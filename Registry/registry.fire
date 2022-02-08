@@ -161,7 +161,10 @@ state    real     unit_fxlat  -         -         -         -    hr    "UNIT_FXL
 state    real     phisc     *i*j      fire        1         z    hr    "PHISC"     "fuel"
 state    real     wz0       *i*j      fire        1         z    hr    "WZ0"       "WRF roughness length"
 state    real     fwh       *i*j      fire        1         z    hr    "FWH"       "fuel fire wind height"
-state    real     can_top   *i*j      fire        1         z   i012hr   "CAN_TOP"   "Height of tree canopy"
+state    real     can_top   *i*j      fire        1         z   i012hr   "CAN_TOP"   "Height of tree canopy top [mAGL] "
+state    real     can_bot   *i*j      fire        1         z   i012hr   "CAN_BOT"   "Height of tree canopy bottom [mAGL]"
+state    real     can_cov   *i*j      fire        1         z   i012hr   "CAN_COV"   "Canopy cover fraction [%]"
+state    real     ntree_cat  *i*j      fire        1         z   i012hr   "NTREE_CAT"   "Massman tree-type index"
 
 
 #
@@ -275,7 +278,7 @@ rconfig   real    fire_lfn_ext_up        namelist,fire         max_domains      
 rconfig   integer fire_topo_from_atm     namelist,fire         max_domains            1      -      "fire_topo_from_atm" "0 = do nothing, 1 = populate ZSF by interpolating from atmosphere" "1"
 rconfig   integer fire_advection         namelist,fire         max_domains            1      -      "fire_advection" "0 = fire spread computed from normal wind speed/slope, 1 = fireline particle speed projected on normal" "0"
 # canopy wind parameterization switches
-rconfig   integer fire_can_top_read      namelist,fire         max_domains            0      -      "fire_can_top_read"    "canopy top height: 1 use wrfinput, 0 from namelist.fire"   ""
+rconfig   integer fire_can_top_read      namelist,fire         max_domains            0      -      "fire_can_top_read"    "canopy top: 0 = defined by itree from namelist.fire and nfuel categories, 1 = defined by ntree_cat, 2 = defined by ntree_cat and can_top input variable"  ""
 # experiments
 rconfig   integer fire_test_steps        namelist,fire         max_domains            0      -      "fire_test_steps" ">0 = on first call, do specified number of steps and terminate (testing only)" "1"
 rconfig   real    fire_const_time        namelist,fire         max_domains          -1.      -      "fire_const_time"   "time from ignition to freeze fire, <0 never" "s"
@@ -384,7 +387,7 @@ halo      HALO_FIRE_LONGLAT dyn_em 24:xlong,xlat
 halo      HALO_FIRE_WIND_A dyn_em 8:u_2,v_2
 halo      HALO_FIRE_ZSF dyn_em 24:zsf
 halo      HALO_FIRE_FUEL dyn_em 8:fuel_frac,fuel_time,bbb,betafl,phiwc,r_0,fgip,ischap,nfuel_cat,dzdxf,dzdyf
-halo      HALO_FIRE_FUEL1 dyn_em 8:fuel_frac,fuel_time,bbb,phiwc,phisc,r_0,fgip,ischap,nfuel_cat,dzdxf,dzdyf,fz0,fwh,wz0,can_top
+halo      HALO_FIRE_FUEL1 dyn_em 8:fuel_frac,fuel_time,bbb,phiwc,phisc,r_0,fgip,ischap,nfuel_cat,dzdxf,dzdyf,fz0,fwh,wz0,can_top,can_bot,can_cov,ntree_cat
 
 
 #

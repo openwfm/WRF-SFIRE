@@ -472,7 +472,7 @@ call print_2d_stats(ifps,min(ifpe,ifde-ir),jfps,min(jfpe,jfde-jr),ifms,ifme,jfms
             grid%nfuel_cat,                               & ! input, or internal for safekeeping
             grid%fuel_time,                      & 
             grid%wz0,                            &          !wrf roughness length on fire mesh
-            grid%fz0, grid%fwh,grid%can_top,grid%cuf,grid%cvf, &
+            grid%fz0,grid%fwh,grid%can_top,grid%can_cov,grid%cuf,grid%cvf,grid%ntree_cat,  &
             fp,                                    & ! structure with pointers passed to spread rate calculation
             config_flags%nfmc,         & ! moisture model variables start
             run_advance_moisture,run_fuel_moisture,dt_moisture,     &    ! moisture model control
@@ -487,7 +487,7 @@ call print_2d_stats(ifps,min(ifpe,ifde-ir),jfps,min(jfpe,jfde-jr),ifms,ifme,jfms
             grid%fmc_equi,                      & ! fuel moisture fields updated, by class, equilibrium diagnostic 
             grid%fmc_lag,                      & ! fuel moisture fields updated, by class, tendency diagnostic
             fp%fmc_g, &                             !  write-only alias. need to exit before using fp again
-            grid%ndwi, &
+            grid%ndwi, & 
             grid%fndwi)
  
 
@@ -584,7 +584,7 @@ subroutine sfire_driver_phys (ifun,    &
     nfuel_cat,                                    & ! in array, data, fire grid, or constant internal
     fuel_time,                                    & ! save constant internal data, fire grid
     wz0,                                          &
-    fz0,fwh,can_top,cuf,cvf,                  &
+    fz0,fwh,can_top,can_cov,cuf,cvf,ntree_cat,    &
     fp,                                           & ! fire params
     nfmc,                                     & ! number of fuel moisture classes
     run_advance_moisture,run_fuel_moisture,dt_moisture,& ! moisture model control
@@ -653,7 +653,7 @@ real,intent(out),dimension(ims:ime,jms:jme)::&
 real, dimension(ims:ime, jms:jme), intent(inout)::xlong, xlat, ndwi ! inout because of extension at bdry
     
 real, intent(inout), dimension(ifms:ifme,jfms:jfme):: & ! fuel data; can be also set inside (cell based, fire grid)
-    fz0,fwh,can_top,cuf,cvf,wz0,                            &  
+    fz0,fwh,can_top,can_cov,ntree_cat,cuf,cvf,wz0,            &  
     nfuel_cat,fndwi                                      
 
 real, intent(inout), dimension(ifms:ifme, jfms:jfme)::     &
@@ -1014,10 +1014,12 @@ do ij=1,num_tiles
             write(msg, '(A20,I1)') 'fire_can_top_read = ', fire_can_top_read
             call message(msg)
 
-            !Lets set the canopy height, using either a look up table, or just explictly setting it 
-            !using WRF input data from LANDFIRE.
+            !Lets set the canopy height, using either a look up table related to the fuel categories 
+            !and values sent for itree within the fire.namelist options. We need to pre-define the
+            !the canopy height since we need to initialize the canopy top winds before running
+            !massman_fwh (for all fire_can_top_read options that are not 2)
 
-            if(fire_can_top_read == 0)then
+            if(fire_can_top_read.ne.2)then
 
                 can_top = 0                             ! Initialize canopy top array on fire mesh 
 
@@ -1031,14 +1033,15 @@ do ij=1,num_tiles
                 ifps, ifpe, jfps, jfpe,                       & ! fire patch bounds
                 ifts,ifte,jfts,jfte,                          &
                 ir,jr,                                        & ! atm/fire grid ratio
-                can_top, nfuel_cat)                             ! tree canopy height info 
+                fire_can_top_read,                            & ! how to define canopy top
+                can_top, nfuel_cat, ntree_cat)                  ! tree canopy height info 
             
             end if 
 
 
             !Compute canopy top winds. Save this variable to cuf and cvf, which is like
             !vf and uf in terms of dimensionality, except that its canopy top winds.
-
+            
             call interpolate_wind2fire_height(id,         & ! to identify debugging prints and files if needed
             ids,ide, kds,kde, jds,jde,                    & ! atm grid dimensions
             ims,ime, kms,kme, jms,jme,                    &
@@ -1069,9 +1072,10 @@ do ij=1,num_tiles
             ifps, ifpe, jfps, jfpe,                       & ! fire patch bounds
             ifts,ifte,jfts,jfte,                          &
             ir,jr,                                        & ! atm/fire grid ratio
+            fire_can_top_read,                            & ! Flag for using can_top input
             cuf,cvf,                                      & ! canopy top winds (input)
-            nfuel_cat,                                    & ! fire fuel category (input)
-            can_top,                                      & ! canopy top (input)
+            nfuel_cat,ntree_cat,                          & ! fire fuel and tree category (input)
+            can_top,can_cov,                              & ! canopy top (input)
             fp%vx,fp%vy)
 
           endif

@@ -47,7 +47,7 @@ subroutine sfire_driver_em_init (grid , config_flags               &
     ! dummies
 
     call message('sfire_driver_em_init: SFIRE initialization start')
-    ! call message(commit_version,level=0)
+    call message(commit_version,level=0)
 
     ! get fire mesh dimensions
     CALL get_ijk_from_subgrid (  grid ,                   &

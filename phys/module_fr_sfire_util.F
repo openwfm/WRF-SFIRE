@@ -1180,7 +1180,7 @@ character(len=*),intent(in)::name
 real,intent(in)::min_a,max_a,avg_a
 !*** local
 character(len=128)::msg
-character(len=35)::id
+character(len=24)::id
 !*** executable
 if(.not.avg_a.eq.avg_a)then
     msg='NaN detected in '//trim(name)
@@ -1189,7 +1189,7 @@ endif
 if(fire_print_msg.eq.0)return
 id=name
 !$OMP CRITICAL(SFIRE_UTIL_CRIT)
-write(msg,'(a,4i5,3g13.5)')id,ips,ipe,jps,jpe,min_a,max_a,avg_a
+write(msg,'(a,4i4,3g11.3)')id,ips,ipe,jps,jpe,min_a,max_a,avg_a
 !$OMP END CRITICAL(SFIRE_UTIL_CRIT)
 call message(msg,level=2)
 end subroutine print_stat_line

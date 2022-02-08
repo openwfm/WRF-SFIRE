@@ -67,11 +67,7 @@ if (fire_perimeter_time > 0. .and. fire_tign_in_time > 0.)then
 endif
 
 if(fire_perimeter_time > 0.)then
-  
-  write(msg,'(a,g14.6)')'init_no_fire: using given ignition time to replay history to fire_perimeter_time=',fire_perimeter_time
-!$OMP CRITICAL(SFIRE_CORE_CRIT)
-  call message(msg,level=1)
-!$OMP END CRITICAL(SFIRE_CORE_CRIT)
+  call message('init_no_fire: using given ignition time to replay history',level=1)
   do j=jfts,jfte
      do i=ifts,ifte
         fuel_frac(i,j)=1.          ! fuel at start is 1 by definition
@@ -408,11 +404,10 @@ do j=jfts,jfte
     enddo
 enddo
 
-! !$OMP CRITICAL(SFIRE_CORE_CRIT)
-! 1 format('check_lfn_tign OK',f9.2,1x,a,1x,i5,':',i5,i5,':',i5)
-! write(msg,1)time_now,trim(s),ifts,ifte,jfts,jfte
-! !$OMP END CRITICAL(SFIRE_CORE_CRIT)
-! call message(msg)
+!$OMP CRITICAL(SFIRE_CORE_CRIT)
+write(msg,'(a,f9.2,1x,a)')'check_lfn_tign OK',time_now,s
+!$OMP END CRITICAL(SFIRE_CORE_CRIT)
+call message(msg)
 
 end subroutine check_lfn_tign 
 
@@ -425,22 +420,17 @@ character(len=*),intent(in)::s              ! for print
 real, intent(in)::time_now                  ! end of timestep = time_now
 real, intent(in):: lfnij, tignij                ! level function, ignition time (state)
 !*** local
-character(len=128):: msg,msg1
+character(len=128):: msg
 !***    executable
 
 if(.not. lfnij<0. .and. tignij<time_now)then
 !$OMP CRITICAL(SFIRE_CORE_CRIT)
-1  format(a,i5,',',i5,a,g13.6,a,g15.8,a,g15.8)
-   msg1 = trim(s)//':check_lfn_tign_ij: inconsistent state'
-   if (lfnij > 0.)then
-       write(msg,1)'i,j=',i,j,' lfn=',lfnij,'>0 tign=',tignij,'< time_now=',time_now
-       call message(msg,level=0)
-       call crash(msg1) ! instead of just warning in check_lfn_tign_ij
-   else
-       write(msg,1)'i,j=',i,j,' lfn=',lfnij,'>=0 tign=',tignij,'< time_now=',time_now
-       call message(msg,level=0)
-       call warning(msg1,level=0)
-   endif
+   write(msg,*)'i,j=',i,j,' lfn=',lfnij,' tign=',tignij,' time_now=',time_now
+   call message(msg,level=0)
+   write(msg,*)' tign-time_now=',tignij-time_now
+   call message(msg,level=0)
+   msg=s//': inconsistent state: lfn>=0 and tign<time_now'
+   call warning(msg)
 !$OMP END CRITICAL(SFIRE_CORE_CRIT)
 endif
 
@@ -625,8 +615,6 @@ do j=jts,jte
    enddo
 enddo
 
-call check_lfn_tign('fuel_left',time_now,its,ite,jts,jte,ims,ime,jms,jme,lfn, tign)
-
 do icl=its1,ite1
   do jcl=jts1,jte1
     helpsum1=0
@@ -747,8 +735,6 @@ real, intent(out),dimension(3,3)::tff,lff
 !
 
 !**********************
-
-      call check_lfn_tign('tign_lfn_interpolation',time_now,icl-1,icl,jcl-1,jcl,ims,ime,jms,jme,lfn, tign)
 	
 !       Direct calculation tif and lff, avoiding big auxiliary arrays, just for case ir=jr=2
 ! Checking whether icl or jcl is on the boundary
@@ -758,7 +744,7 @@ real, intent(out),dimension(3,3)::tff,lff
                                      lfn(icl,jcl-1),lfn(icl,jcl),lff(1,1),tff(1,1),time_now)
 
       call tign_lfn_line_interp(tign(icl-1,jcl),tign(icl,jcl),lfn(icl-1,jcl),lfn(icl,jcl), &
-                             lff(1,2),tff(1,2),time_now,icl-1,jcl,icl,jcl)
+                             lff(1,2),tff(1,2),time_now)
 
 
       call tign_lfn_four_pnts_interp(tign(icl-1,jcl),tign(icl-1,jcl+1),tign(icl,jcl),  & 
@@ -766,20 +752,20 @@ real, intent(out),dimension(3,3)::tff,lff
                                      lfn(icl,jcl),lfn(icl,jcl+1),lff(1,3),tff(1,3),time_now)
 
       call tign_lfn_line_interp(tign(icl,jcl-1),tign(icl,jcl),lfn(icl,jcl-1),lfn(icl,jcl), &
-                             lff(2,1),tff(2,1),time_now,icl,jcl-1,icl,jcl)
+                             lff(2,1),tff(2,1),time_now)
 
       lff(2,2)=lfn(icl,jcl)
       tff(2,2)=tign(icl,jcl)
 
       call tign_lfn_line_interp(tign(icl,jcl+1),tign(icl,jcl),lfn(icl,jcl+1),lfn(icl,jcl), &
-                             lff(2,3),tff(2,3),time_now,icl,jcl+1,icl,jcl)
+                             lff(2,3),tff(2,3),time_now)
 
       call tign_lfn_four_pnts_interp(tign(icl,jcl-1),tign(icl,jcl),tign(icl+1,jcl-1),  & 
                                      tign(icl+1,jcl),lfn(icl,jcl-1),lfn(icl,jcl),      &
                                      lfn(icl+1,jcl-1),lfn(icl+1,jcl),lff(3,1),tff(3,1),time_now)
 
       call tign_lfn_line_interp(tign(icl+1,jcl),tign(icl,jcl),lfn(icl+1,jcl),lfn(icl,jcl), &
-                             lff(3,2),tff(3,2),time_now,icl+1, jcl, icl, jcl)
+                             lff(3,2),tff(3,2),time_now)
 
       call tign_lfn_four_pnts_interp(tign(icl,jcl),tign(icl,jcl+1),tign(icl+1,jcl),  & 
                                      tign(icl+1,jcl+1),lfn(icl,jcl),lfn(icl,jcl+1),      &
@@ -791,7 +777,7 @@ end subroutine tign_lfn_interpolation
 !************************
 !
 
-subroutine tign_lfn_line_interp(tign1,tign2,lfn1,lfn2,lfn_subcl,tign_subcl,time_now,i1,j1,i2,j2)
+subroutine tign_lfn_line_interp(tign1,tign2,lfn1,lfn2,lfn_subcl,tign_subcl,time_now)
 !***purpose: computes time of ignition of the point(*_subcl) that lies on the line
 ! between two points, whose lfn and tign is known
 
@@ -801,11 +787,10 @@ real,intent(in) :: tign1,tign2   ! ignition times at the two endpoints
 real,intent(in) :: lfn1,lfn2     ! level set function at the two endpoints
 real,intent(in) :: time_now      ! tign>=time_now => no fire
 real,intent(out) :: lfn_subcl,tign_subcl ! interpolated to midpoint
-integer,intent(in):: i1,j1,i2,j2 ! indices of the endpoints of the line, for checking only
 
 ! Case 1: both points are on fire -> tign is interpolated linearly
 ! Case 2: both points are not on fire -> tign_subcl=time_now, not burning
-! Case 3: One point is on fire, another is not -> tign_subcl set from
+! Case 3: One point is not fire, another is not -> tign_subcl set from
 !         the equation  tign - time_now = c*lfn, where the proportionality
 !         constant is found from the values of tign and lfn at the burning endpoint.
 !         In particular, lfn(x)=0 implies tign(x)=time_now, so the representations of
@@ -814,13 +799,12 @@ integer,intent(in):: i1,j1,i2,j2 ! indices of the endpoints of the line, for che
 
 !*** local
 real :: c
-character(len=128)::msg
 
 !*** executable
 
 ! check consistency of inputs
-call check_lfn_tign_ij(i1,j1,'tign_lfn_line_interp',time_now,lfn1,tign1) 
-call check_lfn_tign_ij(i2,j2,'tign_lfn_line_interp',time_now,lfn2,tign2) 
+call check_lfn_tign_ij(0,1,'tign_lfn_line_interp',time_now,lfn1,tign1) 
+call check_lfn_tign_ij(0,2,'tign_lfn_line_interp',time_now,lfn2,tign2) 
 
 lfn_subcl=0.5*(lfn1+lfn2)  ! interpolate lfn linearly
 
@@ -829,26 +813,14 @@ if (.not. lfn_subcl < 0.) then ! never test floats on equality
 elseif ((lfn1 < 0.).AND.(lfn2 < 0.)) then
    tign_subcl=0.5*(tign1+tign2) ! both on fire, interpolate linearly
 else  ! one is on fire one is not
-   if (lfn1 < 0.) then  ! 1 is on fire, 2 is not
+   if (lfn1 < 0) then  ! 1 is on fire, 2 is not
       c = (tign1-time_now)/lfn1
-   elseif (lfn2 < 0.) then
+   elseif (lfn2 < 0) then
       c = (tign2-time_now)/lfn2
    else
       call crash('tign_lfn_line_interp: one of lfn1 or lfn2 should be < 0')
    endif
-   if( c < 0.)then
-!$OMP CRITICAL(SFIRE_CORE_CRIT)
-       write(msg,*)'tign1,tign2,time_now ',tign1,tign2,time_now 
-       call message(msg,level=0)
-       write(msg,*)'tign1-time_now,lfn1 ',tign1-time_now,lfn1 
-       call message(msg,level=0)
-       write(msg,*)'tign2-time_now,lfn2 ',tign2-time_now,lfn2 
-       call message(msg,level=0)
-       write(msg,*)'c ',c 
-       call message(msg,level=0)
-!$OMP END CRITICAL(SFIRE_CORE_CRIT)
-       call crash('tign_lfn_line_interp: bad ignition times, c<0')
-   endif
+   if( c < 0.)call crash('tign_lfn_line_interp: bad ignition times, c<0')
    tign_subcl=c*lfn_subcl+time_now;
 endif
 end subroutine tign_lfn_line_interp
@@ -884,14 +856,14 @@ real,intent(out) :: lfn_subcl,tign_subcl
 !
 ! solution for 'c' would be 
 !
-!         sum(tign(Ai)-time_now)*lfn(Ai)
+!         sum(lfn(Ai)*lfn(Ai)
 !    c=   ------------------------------, both sums are over Ai, s.t lfn(Ai)<0
-!         sum(lfn(Ai)*lfn(Ai))
+!         sum(tign(Ai)-time_now)*lfn(Ai)
 !
 
 
-real :: a,b,c,scale
-character(len=128)::msg
+real :: a,b,c,err
+err=0.0001
 
 call check_lfn_tign_ij(0,1,'tign_lfn_four_pnts_interp',time_now,lfn1,tign1) 
 call check_lfn_tign_ij(0,2,'tign_lfn_four_pnts_interp',time_now,lfn2,tign2) 
@@ -909,35 +881,28 @@ elseif((lfn1 < 0.).AND.(lfn2 < 0.).AND.(lfn3 < 0.).AND.(lfn4 < 0.)) then
 else ! some on fire
       ! Case 3
       ! tign_subcl~=c*lfn_subcl+time_now
-      scale = -minval((/lfn1,lfn2,lfn3,lfn4/))
-      a=0.
-      b=0.
+      a=0; 
+      b=0;
       if (lfn1 < 0.) then
-         a=a+(lfn1/scale)**2
-         b=b+(tign1-time_now)*(lfn1/scale)
+         a=a+lfn1*lfn1
+         b=b+(tign1-time_now)*lfn1
       endif
       if (lfn2 < 0.) then
-           a=a+(lfn2/scale)**2
-           b=b+(tign2-time_now)*(lfn2/scale)
+           a=a+lfn2*lfn2 
+           b=b+(tign2-time_now)*lfn2
       endif
       if (lfn3 < 0.) then
-           a=a+(lfn3/scale)**2
-           b=b+(tign3-time_now)*(lfn3/scale)
+           a=a+lfn3*lfn3
+           b=b+(tign3-time_now)*lfn3
       endif
       if (lfn4 < 0.) then
-           a=a+(lfn4/scale)**2
-           b=b+(tign4-time_now)*(lfn4/scale)
+           a=a+lfn4*lfn4
+           b=b+(tign4-time_now)*lfn4
       endif 
-      if (.not. a>0. .or. .not. scale>0.)then
-!$OMP CRITICAL(SFIRE_CORE_CRIT)
-          write(msg,*)'lfn1,2,3,4,_subcl,ssq = ',lfn1,lfn2,lfn3,lfn3,lfn_subcl,a,' scale=',scale
-!$OMP END CRITICAL(SFIRE_CORE_CRIT)
-          call message(msg,level=0)
-          call crash('tign_lfn_four_pnts_interp: internal: not a>0, none of lfn < 0 ?')
-      endif
+      if (.not. a>0.) call crash('tign_lfn_four_pnts_interp: none of lfn < 0')
       if( b < 0.)call crash('tign_lfn_four_pnts_interp: bad ignition times, b<0') ! can have 0 because of rounding
-      c=b/a
-      tign_subcl=c*(lfn_subcl/scale)+time_now;
+      c=b/a;
+      tign_subcl=c*lfn_subcl+time_now;
 endif
 
 end subroutine tign_lfn_four_pnts_interp

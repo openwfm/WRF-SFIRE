@@ -314,11 +314,11 @@ state    real   mub_fine        ij     dyn_em      1         -      -           
 state    real   mub_save        ij     dyn_em      1         -      -           "mub_save" "nest temp, holds orig fine grid mub" "Pa"
 state    real   mu0             ij     dyn_em      1         -      i1          "mu0" "initial dry mass in column" "Pa"
 state    real   mudf            ij     dyn_em      1         -      -           "mudf" "" ""
-state    real   muu             ij     dyn_em      1          X     -           "muu"
+state    real   muu             ij     dyn_em      1          X     rh           "muu"
 state    real   muus            ij     dyn_em      1          X     -           "muus"
-state    real   muv             ij     dyn_em      1          Y     -           "muv"
+state    real   muv             ij     dyn_em      1          Y     rh           "muv"
 state    real   muvs            ij     dyn_em      1          Y     -           "muvs"
-state    real   mut             ij     dyn_em      1          -     -           "mut"
+state    real   mut             ij     dyn_em      1          -     rh           "mut"
 state    real   muts            ij     dyn_em      1          -     -           "muts"
 i1       real   muave           ij     dyn_em      1          -     
 i1       real   mu_save         ij     dyn_em      1          -     
@@ -347,7 +347,7 @@ state    real  xkmv_meso       ikj     dyn_em        1         -      -      "XK
 # Pressure and Density
 state    real   p              ikj     dyn_em      1         -      irh       "p"           "perturbation pressure"         "Pa"
 state    real   al             ikj     dyn_em      1         -      ir        "al"          "inverse perturbation density"  "m3 kg-1"
-state    real   alt            ikj     dyn_em      1         -      r         "alt"         "inverse density"               "m3 kg-1"
+state    real   alt            ikj     dyn_em      1         -      rh         "alt"         "inverse density"               "m3 kg-1"
 state    real   alb            ikj     dyn_em      1         -      irdus     "alb"         "inverse base density"          "m3 kg-1"
 state    real   zx             ikj     dyn_em      1         XZ     -         " "  " "  " "    
 state    real   zy             ikj     dyn_em      1         YZ     -         " "  " "  " "   
