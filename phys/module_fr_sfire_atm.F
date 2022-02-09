@@ -15,6 +15,7 @@ USE module_dm , only : wrf_dm_sum_reals
 
 use module_fr_sfire_phys, only:  mfuelcats, nfuelcats    ! for emissions
 USE module_state_description, only: num_tracer
+use module_state_description, only: p_fire_smoke
 use module_fr_sfire_phys, only: fuel_name
 
 #ifdef WRF_CHEM
@@ -395,7 +396,8 @@ subroutine add_fire_emissions(chem_opt,tracer_opt,dt,dx,dy,      &
        its,ite,kts,kte,jts,jte,          &
        rho,dz8w,                         & ! input on atmosphere mesh 
        fgip, fuel_frac_burnt, nfuel_cat, & ! input on fire mesh
-       chem,tracer)                        ! output
+       chem,tracer,                      & ! output
+       fire_tracer_smoke)                  ! scalar
 
 
 implicit none
@@ -408,6 +410,7 @@ implicit none
 
 ! input
 integer, intent(in)::chem_opt,tracer_opt
+real,intent(in)::fire_tracer_smoke
 real, intent(in):: dt,dx,dy                                           ! time step & mesh spacing
 integer, intent(in)::its,ite,kts,kte,jts,jte,ims,ime,kms,kme,jms,jme &! atm grid dims
        ,ids,ide,kds,kde,jds,jde          

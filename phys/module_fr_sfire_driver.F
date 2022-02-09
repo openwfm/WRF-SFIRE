@@ -530,7 +530,8 @@ call print_2d_stats(ifps,min(ifpe,ifde-ir),jfps,min(jfpe,jfde-jr),ifms,ifme,jfms
                  ips,ipe,kps,kpe,jps,jpe,          &
                  rho,dz8w,                         & ! from atmosphere state
                  grid%fgip, grid%fuel_frac_burnt, grid%nfuel_cat, & ! from fire state
-                 grid%chem,grid%tracer)              ! update/output
+                 grid%chem,grid%tracer,            & ! update/output
+                 config_flags%fire_tracer_smoke)     ! scalar input
           endif
      endif
                 
