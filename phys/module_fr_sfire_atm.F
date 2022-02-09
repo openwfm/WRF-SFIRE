@@ -586,7 +586,7 @@ elseif (tracer_opt == 1) then
     tracer_names(1:1)= (/ 'smoke  ' /)
     tracer_np = 1
 #endif
-elseif (tracer_opt == 2) then
+elseif (tracer_opt == 2 .or. tracer_opt == 3) then
     tracer_pointers(1:8)= (/ &
        p_tr17_1, &
        p_tr17_2, &
@@ -605,7 +605,8 @@ elseif (tracer_opt == 2) then
        'tr17_6  ', &
        'tr17_7  ', &
        'tr17_8  ' /)
-    tracer_np = 8
+    ! tracer_np = 8
+    tracer_np = 1
 else
     call crash('add_fire_emissions: tracer_opt value not supported')
 endif
