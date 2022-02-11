@@ -29,6 +29,7 @@ USE module_configure, only: grid_config_rec_type
 use module_model_constants, only: reradius,    & ! 1/earth radiusw
                                   g,           & ! gravitation acceleration
                                   pi2            ! 2*pi
+use module_timing, only:start_timing,end_timing
 
 implicit none
 
@@ -66,6 +67,8 @@ halo_fire_mag_sub
 #endif
 
     implicit none
+    LOGICAL, EXTERNAL  :: wrf_dm_on_monitor
+
 !*** arguments
     TYPE(domain) , TARGET :: grid                             ! state 
     TYPE (grid_config_rec_type) , INTENT(IN)  :: config_flags ! namelist
@@ -98,6 +101,8 @@ halo_fire_mag_sub
 
 
 !*** executable
+
+    IF ( wrf_dm_on_monitor()) call start_timing
 
 ! populate our structures from wrf
 
@@ -358,6 +363,8 @@ halo_fire_mag_sub
       enddo
     enddo
     if(tsteps>0)call crash('fire_driver_em: test run of uncoupled fire model completed')
+
+    IF ( wrf_dm_on_monitor()) call end_timing('fire')
 
 end subroutine fire_driver_em
 
