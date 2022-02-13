@@ -268,14 +268,16 @@ end subroutine message
 subroutine time_start
 use module_timing, only:start_timing
 implicit none
-call start_timing
+LOGICAL, EXTERNAL  :: wrf_dm_on_monitor
+if (wrf_dm_on_monitor()) call start_timing
 end subroutine time_start
 
 subroutine time_end(string)
 use module_timing, only:end_timing
 implicit none
 character(len=*)string
-call end_timing(string)
+LOGICAL, EXTERNAL  :: wrf_dm_on_monitor
+if (wrf_dm_on_monitor()) call end_timing(string)
 end subroutine time_end
 
 
