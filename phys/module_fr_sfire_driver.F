@@ -2226,7 +2226,7 @@ use IFPORT   ! intel Fortran only
     integer, intent(in)::itimestep  !  wait until we get this frame
     real,intent(out),dimension(ifms:ifme,jfms:jfme)::uf, vf ! wind velocity (m/s) 
 !*** local
-    integer::comm,ncid,varid,chsum_fmw,itry,maxtry=200,frame_fmw,chsum1_fmw
+    integer::comm,ncid,varid,chsum_fmw,itry,maxtry=999,frame_fmw,chsum1_fmw
     integer(4)::isleep=1
     character(LEN=256):: msg
     real, dimension(1,1,1)::dummy
