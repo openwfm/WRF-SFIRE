@@ -41,7 +41,7 @@
 !
 ! [1] Jan Mandel, Jonathan D. Beezley, and Adam K. Kochanski, "Coupled
 ! atmosphere-wildland fire modeling with WRF 3.3 and SFIRE 2011, 
-! Geoscientific Model Development (GMD) 4, 591-610, 2011. 
+! Geoscientific Model Development (GMD) 4, 5913610, 2011. 
 ! doi:10.5194/gmd-4-591-2011
 !
 ! [2] T. L. Clark, J. Coen, and D. Latham, Description of a coupled 
@@ -2226,8 +2226,9 @@ use IFPORT   ! intel Fortran only
     integer, intent(in)::itimestep  !  wait until we get this frame
     real,intent(out),dimension(ifms:ifme,jfms:jfme)::uf, vf ! wind velocity (m/s) 
 !*** local
-    integer::comm,ncid,varid,chsum_fmw,itry,maxtry=999,frame_fmw,chsum1_fmw
-    integer(4)::isleep=1,isleepqq=100000  ! time to sleep wait for FMW
+    integer::comm,ncid,varid,chsum_fmw,itry,maxtry=900000000,frame_fmw,chsum1_fmw
+    integer(4)::isleep=1,isleepqq=100  ! time to sleep wait for FMW
+    real::waitsec,waitmax=100                     ! max total wait in seconds
     character(LEN=256):: msg
     real, dimension(1,1,1)::dummy
 
@@ -2288,13 +2289,15 @@ use IFPORT   ! intel Fortran only
             call message('time step does not agree')
         endif 
         call pnetcdf_close(ncid)
-        write(msg,*)'sleeping ',isleepqq * 1e-6,' sec' 
+        waitsec = itry * isleepqq * 1e-3
+        write(msg,*)'try ',itry,' sleeping ',isleepqq * 1e-3,' sec total ',waitsec
         call sleepqq(isleepqq)   ! intel compiler only
-        !write(msg,*)'sleeping ',isleep,' sec'
+        !waitsec = itry * isleep
+        !write(msg,*)'try ',itry,' sleeping ',isleep,' sec total ',waitsec
         !call sleep(isleep)
         call message(msg)
+        if(waitsec.gt.waitmax)call crash('Reading fire winds timed out')
     enddo 
-    call crash('Reading fire winds timed out')
 end subroutine pnetcdf_read_fire_wind
 
 subroutine pnetcdf_read_fmw(                    &
