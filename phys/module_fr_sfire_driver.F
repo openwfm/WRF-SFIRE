@@ -2227,11 +2227,12 @@ use IFPORT   ! intel Fortran only
     real,intent(out),dimension(ifms:ifme,jfms:jfme)::uf, vf ! wind velocity (m/s) 
 !*** local
     integer::comm,ncid,varid,chsum_fmw,itry,maxtry=999,frame_fmw,chsum1_fmw
-    integer(4)::isleep=1
+    integer(4)::isleep=1,isleepqq=100000  ! time to sleep wait for FMW
     character(LEN=256):: msg
     real, dimension(1,1,1)::dummy
 
 !*** executable
+    call time_start
     do itry=1,maxtry
         write(msg,*)'pnetcdf_read_fire_wind try',itry,' start'
         call message(msg)
@@ -2278,6 +2279,7 @@ use IFPORT   ! intel Fortran only
                 write(msg,*)'success check sum match for time step ',frame_fmw
                 call message(msg)
                 call pnetcdf_close(ncid)
+                call time_end('fmw')
                 return
             else
                 call message('check sum does not agree')
@@ -2286,9 +2288,11 @@ use IFPORT   ! intel Fortran only
             call message('time step does not agree')
         endif 
         call pnetcdf_close(ncid)
-        write(msg,*)'sleeping ',isleep,' sec'
+        write(msg,*)'sleeping ',isleepqq * 1e-6,' sec' 
+        call sleepqq(isleepqq)   ! intel compiler only
+        !write(msg,*)'sleeping ',isleep,' sec'
+        !call sleep(isleep)
         call message(msg)
-        call sleep(isleep)
     enddo 
     call crash('Reading fire winds timed out')
 end subroutine pnetcdf_read_fire_wind
