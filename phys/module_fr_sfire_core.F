@@ -2135,7 +2135,7 @@ intrinsic max,min,sqrt,nint,tiny,huge
             diffCy = diffLy+diffRy
     
             !upwinding - select right or left derivative
-            select case(sfire_upwinding)
+            select case(fire_upwinding)
             case(0)  ! none
                 grad=sqrt(diffCx**2 + diffCy**2)
             case(1) ! standard
@@ -2194,7 +2194,7 @@ intrinsic max,min,sqrt,nint,tiny,huge
         enddo
     enddo        
 
-    if(upwind_err>0)call crash('sfire_upwinding value not supported, 3 recommended')
+    if(upwind_err>0)call crash('fire_upwinding value not supported, 3 recommended')
 
     if(nerr>0)then
 !$OMP CRITICAL(SFIRE_CORE_CRIT)

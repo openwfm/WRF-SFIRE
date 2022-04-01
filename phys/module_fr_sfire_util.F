@@ -33,7 +33,7 @@ integer,save::          &
  fuel_left_jrl=2,       &  ! currently, 2 only supported
  boundary_guard=-1,     &  ! crash if fire gets this many cells to domain boundary, -1=off
  fire_grows_only=1,     &  ! fire can spread out only (level set functions may not increase)
- sfire_upwinding=3,      &  ! upwind normal spread: 1=standard, 2=godunov, 3=eno, 4=sethian 
+ fire_upwinding=3,      &  ! upwind normal spread: 1=standard, 2=godunov, 3=eno, 4=sethian 
  fire_test_steps=0,     &  ! 0=no fire, 1=normal, >1 = do specified number of steps and terminate (testing only)
  fire_topo_from_atm=1,  &  ! 0 = expect ZSF set correctly on entry, 1 = populate by interploating from atmosphere
  fire_advection=0,      &  ! 0 = fire spread from normal wind/slope (CAWFE), 1 = full speed projected
