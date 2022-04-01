@@ -291,7 +291,7 @@ ignited=0
 dmax=0
 dmin=huge(dmax)
 11      format('IGN ',6(a,g17.7,1x)) 
-12      format('IGN ',4(a,2g13.7,1x))
+12      format('IGN ',4(a,2g14.7,1x))
 ! tmperr=0.
 do j=jfts,jfte   
     do i=ifts,ifte
@@ -483,7 +483,7 @@ SUBROUTINE nearest(d,t,ax,ay,sx,sy,st,ex,ey,et,cx2,cy2)
 !***    executable
 
 11      format('IGN ',6(a,g17.7,1x))
-12      format('IGN ',4(a,2g13.7,1x))
+12      format('IGN ',4(a,2g14.7,1x))
 
         ! midpoint m = (mx,my)
         mx = (sx + ex)*0.5
