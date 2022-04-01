@@ -323,19 +323,19 @@ write(msg,1)'patch',ips,':',ipe,jps,':',jpe
 1 format(a,5x,i6,a,2i6,a,i6)
 call message(msg,level=-1)
 !if(ips.ge.ipe.or.jps.ge.jpe)call crash('bad domain bounds')
-!num_tiles=itiles*jtiles
-!istep=(ipe-ips+itiles)/itiles
-!jstep=(jpe-jps+jtiles)/jtiles
-!do i=1,itiles
-!    do j=1,jtiles
-!        ij=j+(i-1)*jtiles
-!        i_start(ij)=min(ipe,ips+(i-1)*istep)
-!        i_end(ij)  =min(ipe,ips+(i  )*istep-1)
-!        j_start(ij)=min(jpe,jps+(j-1)*jstep)
-!        j_end(ij)  =min(jpe,jps+(j  )*jstep-1)
-!    enddo
-!enddo
-!call check_tiles(ips,ipe,jps,jpe,num_tiles,i_start,i_end,j_start,j_end)
+num_tiles=itiles*jtiles
+istep=(ipe-ips+itiles)/itiles
+jstep=(jpe-jps+jtiles)/jtiles
+do i=1,itiles
+    do j=1,jtiles
+        ij=j+(i-1)*jtiles
+        i_start(ij)=min(ipe,ips+(i-1)*istep)
+        i_end(ij)  =min(ipe,ips+(i  )*istep-1)
+        j_start(ij)=min(jpe,jps+(j-1)*jstep)
+        j_end(ij)  =min(jpe,jps+(j  )*jstep-1)
+    enddo
+enddo
+call check_tiles(ips,ipe,jps,jpe,num_tiles,i_start,i_end,j_start,j_end)
 end subroutine set_tiles
 
 

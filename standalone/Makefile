@@ -1,4 +1,4 @@
-# fefines FC, FCFLAGS, FFREE
+# defines FC, FCFLAGS, FFREE
 include make.inc
 DEFS =
 WRF = ..
@@ -8,6 +8,9 @@ LDFLAGS = -L$(NETCDF)/lib -lnetcdff -lnetcdf
 FFLAGS=$(FPFLAGS) $(FCFLAGS) $(FFREE)
 INC = $(WRF)/inc
 
+##################################
+# make sync_inc when WRF changes
+##################################
 
 MAKEFILE=Makefile
 
@@ -106,13 +109,13 @@ fuel_interp_test.exe: $(MAKEFILE) $(FUEL_INTERP_OBJ)
 all: fire init 
 
 atm: atm.exe
-	cd ../wrfv2_fire/test/em_fire; rm -f atm.exe; ln -s ../../../standalone/atm.exe atm.exe
+	cd $(WRF)/test/em_fire; rm -f atm.exe; ln -s ../../standalone/atm.exe atm.exe
 
 fire: fire.exe
-	cd ../wrfv2_fire/test/em_fire; rm -f fire.exe; ln -s ../../../standalone/fire.exe fire.exe
+	cd $(WRF)/test/em_fire; rm -f fire.exe; ln -s ../../standalone/fire.exe fire.exe
 
 init: init.exe
-	cd ../wrfv2_fire/test/em_fire; rm -f init.exe; ln -s ../../../standalone/init.exe init.exe
+	cd $(WRF)/test/em_fire; rm -f init.exe; ln -s ../../standalone/init.exe init.exe
 
 atm.exe: $(MAKEFILE) atm.o $(FIRE_OBJ)
 	$(FC) $(FCFLAGS) -o atm.exe fire.o $(FIRE_OBJ) $(LDFLAGS)

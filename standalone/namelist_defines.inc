@@ -5,18 +5,6 @@
 ! Do not edit.  Your changes to this file will be lost.
 !
 integer    :: first_item_in_struct
-integer , DIMENSION(max_domains) :: dveg
-integer , DIMENSION(max_domains) :: opt_crs
-integer , DIMENSION(max_domains) :: opt_btr
-integer , DIMENSION(max_domains) :: opt_run
-integer , DIMENSION(max_domains) :: opt_sfc
-integer , DIMENSION(max_domains) :: opt_frz
-integer , DIMENSION(max_domains) :: opt_inf
-integer , DIMENSION(max_domains) :: opt_rad
-integer , DIMENSION(max_domains) :: opt_alb
-integer , DIMENSION(max_domains) :: opt_snf
-integer , DIMENSION(max_domains) :: opt_tbot
-integer , DIMENSION(max_domains) :: opt_stc
 integer :: run_days
 integer :: run_hours
 integer :: run_minutes
@@ -57,8 +45,16 @@ integer :: diag_print
 logical :: nocolons
 logical :: cycling
 integer :: output_diagnostics
+integer :: nwp_diagnostics
+logical :: output_ready_flag
+logical :: force_use_old_data
+logical :: usepio
+integer :: pioprocs
+integer :: piostart
+integer :: piostride
+integer :: pioshift
 integer :: dfi_opt
-integer :: dfi_radar
+integer :: dfi_savehydmeteors
 integer :: dfi_nfilter
 logical :: dfi_write_filtered_input
 logical :: dfi_write_dfi_history
@@ -80,16 +76,22 @@ integer :: time_step
 integer :: time_step_fract_num
 integer :: time_step_fract_den
 integer :: time_step_dfi
+real :: reasonable_time_step_ratio
 integer , DIMENSION(max_domains) :: min_time_step
+integer , DIMENSION(max_domains) :: min_time_step_den
 integer , DIMENSION(max_domains) :: max_time_step
+integer , DIMENSION(max_domains) :: max_time_step_den
 real , DIMENSION(max_domains) :: target_cfl
 real , DIMENSION(max_domains) :: target_hcfl
 integer , DIMENSION(max_domains) :: max_step_increase_pct
 integer , DIMENSION(max_domains) :: starting_time_step
+integer , DIMENSION(max_domains) :: starting_time_step_den
 logical :: step_to_output_time
 integer :: adaptation_domain
 logical :: use_adaptive_time_step
+logical :: use_adaptive_time_step_dfi
 integer :: max_dom
+integer :: lats_to_mic
 integer , DIMENSION(max_domains) :: s_we
 integer , DIMENSION(max_domains) :: e_we
 integer , DIMENSION(max_domains) :: s_sn
@@ -101,6 +103,8 @@ integer :: num_metgrid_soil_levels
 real :: p_top_requested
 logical :: interp_theta
 integer :: interp_type
+integer :: rebalance
+integer , DIMENSION(max_domains) :: vert_refine_method
 integer :: vert_refine_fact
 integer :: extrap_type
 integer :: t_extrap_type
@@ -110,11 +114,19 @@ logical :: use_levels_below_ground
 logical :: use_tavg_for_tsk
 logical :: use_surface
 integer :: lagrange_order
+integer :: linear_interp
 integer :: force_sfc_in_vinterp
 real :: zap_close_levels
+real :: maxw_horiz_pres_diff
+real :: trop_horiz_pres_diff
+real :: maxw_above_this_level
+integer :: use_maxw_level
+integer :: use_trop_level
 logical :: sfcp_to_sfcp
 logical :: adjust_heights
 logical :: smooth_cg_topo
+integer :: nest_interp_coord
+integer :: interp_method_type
 logical :: aggregate_lu
 logical :: rh2qv_wrt_liquid
 integer :: rh2qv_method
@@ -124,6 +136,7 @@ real :: qv_max_value
 real :: qv_min_p_safe
 real :: qv_min_flag
 real :: qv_min_value
+integer :: ideal_init_method
 real , DIMENSION(max_domains) :: dx
 real , DIMENSION(max_domains) :: dy
 integer , DIMENSION(max_domains) :: grid_id
@@ -143,13 +156,25 @@ integer , DIMENSION(max_domains) :: shw
 integer :: tile_sz_x
 integer :: tile_sz_y
 integer :: numtiles
+integer :: numtiles_inc
+integer :: numtiles_x
+integer :: numtiles_y
+integer :: tile_strategy
 integer :: nproc_x
 integer :: nproc_y
 integer :: irand
 real , DIMENSION(max_domains) :: dt
+integer :: fft_used
+integer :: cu_used
+integer :: shcu_used
+integer :: cam_used
+integer :: gwd_used
+integer :: alloc_qndropsource
 integer :: num_moves
 integer :: ts_buf_size
 integer :: max_ts_locs
+logical :: tslist_ij
+logical :: tslist_unstagger_winds
 integer , DIMENSION(max_domains) :: vortex_interval
 integer , DIMENSION(max_domains) :: max_vortex_speed
 integer , DIMENSION(max_domains) :: corral_dist
@@ -166,8 +191,19 @@ logical , DIMENSION(max_domains) :: cycle_y
 logical :: reorder_mesh
 logical :: perturb_input
 real , DIMENSION(max_eta) :: eta_levels
+integer :: auto_levels_opt
 real :: max_dz
+real :: dzbot
+real :: dzstretch_s
+real :: dzstretch_u
+integer :: ocean_levels
+real , DIMENSION(max_ocean) :: ocean_z
+real , DIMENSION(max_ocean) :: ocean_t
+real , DIMENSION(max_ocean) :: ocean_s
+integer :: num_traj
+integer :: max_ts_level
 integer :: track_loc_in
+integer :: num_ext_model_couple_dom
 logical :: insert_bogus_storm
 logical :: remove_storm
 integer :: num_storm
@@ -177,38 +213,109 @@ real , DIMENSION(max_bogus) :: vmax_meters_per_second
 real , DIMENSION(max_bogus) :: rmax
 real , DIMENSION(max_bogus) :: vmax_ratio
 real :: rankine_lid
+character*256 :: physics_suite
+logical :: force_read_thompson
+logical :: write_thompson_tables
 integer , DIMENSION(max_domains) :: mp_physics
+real , DIMENSION(max_domains) :: nssl_cccn
+real , DIMENSION(max_domains) :: nssl_alphah
+real , DIMENSION(max_domains) :: nssl_alphahl
+real , DIMENSION(max_domains) :: nssl_cnoh
+real , DIMENSION(max_domains) :: nssl_cnohl
+real , DIMENSION(max_domains) :: nssl_cnor
+real , DIMENSION(max_domains) :: nssl_cnos
+real , DIMENSION(max_domains) :: nssl_rho_qh
+real , DIMENSION(max_domains) :: nssl_rho_qhl
+real , DIMENSION(max_domains) :: nssl_rho_qs
+integer , DIMENSION(max_domains) :: nudge_lightning
+integer , DIMENSION(max_domains) :: nudge_light_times
+integer , DIMENSION(max_domains) :: nudge_light_timee
+integer , DIMENSION(max_domains) :: nudge_light_int
+character*256 :: path_to_files
 integer :: gsfcgce_hail
 integer :: gsfcgce_2ice
 integer , DIMENSION(max_domains) :: progn
+real :: accum_mode
+real :: aitken_mode
+real :: coarse_mode
+integer :: do_radar_ref
+integer :: compute_radar_ref
 integer , DIMENSION(max_domains) :: ra_lw_physics
 integer , DIMENSION(max_domains) :: ra_sw_physics
 real , DIMENSION(max_domains) :: radt
 real , DIMENSION(max_domains) :: naer
 integer , DIMENSION(max_domains) :: sf_sfclay_physics
+integer , DIMENSION(max_domains) :: sf_surf_irr_scheme
+integer :: sf_surf_irr_alloc
+real , DIMENSION(max_domains) :: irr_daily_amount
+integer , DIMENSION(max_domains) :: irr_start_hour
+integer , DIMENSION(max_domains) :: irr_num_hours
+integer , DIMENSION(max_domains) :: irr_start_julianday
+integer , DIMENSION(max_domains) :: irr_end_julianday
+integer , DIMENSION(max_domains) :: irr_freq
+integer , DIMENSION(max_domains) :: irr_ph
 integer , DIMENSION(max_domains) :: sf_surface_physics
 integer , DIMENSION(max_domains) :: bl_pbl_physics
+integer , DIMENSION(max_domains) :: bl_mynn_tkebudget
+integer :: ysu_topdown_pblmix
+integer , DIMENSION(max_domains) :: shinhong_tke_diag
+logical , DIMENSION(max_domains) :: bl_mynn_tkeadvect
+integer :: bl_mynn_cloudpdf
+integer :: bl_mynn_mixlength
+integer , DIMENSION(max_domains) :: bl_mynn_edmf
+integer , DIMENSION(max_domains) :: bl_mynn_edmf_mom
+integer , DIMENSION(max_domains) :: bl_mynn_edmf_tke
+integer , DIMENSION(max_domains) :: bl_mynn_mixscalars
+integer , DIMENSION(max_domains) :: bl_mynn_output
+integer , DIMENSION(max_domains) :: bl_mynn_cloudmix
+integer , DIMENSION(max_domains) :: bl_mynn_mixqt
+integer :: icloud_bl
 integer , DIMENSION(max_domains) :: mfshconv
 integer , DIMENSION(max_domains) :: sf_urban_physics
 real , DIMENSION(max_domains) :: bldt
 integer , DIMENSION(max_domains) :: cu_physics
 integer , DIMENSION(max_domains) :: shcu_physics
 integer , DIMENSION(max_domains) :: cu_diag
+integer , DIMENSION(max_domains) :: kf_edrates
 integer :: kfeta_trigger
+integer :: nsas_dx_factor
 real , DIMENSION(max_domains) :: cudt
 real , DIMENSION(max_domains) :: gsmdt
 integer :: isfflx
 integer :: ifsnow
 integer :: icloud
+integer :: cldovrlp
+integer :: ideal_xland
 real :: swrad_scat
 integer :: surface_input_source
 integer :: num_soil_layers
+integer :: maxpatch
 integer :: num_snow_layers
 integer :: num_snso_layers
-integer :: num_urban_layers
+integer :: num_urban_ndm
+integer :: num_urban_ng
+integer :: num_urban_nwr
+integer :: num_urban_ngb
+integer :: num_urban_nf
+integer :: num_urban_nz
+integer :: num_urban_nbui
+integer :: urban_map_zrd
+integer :: urban_map_zwd
+integer :: urban_map_gd
+integer :: urban_map_zd
+integer :: urban_map_zdf
+integer :: urban_map_bd
+integer :: urban_map_wd
+integer :: urban_map_gbd
+integer :: urban_map_fbd
+integer :: num_urban_hi
 integer :: num_months
+integer :: sf_surface_mosaic
+integer :: mosaic_cat
+integer :: mosaic_cat_soil
 integer :: mosaic_lu
 integer :: mosaic_soil
+integer :: flag_sm_adj
 integer :: maxiens
 integer :: maxens
 integer :: maxens2
@@ -224,12 +331,15 @@ integer :: num_soil_cat
 integer :: mp_zero_out
 real :: mp_zero_out_thresh
 real :: seaice_threshold
+logical , DIMENSION(max_domains) :: bmj_rad_feedback
 integer :: sst_update
 integer :: sst_skin
 integer :: tmn_update
 logical :: usemonalb
 logical :: rdmaxalb
 logical :: rdlai2d
+logical :: ua_phys
+integer :: opt_thcnd
 integer :: co2tf
 integer :: ra_call_offset
 real :: cam_abs_freq_s
@@ -238,11 +348,47 @@ integer :: paerlev
 integer :: cam_abs_dim1
 integer :: cam_abs_dim2
 integer :: lagday
+integer :: no_src_types
+integer :: alevsiz
+integer :: o3input
+integer :: aer_opt
+integer :: swint_opt
+integer , DIMENSION(max_domains) :: aer_type
+integer , DIMENSION(max_domains) :: aer_aod550_opt
+integer , DIMENSION(max_domains) :: aer_angexp_opt
+integer , DIMENSION(max_domains) :: aer_ssa_opt
+integer , DIMENSION(max_domains) :: aer_asy_opt
+real , DIMENSION(max_domains) :: aer_aod550_val
+real , DIMENSION(max_domains) :: aer_angexp_val
+real , DIMENSION(max_domains) :: aer_ssa_val
+real , DIMENSION(max_domains) :: aer_asy_val
 logical , DIMENSION(max_domains) :: cu_rad_feedback
+integer :: dust_emis
+integer :: erosion_dim
+integer :: no_src_types_cu
+integer :: alevsiz_cu
+integer :: aercu_opt
+real :: aercu_fct
+integer :: aercu_used
+logical , DIMENSION(max_domains) :: shallowcu_forced_ra
+integer , DIMENSION(max_domains) :: numbins
+real , DIMENSION(max_domains) :: thbinsize
+real , DIMENSION(max_domains) :: rbinsize
+real , DIMENSION(max_domains) :: mindeepfreq
+real , DIMENSION(max_domains) :: minshallowfreq
+integer , DIMENSION(max_domains) :: shcu_aerosols_opt
+integer , DIMENSION(max_domains) :: icloud_cu
 integer , DIMENSION(max_domains) :: pxlsm_smois_init
+integer , DIMENSION(max_domains) :: pxlsm_modis_veg
 integer :: omlcall
+integer :: sf_ocean_physics
+integer :: traj_opt
+logical , DIMENSION(max_domains) :: dm_has_traj
+integer :: tracercall
+real :: omdt
 real :: oml_hml0
 real :: oml_gamma
+real :: oml_relaxation_time
 integer :: isftcflx
 integer :: iz0tlnd
 real :: shadlen
@@ -251,7 +397,13 @@ integer , DIMENSION(max_domains) :: topo_shading
 integer , DIMENSION(max_domains) :: topo_wind
 integer :: no_mp_heating
 integer :: fractional_seaice
+integer :: seaice_snowdepth_opt
+real :: seaice_snowdepth_max
+real :: seaice_snowdepth_min
 integer :: seaice_albedo_opt
+real :: seaice_albedo_default
+integer :: seaice_thickness_opt
+real :: seaice_thickness_default
 logical :: tice2tsk_if2cold
 real :: bucket_mm
 real :: bucket_j
@@ -259,7 +411,39 @@ real :: mp_tend_lim
 real , DIMENSION(max_domains) :: prec_acc_dt
 integer :: prec_acc_opt
 integer :: bucketr_opt
+integer :: bucketf_opt
+integer :: process_time_series
 integer , DIMENSION(max_domains) :: grav_settling
+real , DIMENSION(max_domains) :: sas_pgcon
+integer , DIMENSION(max_domains) :: scalar_pblmix
+integer , DIMENSION(max_domains) :: tracer_pblmix
+logical :: use_aero_icbc
+logical :: use_rap_aero_icbc
+integer :: use_mp_re
+real :: ccn_conc
+integer :: hail_opt
+integer :: morr_rimed_ice
+integer :: clean_atm_diag
+integer :: calc_clean_atm_diag
+integer :: dveg
+integer :: opt_crs
+integer :: opt_btr
+integer :: opt_run
+integer :: opt_sfc
+integer :: opt_frz
+integer :: opt_inf
+integer :: opt_rad
+integer :: opt_alb
+integer :: opt_snf
+integer :: opt_tbot
+integer :: opt_stc
+integer :: opt_gla
+integer :: opt_rsf
+integer :: opt_soil
+integer :: opt_pedo
+integer :: opt_crop
+real , DIMENSION(max_domains) :: wtddt
+integer :: wrf_hydro
 real , DIMENSION(max_domains) :: fgdt
 integer , DIMENSION(max_domains) :: fgdtzero
 integer , DIMENSION(max_domains) :: grid_fdda
@@ -279,6 +463,8 @@ integer , DIMENSION(max_domains) :: k_zfac_q
 integer , DIMENSION(max_domains) :: dk_zfac_uv
 integer , DIMENSION(max_domains) :: dk_zfac_t
 integer , DIMENSION(max_domains) :: dk_zfac_ph
+integer , DIMENSION(max_domains) :: dk_zfac_q
+integer :: ktrop
 real , DIMENSION(max_domains) :: guv
 real , DIMENSION(max_domains) :: guv_sfc
 real , DIMENSION(max_domains) :: gt
@@ -288,10 +474,11 @@ real , DIMENSION(max_domains) :: gq_sfc
 real , DIMENSION(max_domains) :: gph
 real :: dtramp_min
 integer :: if_ramping
-real :: rinblw
+real , DIMENSION(max_domains) :: rinblw
 integer , DIMENSION(max_domains) :: xwavenum
 integer , DIMENSION(max_domains) :: ywavenum
 integer , DIMENSION(max_domains) :: pxlsm_soil_nudge
+integer , DIMENSION(max_domains) :: fasdas
 integer , DIMENSION(max_domains) :: obs_nudge_opt
 integer :: max_obs
 real , DIMENSION(max_domains) :: fdda_start
@@ -347,13 +534,14 @@ logical :: obs_ipf_in4dob
 logical :: obs_ipf_errob
 logical :: obs_ipf_nudob
 logical :: obs_ipf_init
+integer :: obs_scl_neg_qv_innov
 integer :: scm_force
 real :: scm_force_dx
 integer :: num_force_layers
 integer :: scm_lu_index
 integer :: scm_isltyp
 real :: scm_vegfra
-integer :: scm_canwat
+real :: scm_canwat
 real :: scm_lat
 real :: scm_lon
 logical :: scm_th_t_tend
@@ -375,19 +563,24 @@ integer :: scm_force_flux
 integer :: dyn_opt
 integer :: rk_ord
 integer :: w_damping
-integer :: diff_opt
-integer :: km_opt
-integer :: km_opt_dfi
+integer , DIMENSION(max_domains) :: diff_opt
+integer , DIMENSION(max_domains) :: diff_opt_dfi
+integer , DIMENSION(max_domains) :: km_opt
+integer , DIMENSION(max_domains) :: km_opt_dfi
 integer :: damp_opt
 integer :: rad_nudge
-integer :: gwd_opt
-real , DIMENSION(max_domains) :: sas_pgcon
+integer , DIMENSION(max_domains) :: gwd_opt
+real :: max_rot_angle_gwd
 real , DIMENSION(max_domains) :: zdamp
 real , DIMENSION(max_domains) :: dampcoef
 real , DIMENSION(max_domains) :: khdif
 real , DIMENSION(max_domains) :: kvdif
 real , DIMENSION(max_domains) :: diff_6th_factor
 integer , DIMENSION(max_domains) :: diff_6th_opt
+integer , DIMENSION(max_domains) :: diff_6th_slopeopt
+real , DIMENSION(max_domains) :: diff_6th_thresh
+integer :: use_theta_m
+integer :: use_q_diabatic
 real , DIMENSION(max_domains) :: c_s
 real , DIMENSION(max_domains) :: c_k
 real , DIMENSION(max_domains) :: smdiv
@@ -407,6 +600,16 @@ integer , DIMENSION(max_domains) :: chem_adv_opt
 integer , DIMENSION(max_domains) :: tracer_adv_opt
 integer , DIMENSION(max_domains) :: scalar_adv_opt
 integer , DIMENSION(max_domains) :: tke_adv_opt
+logical , DIMENSION(max_domains) :: moist_mix2_off
+logical , DIMENSION(max_domains) :: chem_mix2_off
+logical , DIMENSION(max_domains) :: tracer_mix2_off
+logical , DIMENSION(max_domains) :: scalar_mix2_off
+logical , DIMENSION(max_domains) :: tke_mix2_off
+logical , DIMENSION(max_domains) :: moist_mix6_off
+logical , DIMENSION(max_domains) :: chem_mix6_off
+logical , DIMENSION(max_domains) :: tracer_mix6_off
+logical , DIMENSION(max_domains) :: scalar_mix6_off
+logical , DIMENSION(max_domains) :: tke_mix6_off
 logical , DIMENSION(max_domains) :: top_radiation
 integer , DIMENSION(max_domains) :: mix_isotropic
 real , DIMENSION(max_domains) :: mix_upper_bound
@@ -421,8 +624,14 @@ real :: base_pres
 real :: base_temp
 real :: base_lapse
 real :: iso_temp
+real :: base_pres_strat
+real :: base_lapse_strat
 logical :: use_baseparam_fr_nml
 real :: fft_filter_lat
+logical :: coupled_filtering
+logical :: pos_def
+logical :: swap_pole_with_next_j
+logical :: actual_distance_average
 logical :: rotated_pole
 logical , DIMENSION(max_domains) :: do_coriolis
 logical , DIMENSION(max_domains) :: do_curvature
@@ -447,7 +656,11 @@ logical , DIMENSION(max_domains) :: open_ye
 logical , DIMENSION(max_domains) :: polar
 logical , DIMENSION(max_domains) :: nested
 real :: spec_exp
+integer :: spec_bdy_final_mu
 integer :: real_data_init_type
+logical , DIMENSION(max_domains) :: have_bcs_moist
+logical , DIMENSION(max_domains) :: have_bcs_scalar
+logical :: multi_bdy_files
 integer :: background_proc_id
 integer :: forecast_proc_id
 integer :: production_status
@@ -477,6 +690,7 @@ integer :: flag_soil_layers
 integer :: flag_slp
 integer :: flag_soilhgt
 integer :: flag_mf_xy
+integer :: flag_um_soil
 real , DIMENSION(max_domains) :: bdyfrq
 character*256 , DIMENSION(max_domains) :: mminlu
 integer , DIMENSION(max_domains) :: iswater
@@ -488,19 +702,22 @@ integer , DIMENSION(max_domains) :: map_proj
 integer :: use_wps_input
 integer , DIMENSION(max_domains) :: dfi_stage
 integer , DIMENSION(max_domains) :: mp_physics_dfi
-character*256 :: windturbines_spec
-integer :: td_turbgridid
-real :: td_hubheight
-real :: td_diameter
-real :: td_stdthrcoef
-real :: td_cutinspeed
-real :: td_cutoutspeed
-real :: td_power
-real :: td_turbpercell
-integer :: td_ewfx
-integer :: td_ewfy
-integer :: td_pwfx
-integer :: td_pwfy
+integer , DIMENSION(max_domains) :: bl_pbl_physics_dfi
+integer , DIMENSION(max_domains) :: windfarm_opt
+integer :: windfarm_ij
+integer :: ideal_case
+integer , DIMENSION(max_domains) :: hailcast_opt
+real , DIMENSION(max_domains) :: haildt
+integer , DIMENSION(max_domains) :: lightning_option
+real , DIMENSION(max_domains) :: lightning_dt
+real , DIMENSION(max_domains) :: lightning_start_seconds
+real , DIMENSION(max_domains) :: flashrate_factor
+integer , DIMENSION(max_domains) :: iccg_method
+real , DIMENSION(max_domains) :: iccg_prescribed_num
+real , DIMENSION(max_domains) :: iccg_prescribed_den
+integer , DIMENSION(max_domains) :: cellcount_method
+real , DIMENSION(max_domains) :: cldtop_adjustment
+integer , DIMENSION(max_domains) :: sf_lake_physics
 character*256 :: auxinput1_inname
 integer :: io_form_auxinput1
 logical :: override_restart_timers
@@ -1570,6 +1787,7 @@ integer :: debug_level
 logical :: self_test_domain
 character*256 :: history_outname
 character*256 :: history_inname
+logical :: use_netcdf_classic
 integer , DIMENSION(max_domains) :: history_interval_d
 integer , DIMENSION(max_domains) :: history_interval_h
 integer , DIMENSION(max_domains) :: history_interval_m
@@ -1658,15 +1876,18 @@ integer :: io_form_sgfdda
 integer :: io_form_gfdda
 character*256 , DIMENSION(max_domains) :: iofields_filename
 logical :: ignore_iofields_warning
+logical :: ncd_nofill
 integer :: nfmc
 logical , DIMENSION(max_domains) :: fmoist_run
 logical , DIMENSION(max_domains) :: fmoist_interp
+integer , DIMENSION(max_domains) :: fmoisti_run
+integer , DIMENSION(max_domains) :: fmoisti_interp
 logical , DIMENSION(max_domains) :: fmoist_only
 integer , DIMENSION(max_domains) :: fmoist_freq
-integer :: kfmc_ndwi
-integer :: fndwi_from_ndwi
 real , DIMENSION(max_domains) :: fmoist_dt
 real :: fmep_decay_tlag
+integer :: kfmc_ndwi
+integer :: fndwi_from_ndwi
 integer , DIMENSION(max_domains) :: ifire
 integer , DIMENSION(max_domains) :: fire_boundary_guard
 integer , DIMENSION(max_domains) :: fire_num_ignitions
@@ -1741,31 +1962,36 @@ integer , DIMENSION(max_domains) :: fire_sprd_mdl
 real , DIMENSION(max_domains) :: fire_crwn_hgt
 real , DIMENSION(max_domains) :: fire_ext_grnd
 real , DIMENSION(max_domains) :: fire_ext_crwn
-integer , DIMENSION(max_domains) :: fire_wind_log_interp
-integer , DIMENSION(max_domains) :: fire_use_windrf
+real , DIMENSION(max_domains) :: fire_wind_height
 integer , DIMENSION(max_domains) :: fire_fuel_read
-integer , DIMENSION(max_domains) :: fire_fmc_read
 integer , DIMENSION(max_domains) :: fire_fuel_cat
+integer , DIMENSION(max_domains) :: fire_fmc_read
 integer , DIMENSION(max_domains) :: fire_print_msg
 integer , DIMENSION(max_domains) :: fire_print_file
+integer , DIMENSION(max_domains) :: fire_fuel_left_method
+integer , DIMENSION(max_domains) :: fire_fuel_left_irl
+integer , DIMENSION(max_domains) :: fire_fuel_left_jrl
+integer , DIMENSION(max_domains) :: fire_grows_only
+integer , DIMENSION(max_domains) :: fire_upwinding
+integer , DIMENSION(max_domains) :: fire_upwind_split
+integer , DIMENSION(max_domains) :: fire_wind_log_interp
+integer , DIMENSION(max_domains) :: fire_use_windrf
 logical , DIMENSION(max_domains) :: fire_restart
 integer , DIMENSION(max_domains) :: fire_time_step_ratio
 integer , DIMENSION(max_domains) :: fire_debug_hook_sec
-integer , DIMENSION(max_domains) :: fire_fuel_left_method
 integer , DIMENSION(max_domains) :: fire_update_fuel_frac
-integer , DIMENSION(max_domains) :: fire_fuel_left_irl
-integer , DIMENSION(max_domains) :: fire_fuel_left_jrl
 real , DIMENSION(max_domains) :: fire_back_weight
-integer , DIMENSION(max_domains) :: fire_grows_only
-integer , DIMENSION(max_domains) :: fire_upwinding
 real , DIMENSION(max_domains) :: fire_viscosity
 real , DIMENSION(max_domains) :: fire_lfn_ext_up
 integer , DIMENSION(max_domains) :: fire_topo_from_atm
 integer , DIMENSION(max_domains) :: fire_advection
+integer , DIMENSION(max_domains) :: fire_can_top_read
 integer , DIMENSION(max_domains) :: fire_test_steps
 real , DIMENSION(max_domains) :: fire_const_time
 real , DIMENSION(max_domains) :: fire_const_grnhfx
 real , DIMENSION(max_domains) :: fire_const_grnqfx
+real , DIMENSION(max_domains) :: fire_atm_feedback
+integer , DIMENSION(max_domains) :: fire_mountain_type
 integer , DIMENSION(max_domains) :: fire_hfx_given
 integer , DIMENSION(max_domains) :: fire_hfx_num_lines
 real , DIMENSION(max_domains) :: fire_hfx_latent_part
@@ -1782,8 +2008,6 @@ real , DIMENSION(max_domains) :: fire_hfx_start_y1
 real , DIMENSION(max_domains) :: fire_hfx_end_y1
 real , DIMENSION(max_domains) :: fire_hfx_start_lon1
 real , DIMENSION(max_domains) :: fire_hfx_end_lon1
-real , DIMENSION(max_domains) :: fire_atm_feedback
-integer , DIMENSION(max_domains) :: fire_mountain_type
 real , DIMENSION(max_domains) :: fire_mountain_height
 real , DIMENSION(max_domains) :: fire_mountain_start_x
 real , DIMENSION(max_domains) :: fire_mountain_start_y
@@ -1812,16 +2036,151 @@ real , DIMENSION(max_domains) :: sfc_vegfra
 real , DIMENSION(max_domains) :: sfc_canwat
 integer , DIMENSION(max_domains) :: sfc_ivgtyp
 integer , DIMENSION(max_domains) :: sfc_isltyp
+logical , DIMENSION(max_domains) :: fire_lsm_reinit
+integer , DIMENSION(max_domains) :: fire_lsm_reinit_iter
+integer , DIMENSION(max_domains) :: fire_upwinding_reinit
+logical , DIMENSION(max_domains) :: fire_is_real_perim
+integer , DIMENSION(max_domains) :: fire_lsm_band_ngp
+logical , DIMENSION(max_domains) :: fire_lsm_zcoupling
+real , DIMENSION(max_domains) :: fire_lsm_zcoupling_ref
+real , DIMENSION(max_domains) :: fire_tracer_smoke
+real , DIMENSION(max_domains) :: fire_viscosity_bg
+real , DIMENSION(max_domains) :: fire_viscosity_band
+integer , DIMENSION(max_domains) :: fire_viscosity_ngp
+real , DIMENSION(max_domains) :: fire_slope_factor
+integer , DIMENSION(max_domains) :: sfire_upwinding
 integer , DIMENSION(max_domains) :: do_avgflx_em
 integer , DIMENSION(max_domains) :: do_avgflx_cugd
-integer , DIMENSION(max_domains) :: stoch_force_opt
-integer , DIMENSION(max_domains) :: stoch_vertstruc_opt
 integer :: nens
+integer , DIMENSION(max_domains) :: skebs
+integer , DIMENSION(max_domains) :: stoch_force_opt
+integer :: skebs_vertstruc
+integer , DIMENSION(max_domains) :: stoch_vertstruc_opt
 real , DIMENSION(max_domains) :: tot_backscat_psi
 real , DIMENSION(max_domains) :: tot_backscat_t
-real :: stoch_force_global_opt
+real :: ztau_psi
+real :: ztau_t
+real :: rexponent_psi
+real :: rexponent_t
+real :: zsigma2_eps
+real :: zsigma2_eta
+integer :: kminforc
+integer :: lminforc
+integer :: kminforct
+integer :: lminforct
+integer :: kmaxforc
+integer :: lmaxforc
+integer :: kmaxforct
+integer :: lmaxforct
+integer :: iseed_skebs
+integer :: kmaxforch
+integer :: lmaxforch
+integer :: kmaxforcth
+integer :: lmaxforcth
+integer , DIMENSION(max_domains) :: sppt
+real , DIMENSION(max_domains) :: gridpt_stddev_sppt
+real , DIMENSION(max_domains) :: stddev_cutoff_sppt
+real , DIMENSION(max_domains) :: lengthscale_sppt
+real , DIMENSION(max_domains) :: timescale_sppt
+integer :: sppt_vertstruc
+integer :: iseed_sppt
+integer , DIMENSION(max_domains) :: rand_perturb
+real , DIMENSION(max_domains) :: gridpt_stddev_rand_pert
+real , DIMENSION(max_domains) :: stddev_cutoff_rand_pert
+real , DIMENSION(max_domains) :: lengthscale_rand_pert
+real , DIMENSION(max_domains) :: timescale_rand_pert
+integer :: rand_pert_vertstruc
+integer :: iseed_rand_pert
+integer , DIMENSION(max_domains) :: spp
+logical :: hrrr_cycling
+integer , DIMENSION(max_domains) :: spp_conv
+real , DIMENSION(max_domains) :: gridpt_stddev_spp_conv
+real , DIMENSION(max_domains) :: stddev_cutoff_spp_conv
+real , DIMENSION(max_domains) :: lengthscale_spp_conv
+real , DIMENSION(max_domains) :: timescale_spp_conv
+integer :: vertstruc_spp_conv
+integer :: iseed_spp_conv
+integer , DIMENSION(max_domains) :: spp_pbl
+real , DIMENSION(max_domains) :: gridpt_stddev_spp_pbl
+real , DIMENSION(max_domains) :: stddev_cutoff_spp_pbl
+real , DIMENSION(max_domains) :: lengthscale_spp_pbl
+real , DIMENSION(max_domains) :: timescale_spp_pbl
+integer :: vertstruc_spp_pbl
+integer :: iseed_spp_pbl
+integer , DIMENSION(max_domains) :: spp_lsm
+real , DIMENSION(max_domains) :: gridpt_stddev_spp_lsm
+real , DIMENSION(max_domains) :: stddev_cutoff_spp_lsm
+real , DIMENSION(max_domains) :: lengthscale_spp_lsm
+real , DIMENSION(max_domains) :: timescale_spp_lsm
+integer :: vertstruc_spp_lsm
+integer :: iseed_spp_lsm
+integer :: skebs_on
+integer :: sppt_on
+integer :: spp_on
+integer :: rand_perturb_on
+integer :: num_stoch_levels
+integer :: seed_dim
 integer , DIMENSION(max_domains) :: sfs_opt
 integer , DIMENSION(max_domains) :: m_opt
+real , DIMENSION(max_domains) :: lakedepth_default
+real , DIMENSION(max_domains) :: lake_min_elev
+integer , DIMENSION(max_domains) :: use_lakedepth
+integer , DIMENSION(max_domains) :: sbm_diagnostics
+integer :: p_lev_diags
+integer :: p_lev_diags_dfi
+integer :: num_press_levels
+real , DIMENSION(max_plevs) :: press_levels
+integer :: use_tot_or_hyd_p
+integer :: extrap_below_grnd
+real :: p_lev_missing
+real , DIMENSION(max_domains) :: p_lev_interval
+integer :: z_lev_diags
+integer :: z_lev_diags_dfi
+integer :: num_z_levels
+real , DIMENSION(max_zlevs) :: z_levels
+real :: z_lev_missing
+real , DIMENSION(max_domains) :: z_lev_interval
+integer , DIMENSION(max_domains) :: afwa_diag_opt
+integer , DIMENSION(max_domains) :: afwa_ptype_opt
+integer , DIMENSION(max_domains) :: afwa_vil_opt
+integer , DIMENSION(max_domains) :: afwa_radar_opt
+integer , DIMENSION(max_domains) :: afwa_severe_opt
+integer , DIMENSION(max_domains) :: afwa_icing_opt
+integer , DIMENSION(max_domains) :: afwa_vis_opt
+integer , DIMENSION(max_domains) :: afwa_cloud_opt
+integer , DIMENSION(max_domains) :: afwa_therm_opt
+integer , DIMENSION(max_domains) :: afwa_turb_opt
+integer , DIMENSION(max_domains) :: afwa_buoy_opt
+real :: afwa_ptype_ccn_tmp
+real :: afwa_ptype_tot_melt
+integer :: afwa_bad_data_check
+integer :: mean_diag
+integer :: mean_freq
+integer , DIMENSION(max_domains) :: mean_interval
+integer , DIMENSION(max_domains) :: mean_diag_interval
+integer , DIMENSION(max_domains) :: mean_diag_interval_s
+integer , DIMENSION(max_domains) :: mean_diag_interval_m
+integer , DIMENSION(max_domains) :: mean_diag_interval_h
+integer , DIMENSION(max_domains) :: mean_diag_interval_d
+integer , DIMENSION(max_domains) :: mean_diag_interval_mo
+integer :: diurnal_diag
+integer , DIMENSION(max_domains) :: nssl_ipelec
+integer :: nssl_isaund
+integer :: nssl_iscreen
+real :: nssl_lightrad
+integer :: nssl_idischarge
+integer :: nssl_ibrkd
+real :: nssl_ecrit
+real :: nssl_disfrac
+integer :: elec_physics
+integer :: perturb_bdy
+integer :: perturb_chem_bdy
+integer :: hybrid_opt
+real :: etac
+integer :: num_wif_levels
+integer :: wif_input_opt
+integer :: diag_nwp2
+integer :: solar_diagnostics
 integer , DIMENSION(max_domains) :: chem_opt
 integer    :: last_item_in_struct
 !ENDOFREGISTRYGENERATEDINCLUDE
