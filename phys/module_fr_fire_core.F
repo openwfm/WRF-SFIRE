@@ -1179,6 +1179,15 @@ if(out>1. .or. out<0.)call crash('fuel_left_cell_2: fuel fraction out of bounds 
 fuel_left_cell_2 = out
 end function fuel_left_cell_2
 
+
+!
+!***************************************
+!
+!subroutine fuel_left_cell_3
+
+!end subroutine fuel_left_cell_3
+
+
 !
 !****************************************
 !
