@@ -1140,7 +1140,7 @@ character(len=128)::msg
 a = 0.0
 b = 1.0
 ! grid spacing
-n = 10
+n = 20
 dx = (b-a)/real(n)
 dy = dx
 ! print *, 'dx = dy = ', dx
