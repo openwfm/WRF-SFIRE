@@ -647,6 +647,12 @@ do icl=its1,ite1
      lff(isubcl,jsubcl),lff(isubcl,jsubcl+1),lff(isubcl+1,jsubcl),lff(isubcl+1,jsubcl+1), &
      tff(isubcl,jsubcl),tff(isubcl,jsubcl+1),tff(isubcl+1,jsubcl),tff(isubcl+1,jsubcl+1), &
      time_now, fuel_time(icl,jcl)) 
+! call method 1, if method 3 is specified in namelist.input, change after testing
+        elseif(fuel_left_method.eq.3)then
+          call fuel_left_cell_3( fuel_left_ff, fire_area_ff, &
+     lff(isubcl,jsubcl),lff(isubcl,jsubcl+1),lff(isubcl+1,jsubcl),lff(isubcl+1,jsubcl+1), &
+     tff(isubcl,jsubcl),tff(isubcl,jsubcl+1),tff(isubcl+1,jsubcl),tff(isubcl+1,jsubcl+1), &
+     time_now, fuel_time(icl,jcl))
 ! dont forget to change fire_area_ff here
         else
           call crash('fuel_left: unknown fuel_left_method')
@@ -1091,6 +1097,125 @@ fuel_frac_left = out
 fire_frac_area = area
 
 end subroutine fuel_left_cell_1
+
+!
+!***************************************
+
+subroutine fuel_left_cell_3( fuel_frac_left, fire_frac_area, &
+    lfn00,lfn01,lfn10,lfn11, &
+    tign00,tign01,tign10,tign11,&
+    time_now, fuel_time_cell)
+!*** purpose: compute the fuel fraction left in one cell
+! uses midpoint numerical integration in double loop to integrate the function in 
+! fuel_left_cell_1 subroutine over an nXn grid. blinear interpolation used to put 
+! level-set and tign on corners of cell onto the finer grid
+implicit none
+!*** arguments
+real, intent(out):: fuel_frac_left, fire_frac_area ! 
+real, intent(in)::lfn00,lfn01,lfn10,lfn11    ! level set function at 4 corners of the cell
+real, intent(in)::tign00,tign01,tign10,tign11! ignition time at the  4 corners of the cell
+real, intent(in)::time_now                   ! the time now
+real, intent(in)::fuel_time_cell            ! time to burns off to 1/e
+
+!
+
+! subroutine variables
+!loops, counters, mesh size, etc
+integer :: i,j,k,n
+!cell dimensions [a,b]X[a,b]
+real :: a,b
+!integral variables
+real :: x,y,dx,dy, s
+!interpolation variables
+real::t00,t01,t10,t11
+real :: intl, intt, t
+!fire/no fire variables
+!burn, burn count, burn function
+real :: burn, bc, bf  !
+!error prints
+character(len=128)::msg
+
+
+!corners of cell [a,b]X[a,b]
+a = 0.0
+b = 1.0
+! grid spacing
+n = 10
+dx = (b-a)/real(n)
+dy = dx
+! print *, 'dx = dy = ', dx
+
+! integral
+!initialize integral / counter sums sum
+s = 0.0
+bc = 0.0
+
+
+!check to see if lfn is greater than zero at all corners   
+!skip loop if no area is on fire
+if(lfn00 < 0.0 .or. lfn01<0.0 .or. lfn11<0.0 .or. lfn10<0.0) then
+!loops
+iloop: do i = 1,n
+   !set grid point to be non burning
+   burn = 0.0
+
+   jloop: do j = 1,n
+      x = a + dx/2.0 + (i-1.0)*dx
+      y = a + dy/2.0 + (j-1.0)*dy
+!interpolate levelset function, declare pixel burning  / not needed
+!      intl = (1.0-x)*( (1.0-y)*lfn00 + y*lfn01 ) + x*( (1.0-y)*lfn01 + y*lfn11 )
+ 
+!interpolate tign      
+      intt = (1.0-x)*( (1.0-y)*tign00 + y*tign01 ) + x*( (1.0-y)*tign01 + y*tign11 )
+!t is the time since fire arrived = time_now - intt
+      t = time_now - intt
+      if(t >= 0) then
+         ! augment count of burning regions
+         bc = bc + 1.0
+         burn = 1.0
+         bf = (1 - exp(-t/fuel_time_cell))
+!make sum update, burn = 0 ==> no change in integral
+         s = s + bf*dx*dy
+      end if
+!make sum update, not burning ==> no change in integral
+      
+!      if(burn >0) then
+!        print *, 'Burn, burn_function',burn,bf
+!      end if      s = s + bf*dx*dy
+
+   end do jloop
+end do iloop
+end if ! check for burning
+
+
+
+!error checking / print on crash
+if(s>1.)then
+!$OMP CRITICAL(SFIRE_CORE_CRIT)
+    write(msg,*)'s=',s,'>1 area=',bc/(real(n)*real(n))
+    call message(msg)
+    write(msg,*)'tign=',tign00,tign01,tign10,tign11,' time_now=',time_now
+!$OMP END CRITICAL(SFIRE_CORE_CRIT)
+    call message(msg)
+    !call message('WARNING: fuel_left_cell_1: fuel fraction > 1')
+    call crash('fuel_left_cell_3: fuel fraction < 0')
+end if
+
+!outputs
+fuel_frac_left = 1 - s
+fire_frac_area = bc/(real(n)*real(n))
+
+if (fuel_frac_left >1 .or. fuel_frac_left < 0) then
+   print *, 'Error fuel fraction = ',fuel_frac_left
+end if
+if (fire_frac_area >1 .or. fire_frac_area < 0) then
+   print *, 'Error fire fraction = ',fire_frac_area
+end if
+
+
+!print *, 'Fuel frac left, fire frac area',fuel_frac_left,fire_frac_area
+
+end subroutine fuel_left_cell_3
 
 !
 !****************************************

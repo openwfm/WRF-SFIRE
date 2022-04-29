@@ -514,6 +514,12 @@ do icl=its,ite
              lffij,lffij1,lffi1j,lffi1j1,&
              tifij,tifij1,tifi1j,tifi1j1,&
              time_now, fuel_time(icl,jcl)) 
+! temporarily call method 1 when 3 is specifide in namelist.input
+        elseif(fuel_left_method.eq.3)then
+          call fuel_left_cell_1( fuel_left_ff, fire_area_ff, &
+             lffij,lffij1,lffi1j,lffi1j1,&
+             tifij,tifij1,tifi1j,tifi1j1,&
+             time_now, fuel_time(icl,jcl))
         else
           call crash('fuel_left: unknown fuel_left_method')
         endif
@@ -1183,9 +1189,26 @@ end function fuel_left_cell_2
 !
 !***************************************
 !
-!subroutine fuel_left_cell_3
+!subroutine fuel_left_cell_3( fuel_frac_left, fire_frac_area, &
+!    lfn00,lfn01,lfn10,lfn11, &
+!    tign00,tign01,tign10,tign11,&
+!    time_now, fuel_time_cell)
+
+!implicit none
+!*** arguments
+!real, intent(out):: fuel_frac_left, fire_frac_area ! 
+!real, intent(in)::lfn00,lfn01,lfn10,lfn11    ! level set function at 4 corners of the cell
+!real, intent(in)::tign00,tign01,tign10,tign11! ignition time at the  4 corners of the cell
+!real, intent(in)::time_now                   ! the time now
+!real, intent(in)::fuel_time_cell            ! time to burns off to 1/e
+
+!integral
+
+!interpolation function
 
 !end subroutine fuel_left_cell_3
+
+
 
 
 !
