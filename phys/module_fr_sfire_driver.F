@@ -1033,7 +1033,9 @@ do ij=1,num_tiles
 
       if(config_flags%ifmw_qes > 0 .or. config_flags%ifmw_run > 0)then
         ! interpolate to firewind layers, ht_fmw already set  
+        !*** vertical loop over k 
         do k=1,nfmw
+          !** u,v -> u0_tmp, v0_tmp
           call interpolate_wind2fire_height(id,1,      & ! to identify debugging prints and files if needed, go up to the boundary
             ids,ide, kds,kde, jds,jde,                    & ! atm grid dimensions
             ims,ime, kms,kme, jms,jme,                    &
@@ -1063,6 +1065,7 @@ do ij=1,num_tiles
           ! lift horizontal wind with terrain gradient 
           !
           if (config_flags%lift_fmw == 1)then 
+            !** u0_tmp, v0_tmp -> u0_tmp, v0_tmp
             do j=jfts,jfte
               do i=ifts,ifte
                 u0 = u0_tmp(i,j)
@@ -1084,6 +1087,7 @@ do ij=1,num_tiles
               call print_2d_stats(ifts,ifte,jfts,jfte,ifms,ifme,jfms,jfme,v0_tmp,'driver_phys:v0_tmp')        
               call print_2d_stats(ifts,ifte,jfts,jfte,ifms,ifme,jfms,jfme,w0_tmp,'driver_phys:w0_tmp')        
             endif
+            !** u0_tmp, v0_tmp -> u0_fmw, v0_fmw
             do j=jfts,jfte
               do i=ifts,ifte
                 u0_fmw(i,k,j) = u0_tmp(i,j)
@@ -2228,7 +2232,7 @@ use IFPORT   ! intel Fortran only
 !*** local
     integer::comm,ncid,varid,chsum_fmw,itry,maxtry=900000000,frame_fmw,chsum1_fmw
     integer(4)::isleep=1,isleepqq=100  ! time to sleep wait for FMW
-    real::waitsec,waitmax=100                     ! max total wait in seconds
+    real::waitsec,waitmax=1000.                     ! max total wait in seconds
     character(LEN=256):: msg
     real, dimension(1,1,1)::dummy
 
