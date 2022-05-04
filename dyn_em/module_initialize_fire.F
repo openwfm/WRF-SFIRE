@@ -30,6 +30,8 @@ MODULE module_initialize_ideal
    USE module_fr_fire_util, ONLY: continue_at_boundary,crash,read_array_2d_real, &
      read_array_2d_integer,interpolate_2d,set_ideal_coord,print_2d_stats
    USE module_fr_fire_phys, ONLY: fuelmc_g,read_namelist_fire 
+  
+   character(len=255)::msg
 
 CONTAINS
 
@@ -671,14 +673,26 @@ CONTAINS
 
   ELSE ! mtn_type 
 
+991 format(2(a,f7.1))
+ 
+    call wrf_message('No mountain given')
+
     if(config_flags%fire_read_atm_ht)then !
+      call wrf_message('Reading atmosphere-grid terrain height')
       call read_array_2d_real('input_ht',grid%ht,ids,ide,jds,jde,ims,ime,jms,jme) 
       ! no flag - we always have the terrain height on atm mesh, zero if not set
+      write(msg,991)'ht min ',minval(grid%ht(ids:ide,jds:jde)), &
+               ' ht max ',maxval(grid%ht(ids:ide,jds:jde))
+      call wrf_message(trim(msg))
     endif
 
     if(config_flags%fire_read_fire_ht)then !
+      call wrf_message('Reading fire-grid terrain height')
       call read_array_2d_real('input_zsf',grid%zsf,ifds,ifde,jfds,jfde,ifms,ifme,jfms,jfme) 
       have_fire_ht=.true.
+      write(msg,991)'ht min ',minval(grid%zsf(ifds:ide,jfds:jfde)), &
+               ' ht max ',maxval(grid%zsf(ifds:ifde,jfds:jfde))
+      call wrf_message(trim(msg))
     endif
 
     if(config_flags%fire_read_atm_grad)then !
