@@ -1020,6 +1020,7 @@ do ij=1,num_tiles
         call print_2d_stats(ifts,ifte,jfts,jfte,ifms,ifme,jfms,jfme,fp%zsf,'driver_phys:zsf')        
 
         if(config_flags%ifmw_qes > 0 .or. config_flags%ifmw_run > 0)then
+          call message('calling set_fmw_layers')
           call set_fmw_layers(config_flags,               &
             ifms, ifme, jfms, jfme,                       &
             ifts,ifte,jfts,jfte,                          &
@@ -1029,12 +1030,18 @@ do ij=1,num_tiles
  
      endif !restart
 
-    elseif(ifun.eq.3)then  ! interpolate winds to the fire grid
-
+    elseif(ifun.eq.3)then  ! interpolate winds to the fire grid 
+      call message('interpolating winds to the fire grid')
       if(config_flags%ifmw_qes > 0 .or. config_flags%ifmw_run > 0)then
         ! interpolate to firewind layers, ht_fmw already set  
         !*** vertical loop over k 
         do k=1,nfmw
+          if(fire_print_msg >= 1)then
+!$OMP CRITICAL(SFIRE_DRIVER_CRIT)
+            write(msg,'(a,i3,a,f8.2,a)')'driver_phys: Interpolating layer',k,' at',ht_fmw(k),'m'
+!!$OMP END CRITICAL(SFIRE_DRIVER_CRIT)
+            call message(msg)
+          endif
           !** u,v -> u0_tmp, v0_tmp
           call interpolate_wind2fire_height(id,1,      & ! to identify debugging prints and files if needed, go up to the boundary
             ids,ide, kds,kde, jds,jde,                    & ! atm grid dimensions
@@ -1053,10 +1060,7 @@ do ij=1,num_tiles
             u0_tmp,v0_tmp,                                & !  interpolated initial fire wind u,v
             ht_fmw(k))                                      ! overrride fwh
           if(fire_print_msg >= 2)then
-!$OMP CRITICAL(SFIRE_DRIVER_CRIT)
-            write(msg,'(a,i3,a,f8.2,a)')'driver_phys: Interpolating layer',k,' at',ht_fmw(k),'m'
-!!$OMP END CRITICAL(SFIRE_DRIVER_CRIT)
-            call message(msg)
+          ! if(fire_print_msg >= 1)then
             call print_2d_stats(ifts,ifte,jfts,jfte,ifms,ifme,jfms,jfme,u0_tmp,'driver_phys:u0_tmp')        
             call print_2d_stats(ifts,ifte,jfts,jfte,ifms,ifme,jfms,jfme,v0_tmp,'driver_phys:v0_tmp')        
           endif
