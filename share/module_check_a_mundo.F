@@ -2948,9 +2948,15 @@
                                           ', with cell width in y-direction = ', &
                                           model_config_rec % e_sn(i) /  model_config_rec % nproc_y
             CALL wrf_debug ( 0, TRIM( wrf_err_message ) )
-            wrf_err_message = '--- WARNING: Reduce the MPI rank count, or redistribute the tasks.'
-            CALL wrf_debug ( 0, TRIM( wrf_err_message ) )
-            ! oops = oops + 1
+            IF ( ( model_config_rec % e_we(i) /  model_config_rec % nproc_x .LT. 5 ) .OR. &
+                 ( model_config_rec % e_sn(i) /  model_config_rec % nproc_y .LT. 5 ) ) THEN
+                 wrf_err_message = '--- ERROR: Reduce the MPI rank count, or redistribute the tasks.'
+                 CALL wrf_debug ( 0, TRIM( wrf_err_message ) )
+                 oops = oops + 1
+            ELSE
+                 wrf_err_message = '--- WARNING: Reduce the MPI rank count, or redistribute the tasks.'
+                 CALL wrf_debug ( 0, TRIM( wrf_err_message ) )
+            END IF
          END IF
       ENDDO
       IF ( oops .GT. 0 ) THEN
