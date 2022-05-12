@@ -648,8 +648,8 @@ do icl=its1,ite1
      tff(isubcl,jsubcl),tff(isubcl,jsubcl+1),tff(isubcl+1,jsubcl),tff(isubcl+1,jsubcl+1), &
      time_now, fuel_time(icl,jcl)) 
 ! call method 1, if method 3 is specified in namelist.input, change after testing
-        elseif(fuel_left_method.eq.3)then
-          call fuel_left_cell_3( fuel_left_ff, fire_area_ff, &
+        elseif(fuel_left_method.ge.3)then
+          call fuel_left_cell_3(fuel_left_method, fuel_left_ff, fire_area_ff, &
      lff(isubcl,jsubcl),lff(isubcl,jsubcl+1),lff(isubcl+1,jsubcl),lff(isubcl+1,jsubcl+1), &
      tff(isubcl,jsubcl),tff(isubcl,jsubcl+1),tff(isubcl+1,jsubcl),tff(isubcl+1,jsubcl+1), &
      time_now, fuel_time(icl,jcl))
@@ -1101,7 +1101,7 @@ end subroutine fuel_left_cell_1
 !
 !***************************************
 
-subroutine fuel_left_cell_3( fuel_frac_left, fire_frac_area, &
+subroutine fuel_left_cell_3(fuel_left_method, fuel_frac_left, fire_frac_area, &
     lfn00,lfn01,lfn10,lfn11, &
     tign00,tign01,tign10,tign11,&
     time_now, fuel_time_cell)
@@ -1111,6 +1111,7 @@ subroutine fuel_left_cell_3( fuel_frac_left, fire_frac_area, &
 ! level-set and tign on corners of cell onto the finer grid
 implicit none
 !*** arguments
+integer, intent(in)::fuel_left_method
 real, intent(out):: fuel_frac_left, fire_frac_area ! 
 real, intent(in)::lfn00,lfn01,lfn10,lfn11    ! level set function at 4 corners of the cell
 real, intent(in)::tign00,tign01,tign10,tign11! ignition time at the  4 corners of the cell
@@ -1140,7 +1141,13 @@ character(len=128)::msg
 a = 0.0
 b = 1.0
 ! grid spacing
-n = 20
+if (fuel_left_method.gt.3)then
+    n = fuel_left_method
+elseif (fuel_left_method.eq.3)then
+    n = 20
+else 
+    call crash('fuel_left_cell_3: fuel_left_method < 3')
+endif
 dx = (b-a)/real(n)
 dy = dx
 ! print *, 'dx = dy = ', dx
