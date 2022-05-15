@@ -1885,6 +1885,7 @@ integer::i,j,its1,ite1,jts1,jte1,k,kk,id1
 character(len=128)::msg
 integer::nfirenodes,nfireline,ierrx
 real::sum_err,min_err,max_err,sum_aerr,min_aerr,max_aerr   
+real::tign_max 
 
 ! constants
 integer,parameter :: mstep=1000, printl=1
@@ -2063,19 +2064,20 @@ elseif(ipart==2)then
     !        = (ts + dt) + dt * lfn_out / (lfn_in - lfn_out)
     ! the second form is better because we want make sure tign < ts+dt (used only for lfn_out < 0)
 
+    tign_max = huge(1.0)
     time_now=ts+dt
     time_future=ts+2*dt
     do j=jts,jte
         do i=its,ite
             call check_lfn_tign_ij(i,j,'prop_ls before',ts,lfn_in(i,j),tign(i,j))
-            if (lfn_out(i,j) < 0. ) then  ! now on fire
+            ! if (lfn_out(i,j) < 0. ) then  ! now on fire
                if( .not. lfn_in(i,j) < 0)  then ! was not before, set ignition time by interpolation
-                  tign(i,j) = time_now + dt * lfn_out(i,j) / (lfn_in(i,j) - lfn_out(i,j))
+                  tign(i,j) = min(tign_max,time_now + dt * lfn_out(i,j) / (lfn_in(i,j) - lfn_out(i,j)))
                   ! tmp = max(tmp,abs(ts + dt * lfn_in(i,j) / (lfn_in(i,j) - lfn_out(i,j)) - tign(i,j)))
                endif  !  was already burning, leave ignition time unchanged
-            else ! set the ignition time outside of burning region
-               tign(i,j)=time_future
-            endif
+            ! else ! set the ignition time outside of burning region
+            !    tign(i,j)=time_future
+            ! endif
             call check_lfn_tign_ij(i,j,'prop_ls after',time_now,lfn_out(i,j),tign(i,j))
             ! lfn_out(i,j) = max(lfn_out(i,j),-100.0)  ! stability fix
         enddo
