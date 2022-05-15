@@ -2,6 +2,7 @@
 
 setenv START_OF_COMPILE "`date`"
 
+
 cont1:
 
 if ( !  -e configure.wrf  ) then
@@ -11,6 +12,8 @@ if ( !  -e configure.wrf  ) then
   echo ""
   exit 1
 endif
+
+echo Building on `hostname` on `date`
 
 #----------------------------------
 # identify the commit where the compiled code came from
