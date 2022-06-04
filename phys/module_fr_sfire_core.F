@@ -1182,7 +1182,9 @@ iloop: do i = 1,n
          burn = 1.0
          bf = (1 - exp(-t/fuel_time_cell))
 !make sum update, burn = 0 ==> no change in integral
-         s = s + bf*dx*dy
+         !multiply by dx*dy outside of looop
+         !s = s + bf*dx*dy
+         s = s + bf 
       end if
 !make sum update, not burning ==> no change in integral
       
@@ -1193,6 +1195,8 @@ iloop: do i = 1,n
    end do jloop
 end do iloop
 end if ! check for burning
+! do multiplication of dx*dy
+s = s*dx*dy
 
 
 
@@ -1203,6 +1207,10 @@ if(s>1.)then
     call message(msg)
     write(msg,*)'tign=',tign00,tign01,tign10,tign11,' time_now=',time_now
 !$OMP END CRITICAL(SFIRE_CORE_CRIT)
+    call message(msg)
+    write(msg,*)'lfn=',lfn00,lfn01,lfn10,lfn11
+    call message(msg)
+    write(msg,*)'t =',t,'fuel_time_cell =',fuel_time_cell
     call message(msg)
     !call message('WARNING: fuel_left_cell_1: fuel fraction > 1')
     call crash('fuel_left_cell_3: fuel fraction < 0')
