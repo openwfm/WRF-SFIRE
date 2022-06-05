@@ -261,13 +261,10 @@ rconfig   real    fire_ignition_start_x5  namelist,fire        max_domains      
 rconfig   real    fire_ignition_start_y5  namelist,fire        max_domains           0.      -      "fire_ignition_start_y5" "y coord of start of ignition line" "m"
 rconfig   real    fire_ignition_end_x5    namelist,fire        max_domains           0.      -      "fire_ignition_end_x5"   "x coord of end of ignition line" "m"
 rconfig   real    fire_ignition_end_y5    namelist,fire        max_domains           0.      -      "fire_ignition_end_y5"   "y coord of end of ignition line" "m"
-<<<<<<< HEAD
 rconfig   real    fire_perimeter_time     namelist,fire        max_domains           0.      -      "fire_perimeter_time"        "if >0, replay history from tign_g array until this time" "s"
 rconfig   real    fire_tign_in_time       namelist,fire        max_domains           0.      -      "fire_tign_in_time"        "if >0,  ignite from given tign array until this time" "s"
-=======
 #
 # ------------------------------------------------------------------------------------------------------------------------
->>>>>>> v4.4
 # variables from old cawfe code
 #
 rconfig   real    fire_lat_init          namelist,fire         max_domains           0.      -      "fire_lat_init"    "latitude to start fire"           "degrees"
@@ -313,13 +310,10 @@ rconfig   real    fire_viscosity         namelist,fire         max_domains      
 rconfig   real    fire_lfn_ext_up        namelist,fire         max_domains           1.0     -      "fire_lfn_ext_up"   "0.=extend level set function at boundary by reflection, 1.=always up" "1"
 rconfig   integer fire_topo_from_atm     namelist,fire         max_domains            1      -      "fire_topo_from_atm" "0 = do nothing, 1 = populate ZSF by interpolating from atmosphere" "1"
 rconfig   integer fire_advection         namelist,fire         max_domains            1      -      "fire_advection" "0 = fire spread computed from normal wind speed/slope, 1 = fireline particle speed projected on normal" "0"
-<<<<<<< HEAD
 # canopy wind parameterization switches
 rconfig   integer fire_can_top_read      namelist,fire         max_domains            0      -      "fire_can_top_read"    "canopy top height: 1 use wrfinput, 0 from namelist.fire"   ""
-=======
 #
 # ------------------------------------------------------------------------------------------------------------------------
->>>>>>> v4.4
 # experiments
 #
 rconfig   integer fire_test_steps        namelist,fire         max_domains            0      -      "fire_test_steps" ">0 = on first call, do specified number of steps and terminate (testing only)" "1"
