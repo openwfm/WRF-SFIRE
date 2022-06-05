@@ -1173,7 +1173,7 @@ iloop: do i = 1,n
 !      intl = (1.0-x)*( (1.0-y)*lfn00 + y*lfn01 ) + x*( (1.0-y)*lfn01 + y*lfn11 )
  
 !interpolate tign      
-      intt = (1.0-x)*( (1.0-y)*tign00 + y*tign01 ) + x*( (1.0-y)*tign01 + y*tign11 )
+      intt = (1.0-x)*( (1.0-y)*tign00 + y*tign01 ) + x*( (1.0-y)*tign10 + y*tign11 )
 !t is the time since fire arrived = time_now - intt
       t = time_now - intt
       if(t >= 0) then
