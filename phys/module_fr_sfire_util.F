@@ -1650,7 +1650,8 @@ elseif(fun.eq.RNRM_SUM)then
   do j=jps,jpe1
     do k=kps,kpe1
       do i=ips,ipe1
-        lsum=lsum+sqrt(a(i,k,j)*a(i,k,j)+b(i,k,j)*b(i,k,j))
+        !lsum=lsum+sqrt(a(i,k,j)*a(i,k,j)+b(i,k,j)*b(i,k,j))
+        lsum=lsum+anorm2(a(i,k,j),b(i,k,j))
       enddo
     enddo
   enddo
@@ -1690,7 +1691,8 @@ elseif(fun.eq.RNRM_MAX)then
   do j=jps,jpe1
     do k=kps,kpe1
       do i=ips,ipe1
-        lsum=max(lsum,sqrt(a(i,k,j)*a(i,k,j)+b(i,k,j)*b(i,k,j)))
+        ! lsum=max(lsum,sqrt(a(i,k,j)*a(i,k,j)+b(i,k,j)*b(i,k,j)))
+        lsum=max(lsum,anorm2(a(i,k,j),b(i,k,j)))
       enddo
     enddo
   enddo
@@ -1738,8 +1740,21 @@ if(gsum.ne.gsum)call message('fun_real: WARNING: NaN detected')
 ! now gsum is known to all threads
 
 fun_real=gsum
-
 end function fun_real
+
+pure elemental real function anorm2(x,y)
+real, intent(in)::x,y
+real::s,s1,xs,ys
+s=max(abs(x),abs(y))
+if(s > 0.)then
+    s1 = 1.0/s
+    xs = x*s1
+    ys = y*s1
+    anorm2 = s*sqrt(xs*xs + ys*ys)
+else
+    anorm2 = 0.
+endif
+end function anorm2
 
 subroutine sfire_debug_hook(fire_debug_hook_sec)
 integer, intent(in)::fire_debug_hook_sec
