@@ -148,7 +148,8 @@ subroutine sfire_driver_em ( grid , config_flags                    &
 !*** local
     integer::fire_ifun,ir,jr,istep,itimestep,i,ipe1,kpe1,jpe1,j
     logical::restart,replay
-    real:: corner_ll,corner_ul,corner_ur,corner_lr, max_u, max_v, max_w, max_rho, min_rho
+    real:: corner_ll,corner_ul,corner_ur,corner_lr, max_u, max_v, max_w, max_rho, min_rho, &
+        avg_u, avg_v, avg_w, avg_rho, xnan
     character(len=128)msg, msg2
     type(fire_params)::fp
     real:: moisture_time
@@ -184,13 +185,14 @@ subroutine sfire_driver_em ( grid , config_flags                    &
 #ifndef SFIRE_STANDALONE
 
 !   see what we got from wrf
-!! need to replace ipe by min(ide-1,ipe) and similarly jpe
 
     if(fire_print_msg.ge.2 .and. fire_ifun_start .gt. 1)then
 
       ipe1=min(ide-1,ipe)
       jpe1=min(jde-1,jpe)
       kpe1=kpe-1
+
+      call print_3d_stats(ips,ipe1,kps,kpe1,jps,jpe1,ims,ime,kms,kme,jms,jme,rho,'rho')
 
       max_u=fun_real(REAL_AMAX,  &
         ims,ime,kms,kme,jms,jme, &                ! memory dims
@@ -213,19 +215,40 @@ subroutine sfire_driver_em ( grid , config_flags                    &
         0,1,0,       &                            ! staggering
         grid%w_2,grid%w_2)
 
-      !write(msg,93)time_step_start,'Maximal u v w  wind',max_u,max_v,max_w,'m/s'
+      avg_u=fun_real(REAL_AVG,  &
+        ims,ime,kms,kme,jms,jme, &                ! memory dims
+        ids,ide,kds,kde,jds,jde, &                ! domain dims
+        ips,ipe1,kps,kpe1,jps,jpe1, &                ! patch or tile dims
+        1,0,0,       &                            ! staggering
+        grid%u_2,grid%u_2)
+
+      avg_v=fun_real(REAL_AVG,  &
+        ims,ime,kms,kme,jms,jme, &                ! memory dims
+        ids,ide,kds,kde,jds,jde, &                ! domain dims
+        ips,ipe1,kps,kpe1,jps,jpe1, &                ! patch or tile dims
+        0,0,1,       &                            ! staggering
+        grid%v_2,grid%v_2)
+
+      avg_w=fun_real(REAL_AVG,  &
+        ims,ime,kms,kme,jms,jme, &                ! memory dims
+        ids,ide,kds,kde,jds,jde, &                ! domain dims
+        ips,ipe1,kps,kpe1,jps,jpe1, &                ! patch or tile dims
+        0,1,0,       &                            ! staggering
+        grid%w_2,grid%w_2)
+
+
+      !write(msg,93)time_step_start,'Maximal u v w  wind ',max_u,max_v,max_w,'m/s'
       !call message(msg,0)
       !write(msg,92)time_step_start,'Min and max rho    ',min_rho,max_rho,'kg/m^3'
       !call message(msg,0)
 
-      write(msg,91)time_step_start,'Maximal u wind      ',max_u,'m/s'
+      write(msg,91)time_step_start,'Maximal u wind ',max_u,'average',avg_u,'m/s'
       call message(msg,0)
-      write(msg,91)time_step_start,'Maximal v wind      ',max_v,'m/s'
+      write(msg,91)time_step_start,'Maximal v wind ',max_v,'average',avg_v,'m/s'
       call message(msg,0)
-      write(msg,91)time_step_start,'Maximal w wind      ',max_w,'m/s'
+      write(msg,91)time_step_start,'Maximal w wind ',max_w,'average',avg_w,'m/s'
       call message(msg,0)
 
-      if (present(rho)) then
 
         max_rho=fun_real(REAL_MAX,  &
           ims,ime,kms,kme,jms,jme, &                ! memory dims
@@ -241,18 +264,22 @@ subroutine sfire_driver_em ( grid , config_flags                    &
           0,0,0,       &                            ! staggering
           rho,rho)
   
+        avg_rho=fun_real(REAL_AVG,  &
+          ims,ime,kms,kme,jms,jme, &                ! memory dims
+          ids,ide,kds,kde,jds,jde, &                ! domain dims
+          ips,ipe1,kps,kpe1,jps,jpe1, &                ! patch or tile dims
+          0,0,0,       &                            ! staggering
+          rho,rho)
   
-        write(msg,91)time_step_start,'Minimal rho         ',min_rho,'kg/m^3'
-        call message(msg,0)
-        write(msg,91)time_step_start,'Maximal rho         ',max_rho,'kg/m^3'
+        write(msg,91)time_step_start,'Min rho',min_rho,'max',max_rho,'average',avg_rho,'kg/m^3'
         call message(msg,0)
  
-      endif
-
+      xnan = avg_u + avg_v + avg_w + avg_rho
+      if(xnan.ne.xnan)call crash('NaN detected')
 
 93    format('Time ',f11.3,' s ',a,3e12.3,1x,a)
 92    format('Time ',f11.3,' s ',a,2e12.3,1x,a)
-91    format('Time ',f11.3,' s ',a,e12.3,1x,a)
+91    format('Time ',f11.3,' s ',4(a,e12.3,1x))
 
 
     endif
@@ -268,8 +295,6 @@ subroutine sfire_driver_em ( grid , config_flags                    &
         call crash('fire mesh refinement ratio must be positive')
     endif
 
-call print_2d_stats(ifps,min(ifpe,ifde-ir),jfps,min(jfpe,jfde-jr),ifms,ifme,jfms,jfme, grid%tign_g,'sfire_driver_em: grid%tign_g')
-call print_2d_stats(ifps,min(ifpe,ifde-ir),jfps,min(jfpe,jfde-jr),ifms,ifme,jfms,jfme, grid%nfuel_cat,'sfire_driver_em: grid%nfuel_cat')
 
     itimestep=grid%itimestep
     restart=config_flags%restart .or. config_flags%cycling .or. config_flags%fire_restart ! skip state initialization
@@ -281,6 +306,8 @@ call print_2d_stats(ifps,min(ifpe,ifde-ir),jfps,min(jfpe,jfde-jr),ifms,ifme,jfms
     write(msg,95)config_flags%restart,config_flags%cycling,config_flags%fire_restart,restart
     call message(msg)
     
+call print_2d_stats(ifps,min(ifpe,ifde-ir),jfps,min(jfpe,jfde-jr),ifms,ifme,jfms,jfme, grid%tign_g,'sfire_driver_em: grid%tign_g')
+call print_2d_stats(ifps,min(ifpe,ifde-ir),jfps,min(jfpe,jfde-jr),ifms,ifme,jfms,jfme, grid%nfuel_cat,'sfire_driver_em: grid%nfuel_cat')
     
     ! **** moisture model
 

@@ -59,7 +59,7 @@ real, save::            &
  fire_hfx_latent_part=0.084   ! proportion of the given heat flux released as latent, the rest is sensible
 
 
-integer, parameter:: REAL_SUM=10, REAL_MAX=20, REAL_MIN=21, REAL_AMAX=22, RNRM_SUM=30, RNRM_MAX=40
+integer, parameter:: REAL_SUM=10, REAL_AVG=11, REAL_MAX=20, REAL_MIN=21, REAL_AMAX=22, RNRM_SUM=30, RNRM_MAX=40 
 
 ! describe one ignition line
 type line_type
@@ -1634,7 +1634,7 @@ is=ifval(istag.ne.0,1,0)
 ks=ifval(kstag.ne.0,1,0)
 js=ifval(jstag.ne.0,1,0)
 
-if(fun.eq.REAL_SUM)then
+if(fun.eq.REAL_SUM .or. fun.eq.REAL_AVG)then
   void=0.
   lsum=void
   do j=jps,jpe1
@@ -1644,6 +1644,7 @@ if(fun.eq.REAL_SUM)then
       enddo
     enddo
   enddo
+  if(fun.eq.REAL_AVG)lsum=lsum/((ipe1-ips)*(jpe1-jps)*(kpe1-kps))
 elseif(fun.eq.RNRM_SUM)then
   void=0.
   lsum=void
