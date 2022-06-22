@@ -1251,7 +1251,6 @@ do j=jps,jpe
     enddo
   enddo
 enddo
-if(bb.ne.bb)goto 10 ! should never happen 
 if(fire_print_msg.le.0)return
 avg_a = avg_a/((ipe-ips+1)*(jpe-jps+1)*(kpe-kps+1))
 call print_stat_line(name,ips,ipe,jps,jpe,min_a,max_a,avg_a)
@@ -1267,7 +1266,7 @@ write(msg,2)'memory dimensions',ims,ime,kms,kme,jms,jme
 call message(msg,level=0)
 2 format(a,6i8)
 !$OMP END CRITICAL(SFIRE_UTIL_CRIT)
-call print_stat_line(name,ips,ipe,jps,jpe,aa,aa,aa)
+! call print_stat_line(name,ips,ipe,jps,jpe,aa,aa,aa)
 if(aa.ne.aa)goto 10
 msg='Invalid floating point number detected in '//name
 call crash(msg)
