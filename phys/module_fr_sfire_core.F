@@ -647,12 +647,19 @@ do icl=its1,ite1
      lff(isubcl,jsubcl),lff(isubcl,jsubcl+1),lff(isubcl+1,jsubcl),lff(isubcl+1,jsubcl+1), &
      tff(isubcl,jsubcl),tff(isubcl,jsubcl+1),tff(isubcl+1,jsubcl),tff(isubcl+1,jsubcl+1), &
      time_now, fuel_time(icl,jcl)) 
+        elseif(fuel_left_method.eq.4)then
+          call fuel_left_cell_4( fuel_left_ff, fire_area_ff, &
+     lff(isubcl,jsubcl),lff(isubcl,jsubcl+1),lff(isubcl+1,jsubcl),lff(isubcl+1,jsubcl+1), &
+     tff(isubcl,jsubcl),tff(isubcl,jsubcl+1),tff(isubcl+1,jsubcl),tff(isubcl+1,jsubcl+1), &
+     time_now, fuel_time(icl,jcl)) 
 ! call method 1, if method 3 is specified in namelist.input, change after testing
-        elseif(fuel_left_method.ge.3)then
+        elseif((fuel_left_method.eq.3) .or. (fuel_left_method.ge.5))then
           call fuel_left_cell_3(fuel_left_method, fuel_left_ff, fire_area_ff, &
      lff(isubcl,jsubcl),lff(isubcl,jsubcl+1),lff(isubcl+1,jsubcl),lff(isubcl+1,jsubcl+1), &
      tff(isubcl,jsubcl),tff(isubcl,jsubcl+1),tff(isubcl+1,jsubcl),tff(isubcl+1,jsubcl+1), &
      time_now, fuel_time(icl,jcl))
+
+        
 ! dont forget to change fire_area_ff here
         else
           call crash('fuel_left: unknown fuel_left_method')
@@ -1124,15 +1131,15 @@ real, intent(in)::fuel_time_cell            ! time to burns off to 1/e
 !loops, counters, mesh size, etc
 integer :: i,j,k,n
 !cell dimensions [a,b]X[a,b]
-real :: a,b
+double precision :: a,b
 !integral variables
-real :: x,y,dx,dy, s
+double precision :: x,y,dx,dy, s
 !interpolation variables
-real::t00,t01,t10,t11
-real :: intl, intt, t
+double precision::t00,t01,t10,t11
+double precision :: intl, intt, t
 !fire/no fire variables
 !burn, burn count, burn function
-real :: burn, bc, bf  !
+double precision :: burn, bc, bf  !
 !error prints
 character(len=128)::msg
 
@@ -1231,6 +1238,241 @@ end if
 !print *, 'Fuel frac left, fire frac area',fuel_frac_left,fire_frac_area
 
 end subroutine fuel_left_cell_3
+
+!
+!***************************************
+!
+! neural network approximation of quadrature method in fuel_cell_left_3 subroutine
+! network trained using Matlab deep learning toolbox
+! fire area is set to 0.5 for this, temporarily
+subroutine fuel_left_cell_4( fuel_frac_left, fire_frac_area, &
+    lfn00,lfn01,lfn10,lfn11, &
+    tign00,tign01,tign10,tign11,&
+    time_now, fuel_time_cell)
+
+implicit none
+!*** purpose: compute the fuel fraction left in one cell
+
+real, intent(out):: fuel_frac_left, fire_frac_area !
+real, intent(in)::lfn00,lfn01,lfn10,lfn11    ! level set function at 4 corners of the cell
+real, intent(in)::tign00,tign01,tign10,tign11! ignition time at the  4 corners of the cell
+real, intent(in)::time_now                   ! the time now
+real, intent(in)::fuel_time_cell             ! time to burns off to 1/e
+
+!*** local
+double precision::ps,aps,area,ta,out
+double precision::t00,t01,t10,t11
+double precision,parameter::safe=tiny(aps)
+character(len=128)::msg
+
+!loop integers
+integer :: i
+
+!vectors of ones
+double precision, dimension(5,1) :: ones5
+double precision, dimension(10,1) :: ones10
+
+
+!scale inputs variables
+double precision, dimension(5,1) :: x1s1off, x1s1gain, x1s1ymin, xp1, y, s
+
+!hidden layer 1
+!a1 = f(w1*x + b1)
+double precision, dimension(10,5) :: w1
+double precision, dimension(10,1) :: b1
+double precision, dimension(10,1) :: a1, a
+
+!hidden layer 2
+!a2 = f(w2*a2 + b2)
+!double precision, dimension(10,5) :: w2
+!double precision, dimension(10,1) :: b2
+double precision, dimension(10,1) :: a2
+
+!layer 3
+!a3 = w3*a3 + b3
+double precision, dimension(1,10) :: w3
+double precision :: b3
+double precision :: a3
+
+!output / rescal a3
+double precision :: y1s1ymin, y1s1gain, y1s1off, y1!
+
+!!!!!! set values for the network components
+ones10 = 1.0
+ones5 = 1.0
+
+!inputs  x1s1off, x1s1gain, x1s1ymin
+x1s1off(1,1) = -18364.109302605098491767421365 
+x1s1off(2,1) = -19547.118083232799108373001218 
+x1s1off(3,1) = -18762.348117023699160199612379 
+x1s1off(4,1) = -20254.326080160099081695079803 
+x1s1off(5,1) = 8.025350403886289285537714
+!!!
+x1s1gain(1,1) = 0.000054878464133320798530 
+x1s1gain(2,1) = 0.000050900272264863497278 
+x1s1gain(3,1) = 0.000053475341196840500842 
+x1s1gain(4,1) = 0.000050861330526662097240 
+x1s1gain(5,1) = 0.001000033127124149963730 
+!!!
+x1s1ymin = -1.000000000000000000000000
+
+!hidden layer 1
+b1(1,1) = -1.431797037498684810330474 
+b1(2,1) = 1.453526482245841799922914 
+b1(3,1) = 1.263126778240497349869997 
+b1(4,1) = 3.951995338878110608504812 
+b1(5,1) = 1.297191229416224445003536 
+b1(6,1) = 2.036417417367307525211118 
+b1(7,1) = -1.165723801117613422917429 
+b1(8,1) = -3.375159055733035096125150 
+b1(9,1) = 1.357931878844330420008646 
+b1(10,1) = 3.457713835343398933730441
+!!!
+w1(1,1) = 34.773324410376162063585070 
+w1(1,2) = 10.869487305361406725978668 
+w1(1,3) = 9.679367168027795287343906 
+w1(1,4) = 2.705806471077859320928383 
+w1(1,5) = -0.928663577416388497098865 
+w1(2,1) = -7.841024161386632940207164 
+w1(2,2) = -3.673864267765028390755333 
+w1(2,3) = -12.765747256183693991715700 
+w1(2,4) = -6.494303242004791698605004 
+w1(2,5) = 0.769935076731056766696781 
+w1(3,1) = -10.364161907449021882143825 
+w1(3,2) = -31.218530969425124510507885 
+w1(3,3) = -2.760231506333389539520340 
+w1(3,4) = -8.575229299316438513756111 
+w1(3,5) = 0.752585319132815233622580 
+w1(4,1) = -24.446740673281869504762653 
+w1(4,2) = -12.889382233050469039881136 
+w1(4,3) = -6.551628969516253953031537 
+w1(4,4) = -1.699359015054914490150395 
+w1(4,5) = 3.873202712172569839310654 
+w1(5,1) = -7.498383110358065373191039 
+w1(5,2) = -3.520933025177221509238734 
+w1(5,3) = -12.203902904980875376850236 
+w1(5,4) = -6.220242203347460474560648 
+w1(5,5) = 0.818299357515035685750604 
+w1(6,1) = -2.211849903859714583376217 
+w1(6,2) = -8.324673027406536363059786 
+w1(6,3) = -9.462321308424124666203170 
+w1(6,4) = -31.292397352032327972892745 
+w1(6,5) = 0.787941612820321823917880 
+w1(7,1) = 7.315338243223592940012168 
+w1(7,2) = 3.444877672250137301546147 
+w1(7,3) = 11.911128294498071866769351 
+w1(7,4) = 6.081134436278269106423977 
+w1(7,5) = -0.879948942289783042625118 
+w1(8,1) = 3.254072880391605249172926 
+w1(8,2) = 12.004991857391406284705226 
+w1(8,3) = 3.562418127584562554943659 
+w1(8,4) = 12.059118903828776936393297 
+w1(8,5) = -2.186034113206075435442699 
+w1(9,1) = -3.203280151101213668596301 
+w1(9,2) = 0.088213474004564931818528 
+w1(9,3) = -23.748649986549171586602824 
+w1(9,4) = -5.920802795150399866486168 
+w1(9,5) = 0.863768303740306886417955 
+w1(10,1) = -3.329369399771283877242922 
+w1(10,2) = -12.269859339736859382696821 
+w1(10,3) = -3.637604300513677557660230 
+w1(10,4) = -12.318538232833201817584268 
+w1(10,5) = 2.206396554407771493089285 
+
+
+!hidden layer 2
+!a2 = f(w2*a2 + b2)
+! skipping for testing purposes
+
+
+!layer 3 
+b3 = -0.025647591999688409275526 
+!!!
+w3(1,1) = 0.114341029535412627704538 
+w3(1,2) = 9.033290782171352617524462 
+w3(1,3) = -0.147274039082734370387229 
+w3(1,4) = -0.108975601655022735769762 
+w3(1,5) = -18.080791313755817384389957 
+w3(1,6) = -0.141502164978920763616088 
+w3(1,7) = -8.876436764398441425782948 
+w3(1,8) = 7.991587621488536186120655 
+w3(1,9) = -0.112171135185037865178437 
+w3(1,10) = 7.816303954684148180831471
+
+!output / rescale y1s1ymin, y1s1gain, y1s1off, y1!
+y1s1ymin = -1.0;
+y1s1gain = 2.0;
+y1s1off = 0.0;
+
+
+!!!!!!!! Computations !!!!!!!!!
+
+!only is lfn indicates cell has fire
+if (lfn00 < 0.0 .or. lfn01 < 0.0 .or. lfn10 < 0.0 .or. lfn11 < 0.0) then
+   print *, "Cell on fire"
+   !process inputs
+   ! s is vector of inputs
+   s(1,1) = tign00 - time_now
+   s(2,1) = tign01 - time_now
+   s(3,1) = tign10 - time_now
+   s(4,1) = tign11 - time_now
+   s(5,1) = fuel_time_cell
+   !scaling
+   xp1 = s - x1s1off 
+   xp1 = xp1 * x1s1gain
+   xp1 = xp1 + x1s1ymin   
+   
+   !xp1 is now the processed input
+
+
+   !!! layer 1 !!!
+   a = b1 + matmul(w1,xp1)
+   !print *, "a = ", a
+   !matlab --> a = 2 ./ (1 + exp(-2*n)) - 1;
+   do i = 1,10
+     a1(i,1) = 2.0/(1+exp(-2.0*a(i,1))) - 1
+     !print *, a(i,1)
+   end do
+   !print *, "a1 = ", a1
+
+   !!!layer 2 !!! skipping for now
+   ! a2 = f(w2*a1 + b1)
+   a2 = a1
+
+   !!! layer 3 !!!
+   !a3 = w3*a2 + b3, this is a just a dot product
+   a3 = b3
+   do i = 1,10
+      a3 = a3 + w3(1,i)*a2(i,1)
+   end do
+   print *, "a2 = ",a3
+
+   !scale outputs
+   y1 = a3-y1s1ymin
+   y1 = y1/y1s1gain
+   y1 = y1 + y1s1off
+
+   !make sure value is between zero and one
+   if (y1 > 1.0) then
+      y1 = 1.0
+   end if
+
+   if (y1 < 0.0) then
+      y1 = 0.0
+   end if
+
+else !lfn check
+   y1 = 0.0
+end if ! lfn check
+
+
+!test out, interface
+!fuel_frac_left  = (tign00+tign01+tign10+tign11)/fuel_time_cell
+fuel_frac_left = 1.0 - y1
+fire_frac_area = 0.5
+
+end subroutine fuel_left_cell_4
+
 
 !
 !****************************************
