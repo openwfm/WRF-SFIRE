@@ -2223,7 +2223,12 @@ subroutine pnetcdf_read_fire_wind(                    &
     uf, vf, itimestep)
 !*** purpose: read uv,vf, wait for correct frame and checksum, crash if timeout
 !*** global
+#ifndef GNU
+#define IFORT
+#endif
+#ifdef IFORT
 use IFPORT   ! intel Fortran only
+#endif
     implicit none
 
 !*** arguments
@@ -2297,13 +2302,16 @@ use IFPORT   ! intel Fortran only
             call message('time step does not agree')
         endif 
         call pnetcdf_close(ncid)
+#ifdef IFORT
         waitsec = itry * isleepqq * 1e-3
         write(msg,*)'try ',itry,' sleeping ',isleepqq * 1e-3,' sec total ',waitsec
         call sleepqq(isleepqq)   ! intel compiler only
+#else
         !waitsec = itry * isleep
         !write(msg,*)'try ',itry,' sleeping ',isleep,' sec total ',waitsec
         !call sleep(isleep)
         call message(msg)
+#endif
         if(waitsec.gt.waitmax)call crash('Reading fire winds timed out')
     enddo 
 end subroutine pnetcdf_read_fire_wind
