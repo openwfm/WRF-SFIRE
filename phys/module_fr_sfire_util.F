@@ -1473,7 +1473,7 @@ if(nprocs.ne.1.or.myproc.ne.0.or.mythread.ne.0) &
 ! print line
 mi=ite-its+1
 mj=jte-jts+1
-write(msg,2)'reading array size ',mi,mj,' from file ',trim(filename)
+write(msg,2)'read_array_2d_real: array size ',mi,mj,' from file ',trim(filename)
 2 format(a,2i6,2a)
 call message(msg,level=1)
 
@@ -2024,7 +2024,7 @@ subroutine pnetcdf_read_arr(ncid,                &
     if (ends(2).eq.dims(2)-1)ends(2)=dims(2)
     cnts = ends - star + 1
 
-    write(msg,*)"reading ",trim(name),star(1),ends(1),star(2),ends(2),star(3),ends(3)
+    write(msg,*)"pnetcdf_read_arr ",trim(name),star(1),ends(1),star(2),ends(2),star(3),ends(3)
     call message(msg)
  
     ! read from file
@@ -2079,7 +2079,9 @@ subroutine pnetcdf_read_2d(ncid,                &
     cnts = ends - star + 1
     allocate(at(ips:ipe,jps:jpe))
 
-    write(msg,*)"reading ",trim(name),star,ends
+    write(msg,*)"pnetcdf_read_2d reading ",trim(name),star,":",ends
+    call message(msg)
+    write(msg,*)"pnetcdf_read_2d reading ",trim(name),"start",star,"counts",cnts,"."
     call message(msg)
  
     ! read from file
