@@ -1,0 +1,24 @@
+#!/bin/tcsh
+#SBATCH --account=efd-np
+#SBATCH --partition=efd-shared-np
+#SBATCH --nodes=1
+#SBATCH --mem=45G
+#SBATCH --time=1:00:00 # walltime, abbreviated by -t
+#SBATCH -o slurm-%j.out-%N # name of the stdout, using the job number (%j) and the first node (%N)
+#SBATCH --ntasks=16   # number of MPI tasks, abbreviated by -n
+#SBATCH --job-name=INV_WRF 
+
+# set data and working directories
+
+# load appropriate modules, in this case Intel compilers, MPICHa
+source /uufs/chpc.utah.edu/common/home/u6015690/bin/intel.tcsh
+source /uufs/chpc.utah.edu/common/home/u6015690/bin/pnetcdf.tcsh
+
+rm -f rsl.error.???? rsl.out.????
+
+# run the program
+mpirun -np 1 ./ideal.exe
+mv rsl.error.0000 ideal.log
+mpirun -np 16 ./wrf.exe
+
+
