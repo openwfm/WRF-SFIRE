@@ -2081,7 +2081,11 @@ subroutine pnetcdf_read_2d(ncid,                &
 
     write(msg,*)"pnetcdf_read_2d reading ",trim(name),star,":",ends
     call message(msg)
-    write(msg,*)"pnetcdf_read_2d reading ",trim(name),"start",star,"counts",cnts,"."
+    write(msg,*)"pnetcdf_read_2d reading ",trim(name)
+    call message(msg)
+    write(msg,*)"pnetcdf_read_2d reading ","start",star
+    call message(msg)
+    write(msg,*)"pnetcdf_read_2d reading ","counts",cnts
     call message(msg)
  
     ! read from file
@@ -2109,7 +2113,7 @@ subroutine pnetcdf_var_info(ncid,varname,dims,varid,prints)
     real:: values_real(mdims)
     character(len=mdims):: values_char
     character(LEN=256):: filename, msg
-    logical::verbose=.false.
+    logical::verbose=.true.
 
     if(present(prints)) verbose = prints>0
      
