@@ -17,3 +17,6 @@
 configure.wrf*
 *.backup
 *.f90
+wrfout*
+wrfinp*
+wrfrst*

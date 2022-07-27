@@ -12,7 +12,11 @@
 
 # load appropriate modules, in this case Intel compilers, MPICHa
 source /uufs/chpc.utah.edu/common/home/u6015690/bin/intel.tcsh
+source /uufs/chpc.utah.edu/common/home/u6015690/bin/netcdf.tcsh
 source /uufs/chpc.utah.edu/common/home/u6015690/bin/pnetcdf.tcsh
+
+echo I am here:
+pwd
 
 rm -f rsl.error.???? rsl.out.????
 
