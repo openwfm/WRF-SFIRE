@@ -1,36 +1,43 @@
 This directory contains SFIRE (the fire component of wrf-fire) test driver.
-It links the fire model from the files wrfv2_fire/phys/module_fr_sfire_*.F with the 
-files in this directory:
+It builds the fire executable from the files sources WRF-SFIRE, files generate
+in a WRF-SFIRE build, and ithe files in this directory.
 
-model_test_main.F	the main program that calls the model
-wrf_fakes.F             stubs that perform various wrf functions
+How to build and test:
 
-To build the standalone driver, create your own make.inc, or link an existing one, and type make. 
-This will create file model_test_main.exe, then just execute this file.
+1. build WRF-SFIRE as usual: cd ..; ./cofigure; compile em_fire
+2. back here: cd standalone
+3. Select compiler: ln -s make.inc.ifort make.inc or one of the others or make your own
+4. Copy in generated files from WRF-SFIRE build: make sync_inc
+5. Build fire.exe: make 
+6. Create atmospheric forcing: cd test/em_fire/hill; ideal.exe; wrf.exe
+7. link atmospheric forcing: ln -s the_wrfout_just_created fire_input.nc
+8. Fun the standalone: ../fire 
 
-For more information see http://www.openwfm.org/wiki/How_to_run_the_standalone_fire_model_in_WRF-Fire
+Files:
 
-Keeping the standalone up to date (for programmers)
+fire.F             the main fire program 
+module_domain.F    fake WRF declaration of grid
+module_configure.F fake WRF declaration of namelist 
+wrf_fakes.F        fake WRF subroutines
+wrf_netcdf.F       read and write files in WRF compatible format
+util_netcdf.F      convenience stubs to netcdf API   
 
-If you get errors about missing configure_flags%something it means that the registry 
-has changed and the include files need to be updated as follows:
+The following main programs almost certainly do not work:
 
- - build wrf in the wrf2_fire directory
- - in this directory: make sync_inc
- - commit the resulting include files
+init.F                     generate a basic fire_input.nc 
+moisture_main.F            run the fuel  moisture model
+moisture_test_main.F       another one
+fuels_main.F               not sure
+atm.F                      not sure
+fuel_interp_test_main.F    not sure
 
-If you still get errors, it means that the standalone fell behind (again) and some hand updating is
-needed. Let me know.
+See also old guide for the original 2012 pre-WRF-SFIRE version at 
+http://wiki.openwfm.org/wiki/How_to_run_the_standalone_fire_model_in_WRF-Fire
 
-Spread rate calculation interface:
-
-The spread rate is computed in module_fr_sfire_phys.F (maybe it should be renamed to 
-module_fr_sfire_spread.F?). This module defines derived type fire_params which contains only
-pointers.  The driver declares an object type fire_params and assigns the pointers to 
-parameter arrays. This object is passed down the call chain to the spread rate calculation.
-This way, when the parameters passed to the spread rate calculation change, no changes
-are required in the code between the driver and the spread rate calculation.
+If you still get errors, it means that the standalone fell behind the fire
+code (again) and some hand updating is needed.
 
 Jan Mandel
 June 18, 2010
 Updated December 22, 2012
+Updated August 1, 2022
