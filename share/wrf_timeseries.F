@@ -85,13 +85,8 @@ SUBROUTINE calc_ts_locations( grid )
    
       IF (ips <= 1 .AND. 1 <= ipe .AND. &
           jps <= 1 .AND. 1 <= jpe) THEN
-#if(NMM_CORE==1)
-         known_lat = grid%hlat(1,1)
-         known_lon = grid%hlon(1,1)
-#else
          known_lat = grid%xlat(1,1)
          known_lon = grid%xlong(1,1)
-#endif
       ELSE
          known_lat = 9999.
          known_lon = 9999.
@@ -225,13 +220,8 @@ SUBROUTINE calc_ts_locations( grid )
                ts_xlong = 1.E30
                ts_hgt   = 1.E30
             ELSE
-#if(NMM_CORE==1)
-               ts_xlat  = grid%hlat(grid%itsloc(k),grid%jtsloc(k))
-               ts_xlong = grid%hlon(grid%itsloc(k),grid%jtsloc(k))
-#else
                ts_xlat  = grid%xlat(grid%itsloc(k),grid%jtsloc(k))
                ts_xlong = grid%xlong(grid%itsloc(k),grid%jtsloc(k))
-#endif
 #if (EM_CORE == 1)
                ts_hgt   = grid%ht(grid%itsloc(k),grid%jtsloc(k))
 #endif
@@ -351,6 +341,7 @@ SUBROUTINE calc_ts( grid )
    INTEGER :: i, k, mm, n, ix, iy, rc
    REAL :: earth_u, earth_v,                       &
            output_t, output_q, clw, xtime_minutes
+   REAL, PARAMETER :: MISSING = -999.0
    REAL, ALLOCATABLE, DIMENSION(:) :: p8w
    REAL, ALLOCATABLE, DIMENSION(:) :: earth_u_profile, earth_v_profile
    TYPE (grid_config_rec_type) :: config_flags
@@ -516,6 +507,38 @@ SUBROUTINE calc_ts( grid )
             grid%ts_ctopht_tot(n,i) = grid%ctopht_tot(ix,iy)
             grid%ts_clrnidx(n,i) = grid%clrnidx(ix,iy)
             grid%ts_sza(n,i) = grid%sza(ix,iy)
+            grid%ts_ghi_accum(n,i) = grid%ghi_accum(ix,iy)
+            grid%ts_swdown(n,i) = grid%swdown(ix,iy)
+            grid%ts_swddni(n,i) = grid%swddni(ix,iy)
+            grid%ts_swddif(n,i) = grid%swddif(ix,iy)
+            ! Calc extra solar variables if FARMS or RRTMG/RRTMG FAST
+            if ( config_flags%swint_opt == 2 .or. &
+                 config_flags%ra_sw_physics == RRTMG_SWSCHEME .or. &
+                 config_flags%ra_sw_physics == RRTMG_SWSCHEME_FAST ) then
+              grid%ts_swdownc(n,i) = grid%swdownc(ix,iy)
+              grid%ts_swddnic(n,i) = grid%swddnic(ix,iy)
+              if ( config_flags%swint_opt == 2 ) then  ! FARMS
+                grid%ts_swdown2(n,i) = grid%swdown2(ix,iy)
+                grid%ts_swddni2(n,i) = grid%swddni2(ix,iy)
+                grid%ts_swddif2(n,i) = grid%swddif2(ix,iy)
+                grid%ts_swdownc2(n,i) = grid%swdownc2(ix,iy)
+                grid%ts_swddnic2(n,i) = grid%swddnic2(ix,iy)
+              else
+                grid%ts_swdown2(n,i) = MISSING
+                grid%ts_swddni2(n,i) = MISSING
+                grid%ts_swddif2(n,i) = MISSING
+                grid%ts_swdownc2(n,i) = MISSING
+                grid%ts_swddnic2(n,i) = MISSING
+              end if
+            else
+              grid%ts_swdownc(n,i) = MISSING
+              grid%ts_swddnic(n,i) = MISSING
+              grid%ts_swdown2(n,i) = MISSING
+              grid%ts_swddni2(n,i) = MISSING
+              grid%ts_swddif2(n,i) = MISSING
+              grid%ts_swdownc2(n,i) = MISSING
+              grid%ts_swddnic2(n,i) = MISSING
+            end if
          END IF
 #else
          grid%ts_tsk(n,i)  = grid%nmm_tsk(ix,iy)
@@ -580,6 +603,17 @@ SUBROUTINE calc_ts( grid )
             grid%ts_ctopht_tot(n,i) = 1.E30
             grid%ts_clrnidx(n,i) = 1.E30
             grid%ts_sza(n,i) = 1.E30
+            grid%ts_ghi_accum(n,i) = 1.E30
+            grid%ts_swdown(n,i) = 1.E30
+            grid%ts_swddni(n,i) = 1.E30
+            grid%ts_swddif(n,i) = 1.E30
+            grid%ts_swdownc(n,i) = 1.E30
+            grid%ts_swddnic(n,i) = 1.E30
+            grid%ts_swdown2(n,i) = 1.E30
+            grid%ts_swddni2(n,i) = 1.E30
+            grid%ts_swddif2(n,i) = 1.E30
+            grid%ts_swdownc2(n,i) = 1.E30
+            grid%ts_swddnic2(n,i) = 1.E30
          END IF
 #endif
          grid%ts_tsk(n,i)  = 1.E30
@@ -787,6 +821,39 @@ SUBROUTINE write_ts( grid )
 
       ts_buf(:,:) = grid%ts_sza(:,:)
       CALL wrf_dm_min_reals(ts_buf(:,:),grid%ts_sza(:,:),grid%ts_buf_size*grid%max_ts_locs)
+
+      ts_buf(:,:) = grid%ts_ghi_accum(:,:)
+      CALL wrf_dm_min_reals(ts_buf(:,:),grid%ts_ghi_accum(:,:),grid%ts_buf_size*grid%max_ts_locs)
+
+      ts_buf(:,:) = grid%ts_swdown(:,:)
+      CALL wrf_dm_min_reals(ts_buf(:,:),grid%ts_swdown(:,:),grid%ts_buf_size*grid%max_ts_locs)
+
+      ts_buf(:,:) = grid%ts_swddni(:,:)
+      CALL wrf_dm_min_reals(ts_buf(:,:),grid%ts_swddni(:,:),grid%ts_buf_size*grid%max_ts_locs)
+
+      ts_buf(:,:) = grid%ts_swddif(:,:)
+      CALL wrf_dm_min_reals(ts_buf(:,:),grid%ts_swddif(:,:),grid%ts_buf_size*grid%max_ts_locs)
+
+      ts_buf(:,:) = grid%ts_swdownc(:,:)
+      CALL wrf_dm_min_reals(ts_buf(:,:),grid%ts_swdownc(:,:),grid%ts_buf_size*grid%max_ts_locs)
+
+      ts_buf(:,:) = grid%ts_swddnic(:,:)
+      CALL wrf_dm_min_reals(ts_buf(:,:),grid%ts_swddnic(:,:),grid%ts_buf_size*grid%max_ts_locs)
+
+      ts_buf(:,:) = grid%ts_swdown2(:,:)
+      CALL wrf_dm_min_reals(ts_buf(:,:),grid%ts_swdown2(:,:),grid%ts_buf_size*grid%max_ts_locs)
+
+      ts_buf(:,:) = grid%ts_swddni2(:,:)
+      CALL wrf_dm_min_reals(ts_buf(:,:),grid%ts_swddni2(:,:),grid%ts_buf_size*grid%max_ts_locs)
+
+      ts_buf(:,:) = grid%ts_swddif2(:,:)
+      CALL wrf_dm_min_reals(ts_buf(:,:),grid%ts_swddif2(:,:),grid%ts_buf_size*grid%max_ts_locs)
+
+      ts_buf(:,:) = grid%ts_swdownc2(:,:)
+      CALL wrf_dm_min_reals(ts_buf(:,:),grid%ts_swdownc2(:,:),grid%ts_buf_size*grid%max_ts_locs)
+
+      ts_buf(:,:) = grid%ts_swddnic2(:,:)
+      CALL wrf_dm_min_reals(ts_buf(:,:),grid%ts_swddnic2(:,:),grid%ts_buf_size*grid%max_ts_locs)
    END IF
 #endif
 
@@ -836,7 +903,7 @@ SUBROUTINE write_ts( grid )
                                  grid%ts_clw(n,i)
             ELSE
                !!! WRF-Solar diagnostics
-               WRITE(UNIT=iunit,FMT='(i2,f13.6,i5,i5,i5,1x,39(f13.5,1x))')  &
+               WRITE(UNIT=iunit,FMT='(i2,f13.6,i5,i5,i5,1x,49(f13.5,1x))')  &
                                  grid%id, grid%ts_hour(n,i),                &
                                  grid%id_tsloc(i), ix, iy,                  &
                                  grid%ts_t(n,i),                            &
@@ -877,7 +944,18 @@ SUBROUTINE write_ts( grid )
                                  grid%ts_cbaseht_tot(n,i),                  &
                                  grid%ts_ctopht_tot(n,i),                   &
                                  grid%ts_clrnidx(n,i),                      &
-                                 grid%ts_sza(n,i)
+                                 grid%ts_sza(n,i),                          &
+                                 grid%ts_ghi_accum(n,i),                    &
+                                 grid%ts_swdown(n,i),                       &
+                                 grid%ts_swddni(n,i),                       &
+                                 grid%ts_swddif(n,i),                       &
+                                 grid%ts_swdownc(n,i),                      &
+                                 grid%ts_swddnic(n,i),                      &
+                                 grid%ts_swdown2(n,i),                      &
+                                 grid%ts_swddni2(n,i),                      &
+                                 grid%ts_swddif2(n,i),                      &
+                                 grid%ts_swdownc2(n,i),                     &
+                                 grid%ts_swddnic2(n,i)
             END IF
 #else
             WRITE(UNIT=iunit,FMT='(i2,f13.6,i5,i5,i5,1x,7(f13.5,1x))')   &
