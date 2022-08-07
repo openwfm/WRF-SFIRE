@@ -1,17 +1,16 @@
 This directory contains SFIRE (the fire component of wrf-fire) test driver.
-It builds the fire executable from the files sources WRF-SFIRE, files generate
-in a WRF-SFIRE build, and ithe files in this directory.
+It builds the fire executable from the files sources WRF-SFIRE, files generated
+in a WRF-SFIRE build, and the files in this directory.
 
 How to build and test:
 
-1. build WRF-SFIRE as usual: cd ..; ./cofigure; compile em_fire
+1. build WRF-SFIRE as usual: cd ..; ./configure; compile em_fire
 2. back here: cd standalone
 3. Select compiler: ln -s make.inc.ifort make.inc or one of the others or make your own
-4. Copy in generated files from WRF-SFIRE build: make sync_inc
-5. Build fire.exe: make 
-6. Create atmospheric forcing: cd test/em_fire/hill; ideal.exe; wrf.exe
-7. link atmospheric forcing: ln -s the_wrfout_just_created fire_input.nc
-8. Fun the standalone: ../fire 
+4. Build fire.exe: make 
+5. Create atmospheric forcing: cd test/em_fire/hill; ideal.exe; wrf.exe
+6. link atmospheric forcing: ln -s the_wrfout_just_created fire_input.nc
+7. Fun the standalone: ../fire.exe
 
 Files:
 
