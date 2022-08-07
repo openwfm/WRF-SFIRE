@@ -175,7 +175,8 @@ subroutine sfire_driver_em ( grid , config_flags                    &
 ! copy configuration flags to sfire internal structures
     call set_flags(config_flags)
 
-    write(msg,'(a,i3)')' domain', grid%id
+    write(msg,'(a,i3)')' domain', grid%grid_id
+
     call message(msg,level=1)
 
 ! prevent memory errors because of variables missing in registry packages
@@ -1708,7 +1709,8 @@ fire_update_fuel_frac   = config_flags%fire_update_fuel_frac
 boundary_guard          = config_flags%fire_boundary_guard
 fire_back_weight        = config_flags%fire_back_weight
 fire_grows_only         = config_flags%fire_grows_only
-sfire_upwinding         = config_flags%sfire_upwinding
+fire_upwinding          = config_flags%fire_upwinding
+if(fire_upwinding .eq.9)fire_upwinding =3  ! replace by old default
 fire_viscosity          = config_flags%fire_viscosity 
 fire_lfn_ext_up         = config_flags%fire_lfn_ext_up 
 fire_test_steps         = config_flags%fire_test_steps 

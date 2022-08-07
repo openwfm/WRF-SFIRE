@@ -1,13 +1,16 @@
-# fefines FC, FCFLAGS, FFREE
+# defines FC, FCFLAGS, FFREE
 include make.inc
 DEFS =
-WRF = ../wrfv2_fire
-FPFLAGS= -I$(NETCDF)/include -I.
+WRF = ..
+INC = $(WRF)/inc
+FPFLAGS= -I$(NETCDF)/include -I $(INC) -I. 
 LDFLAGS = -L$(NETCDF)/lib -lnetcdff -lnetcdf
 #LDFLAGS = `$(NETCDF)/bin/nc-config --flibs`
 FFLAGS=$(FPFLAGS) $(FCFLAGS) $(FFREE)
-INC = $(WRF)/inc
 
+##################################
+# make sync_inc when WRF changes
+##################################
 
 MAKEFILE=Makefile
 
@@ -56,12 +59,7 @@ FUELS_OBJ = \
     wrf_fakes.o
     
 
-NAMELIST= \
-    namelist_statements.inc \
-    namelist_defaults.inc \
-    namelist_defines.inc \
-    namelist_defines2.inc \
-    config_assigns.inc
+NAMESLIST = $(INC)/config_assigns.inc $(INC)/namelist_defaults.inc $(INC)/namelist_defines.inc $(INC)/namelist_defines2.inc $(INC)/namelist_statements.inc
 
 FUEL_INTERP_OBJ = \
     fuel_interp_test_main.o \
@@ -106,13 +104,13 @@ fuel_interp_test.exe: $(MAKEFILE) $(FUEL_INTERP_OBJ)
 all: fire init 
 
 atm: atm.exe
-	cd ../wrfv2_fire/test/em_fire; rm -f atm.exe; ln -s ../../../standalone/atm.exe atm.exe
+	cd $(WRF)/test/em_fire; rm -f atm.exe; ln -s ../../standalone/atm.exe atm.exe
 
 fire: fire.exe
-	cd ../wrfv2_fire/test/em_fire; rm -f fire.exe; ln -s ../../../standalone/fire.exe fire.exe
+	cd $(WRF)/test/em_fire; rm -f fire.exe; ln -s ../../standalone/fire.exe fire.exe
 
 init: init.exe
-	cd ../wrfv2_fire/test/em_fire; rm -f init.exe; ln -s ../../../standalone/init.exe init.exe
+	cd $(WRF)/test/em_fire; rm -f init.exe; ln -s ../../standalone/init.exe init.exe
 
 atm.exe: $(MAKEFILE) atm.o $(FIRE_OBJ)
 	$(FC) $(FCFLAGS) -o atm.exe fire.o $(FIRE_OBJ) $(LDFLAGS)
@@ -237,9 +235,6 @@ ESMF_Clock.o : ESMF_BaseTime.o ESMF_Time.o ESMF_TimeInterval.o
 $(ESMF_OBJS) : %.o : $(WRF)/external/esmf_time_f90/%.F90
 	$(FC) -c $< -I$(WRF)/external/esmf_time_f90 -I. -DMAX_HISTORY=25 -o $@
 
-INCFILES = $(INC)/config_assigns.inc $(INC)/namelist_defaults.inc $(INC)/namelist_defines.inc $(INC)/namelist_defines2.inc $(INC)/namelist_statements.inc
-sync_inc: $(INCFILES)
-	cp $(INCFILES) .
 
 clean:
 	rm -f *.mod *.o *.f90 *.s *.exe *.a

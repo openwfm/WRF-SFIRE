@@ -8,7 +8,8 @@ public read_namelist,grid_config_rec_type,nmlfile
 
 
 ! type for all namelist fields, domain 1 only
-integer,parameter::max_domains=10,max_moves=1,max_eta=501,max_bogus=5
+integer,parameter::max_domains=10,max_moves=1,max_eta=501,max_bogus=5, &
+   max_ocean = 1, max_plevs=1, max_zlevs=1
 type grid_config_rec_type
 #include "namelist_defines2.inc"
 end type

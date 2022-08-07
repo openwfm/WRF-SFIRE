@@ -291,7 +291,7 @@ ignited=0
 dmax=0
 dmin=huge(dmax)
 11      format('IGN ',6(a,g17.7,1x)) 
-12      format('IGN ',4(a,2g13.7,1x))
+12      format('IGN ',4(a,2g14.7,1x))
 ! tmperr=0.
 do j=jfts,jfte   
     do i=ifts,ifte
@@ -448,7 +448,7 @@ end subroutine check_lfn_tign_ij
 
 
 ! called from the inside of a loop, inline if possible
-!DEC$ ATTRIBUTES FORCEINLINE
+!DEC$ ATTRIBUTES FORCEINLINE :: nearest
 SUBROUTINE nearest(d,t,ax,ay,sx,sy,st,ex,ey,et,cx2,cy2)
         implicit none
 !***    arguments
@@ -483,7 +483,7 @@ SUBROUTINE nearest(d,t,ax,ay,sx,sy,st,ex,ey,et,cx2,cy2)
 !***    executable
 
 11      format('IGN ',6(a,g17.7,1x))
-12      format('IGN ',4(a,2g13.7,1x))
+12      format('IGN ',4(a,2g14.7,1x))
 
         ! midpoint m = (mx,my)
         mx = (sx + ex)*0.5
@@ -2135,7 +2135,7 @@ intrinsic max,min,sqrt,nint,tiny,huge
             diffCy = diffLy+diffRy
     
             !upwinding - select right or left derivative
-            select case(sfire_upwinding)
+            select case(fire_upwinding)
             case(0)  ! none
                 grad=sqrt(diffCx**2 + diffCy**2)
             case(1) ! standard
@@ -2193,7 +2193,7 @@ intrinsic max,min,sqrt,nint,tiny,huge
         enddo
     enddo        
 
-    if(upwind_err>0)call crash('sfire_upwinding value not supported, 3 recommended')
+    if(upwind_err>0)call crash('fire_upwinding value not supported, 3 recommended')
 
     if(nerr>0)then
 !$OMP CRITICAL(SFIRE_CORE_CRIT)
