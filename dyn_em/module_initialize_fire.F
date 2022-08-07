@@ -1104,6 +1104,8 @@ ENDIF
          END DO
       END DO
       ENDIF
+ 
+ write(6,*)'END SUBROUTINE init_domain_rk'
 
  END SUBROUTINE init_domain_rk
 
