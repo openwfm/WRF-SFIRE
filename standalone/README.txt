@@ -2,15 +2,27 @@ This directory contains SFIRE (the fire component of wrf-fire) test driver.
 It builds the fire executable from the files sources WRF-SFIRE, files generated
 in a WRF-SFIRE build, and the files in this directory.
 
-How to build and test:
+How to build standalone:
 
-1. build WRF-SFIRE as usual: cd ..; ./configure; compile em_fire
-2. back here: cd standalone
+1. build WRF-SFIRE as usual: cd ..; ./configure; compile em_fire (not required for make fire_ros.exe)
+2. go back here: cd standalone
 3. Select compiler: ln -s make.inc.ifort make.inc or one of the others or make your own
-4. Build fire.exe: make 
-5. Create atmospheric forcing: cd test/em_fire/hill; ideal.exe; wrf.exe
-6. link atmospheric forcing: ln -s the_wrfout_just_created fire_input.nc
-7. Fun the standalone: ../fire.exe
+4. make  or make <nameofexecutable>.exe
+
+All standalone executables should be run in the simulation directory where wrf.exe runs.
+They use the inputs available to wrf.exe such as namelist.input and namelist.fire, etc.
+
+fire.exe is the complete fire model running with atmosphere from WRF-SFIRE output. To use:
+
+1. Create atmospheric forcing: cd test/em_fire/hill; ideal.exe; wrf.exe
+2. link atmospheric forcing: ln -s the_wrfout_just_created fire_input.nc
+3. Run the standalone in the simulation directoryt: <WRF SFIRE ROOT>/standalone/fire.exe
+
+fire_ros.exe calls the fuels and rate of spread (ROS) subsystem. To use:
+1. Run the standalone in the simulation directory: <WRF SFIRE ROOT>/standalone/fire_ros.ex
+   This will create Matlab file fuels.m. Follow the directions to use it in Matlab at
+   https://wiki.openwfm.org/wiki/How_to_diagnose_fuel_properties_in_WRF-SFIRE
+    
 
 Files:
 

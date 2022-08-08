@@ -91,7 +91,7 @@ MOISTURE_OBJ = \
 
 #.PHONY: all
 
-default: fire
+default: fire.exe fire_ros.exe
 
 moisture: moisture.exe
 moisture.exe: $(MAKEFILE) libesmf_time.a $(MOISTURE_OBJ)
@@ -107,16 +107,8 @@ fuel_interp_test: fuel_interp_test.exe
 fuel_interp_test.exe: $(MAKEFILE) $(FUEL_INTERP_OBJ)
 	$(FC) $(FCFLAGS) -o fuel_interp_test.exe $(FUEL_INTERP_OBJ)
 
-all: fire init 
-
 atm: atm.exe
 	cd $(WRF)/test/em_fire; rm -f atm.exe; ln -s ../../standalone/atm.exe atm.exe
-
-fire: fire.exe
-	cd $(WRF)/test/em_fire; rm -f fire.exe; ln -s ../../standalone/fire.exe fire.exe
-
-init: init.exe
-	cd $(WRF)/test/em_fire; rm -f init.exe; ln -s ../../standalone/init.exe init.exe
 
 atm.exe: $(MAKEFILE) atm.o $(FIRE_OBJ)
 	$(FC) $(FCFLAGS) -o atm.exe fire.o $(FIRE_OBJ) $(LDFLAGS)
@@ -195,7 +187,7 @@ module_fr_sfire_driver.o: $(MAKEFILE) \
 	sfire_id.inc \
 	module_domain.o \
 	module_configure.o \
-    module_fr_sfire_phys.o \
+        module_fr_sfire_phys.o \
 	module_fr_sfire_model.o \
 	module_fr_sfire_atm.o \
 	module_fr_sfire_util.o
