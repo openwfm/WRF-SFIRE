@@ -57,6 +57,12 @@ FUELS_OBJ = \
     module_fr_sfire_phys.o \
     module_fr_sfire_util.o  \
     wrf_fakes.o
+
+FIRE_ROS_OBJ = \
+    fire_ros_main.o \
+    module_fr_sfire_phys.o \
+    module_fr_sfire_util.o  \
+    wrf_fakes.o
     
 
 NAMESLIST = $(INC)/config_assigns.inc $(INC)/namelist_defaults.inc $(INC)/namelist_defines.inc $(INC)/namelist_defines2.inc $(INC)/namelist_statements.inc
@@ -125,6 +131,10 @@ fuels: fuels.exe
 
 fuels.exe: $(MAKEFILE) $(FUELS_OBJ)
 	$(FC) $(FCFLAGS) $(LDFLAGS) -o fuels.exe $(FUELS_OBJ) $(LDFLAGS)
+
+fire_ros.exe: $(MAKEFILE) $(FIRE_ROS_OBJ)
+	$(FC) $(FCFLAGS) $(LDFLAGS) -o fire_ros.exe $(FIRE_ROS_OBJ) $(LDFLAGS)
+ 
  
 # for the order of generating modules
 
