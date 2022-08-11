@@ -22,6 +22,10 @@ real,pointer,dimension(:,:):: ischap               ! 1 if chapparal
 real,pointer,dimension(:,:):: fuel_time            ! time to burn to 1/e (s)
 real,pointer,dimension(:,:):: fmc_g                ! fuel moisture contents, ground (1)
 real,pointer,dimension(:,:):: nfuel_cat            ! fuel category (integer values)
+real,pointer,dimension(:,:):: t2f                  ! temperature at 2m (K) (Balbi model only)
+real,pointer,dimension(:,:):: psfcf                ! surface pressure (Pa) (Balbi model only)
+real,pointer,dimension(:,:):: ffw                  ! fire front width (m) (Balbi model only)
+
 end type fire_params
 
 ! subroutines and functions 
