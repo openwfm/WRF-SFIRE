@@ -33,7 +33,8 @@ fire_rate_of_spread
 public:: fire_params
 
 ! variables
-PUBLIC:: fire_wind_height,fcz0,fcwh,have_fuel_cats,nfuelcats,no_fuel_cat,no_fuel_cat2,windrf,moisture_classes,itree,fueldepthm
+PUBLIC:: fire_wind_height,fcz0,fcwh,have_fuel_cats,nfuelcats, &
+  no_fuel_cat,no_fuel_cat2,windrf,moisture_classes,itree,fueldepthm,ibeh
 PUBLIC:: mfuelcats
 ! NOTE: fcwh and fcz0 are called fwh and fz0 in read/write statements
 
