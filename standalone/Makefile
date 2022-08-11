@@ -8,16 +8,14 @@ LDFLAGS = -L$(NETCDF)/lib -lnetcdff -lnetcdf
 #LDFLAGS = `$(NETCDF)/bin/nc-config --flibs`
 FFLAGS=$(FPFLAGS) $(FCFLAGS) $(FFREE)
 
-##################################
-# make sync_inc when WRF changes
-##################################
-
 MAKEFILE=Makefile
 
+# to compile WRF sources
 %.o: $(WRF)/phys/%.F 
 	$(FP) $(FFLAGS) $(DEFS) -E $(WRF)/phys/$*.F | sed 's/^#.*//' > $*.f90
 	$(FC) -c $(FFLAGS) $*.f90
 
+# to compile local sources
 %.o: %.F 
 	$(FP) $(FFLAGS) $(DEFS) -E $*.F | sed 's/^#.*//' > $*.f90
 	$(FC) -c $(FFLAGS) $*.f90
@@ -59,7 +57,6 @@ FUELS_OBJ = \
     wrf_fakes.o
 
 FIRE_ROS_OBJ = \
-    fire_ros_main.o \
     module_fr_sfire_phys.o \
     module_fr_sfire_util.o  \
     wrf_fakes.o
@@ -91,7 +88,9 @@ MOISTURE_OBJ = \
 
 #.PHONY: all
 
-default: fire.exe fire_ros.exe
+default: fire_ros
+
+all: fire fire_ros
 
 moisture: moisture.exe
 moisture.exe: $(MAKEFILE) libesmf_time.a $(MOISTURE_OBJ)
@@ -113,20 +112,20 @@ atm: atm.exe
 atm.exe: $(MAKEFILE) atm.o $(FIRE_OBJ)
 	$(FC) $(FCFLAGS) -o atm.exe fire.o $(FIRE_OBJ) $(LDFLAGS)
 
-fire.exe: $(MAKEFILE) fire.o $(FIRE_OBJ)
-	$(FC) $(FCFLAGS) -o fire.exe fire.o $(FIRE_OBJ) $(LDFLAGS)
+fire: fire.exe
+fire.exe: $(MAKEFILE) fire_main.o $(FIRE_OBJ)
+	$(FC) $(FCFLAGS) -o fire.exe fire_main.o $(FIRE_OBJ) $(LDFLAGS)
 
 init.exe: $(MAKEFILE) init.o $(INIT_OBJ)
 	$(FC) $(FCFLAGS) -o init.exe init.o $(INIT_OBJ) $(LDFLAGS)
 
 fuels: fuels.exe
-
 fuels.exe: $(MAKEFILE) $(FUELS_OBJ)
 	$(FC) $(FCFLAGS) $(LDFLAGS) -o fuels.exe $(FUELS_OBJ) $(LDFLAGS)
 
-fire_ros.exe: $(MAKEFILE) $(FIRE_ROS_OBJ)
-	$(FC) $(FCFLAGS) $(LDFLAGS) -o fire_ros.exe $(FIRE_ROS_OBJ) $(LDFLAGS)
- 
+fire_ros: fire_ros.exe
+fire_ros.exe: $(MAKEFILE) $(FIRE_ROS_OBJ) fire_ros_main.o
+	$(FC) $(FCFLAGS) $(LDFLAGS) -o fire_ros.exe fire_ros_main.o $(FIRE_ROS_OBJ) $(LDFLAGS)
  
 # for the order of generating modules
 
