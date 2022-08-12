@@ -965,7 +965,7 @@ end subroutine init_fuel_cats
 subroutine write_fuels_m(nsteps,maxwind,maxslope)
 implicit none
 integer, intent(in):: nsteps   ! number of steps for speed computation
-real, intent(in):: maxwind,maxslope ! computer from zero to these
+real, intent(in):: maxwind,maxslope ! from zero to these
 
 integer:: iounit,k,j,i,isave
 type(fire_params)::fp
@@ -1414,7 +1414,8 @@ end subroutine set_nfuel_cat
 !            
 
 real function fire_rate_of_spread(propx, propy, i,j,fp)
-! compute rate of spread at grid node (i,j) in the direction (dx,dy)
+! compute rate of spread at grid node (i,j) in the direction (propx,propy)
+! winds and everything else on the fire grid is passed in type fp
 implicit none
 !***arguments
 real, intent(in)::propx, propy! direction, need not be normalized
@@ -1444,13 +1445,13 @@ propx,propy,i,j,fp,ierrx,msg)
 
 implicit none
 
-! compute the wind speed and slope normal to the fireline and call fire_ros_cawfe
+! compute the wind speed and slope normal to the fireline and call fire_ros_cawfe or fire_ros_balbi
 
 !*** arguments
 real, intent(out)::ros ! rate of spread: backing, due to wind, due to slope
-real, intent(in)::propx,propy
+real, intent(in)::propx,propy  ! direction, needs to be normalized
 integer, intent(in)::i,j         ! node mesh coordinates
-type(fire_params),intent(in)::fp
+type(fire_params),intent(in)::fp ! everything else on the fire grid, indexed by i,j
 integer, intent(out)::ierrx
 character(len=*), intent(out)::msg
 
