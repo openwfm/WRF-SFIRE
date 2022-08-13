@@ -1499,12 +1499,14 @@ else
         call warning(msg)
     endif
     ros = ros_back+ros_wind+ros_slope
+#ifdef DEBUG
     call fire_ros_rothermel(rr,fp%nfuel_cat(i,j),speed,tanphi,fp%fmc_g(i,j))
     if (abs(ros-rr)>1e-4)then
         write(msg,'(2(a,i6),2(a,f10.6),a,g15.4)')'i=',i,' j=',j,  &
         ' fire_ros_cawfe:',ros,' rothermel:',rr,' diff:',ros-rr
         call warning(msg)
     endif
+#endif
 endif
 if(fire_grows_only.gt.0)ros=max(ros,0.)
 
