@@ -22,17 +22,20 @@ integer:: n=10, iounit=9, ierr, i, j
 logical:: have_data=.true.
 character(len=50)::file_in="namelist_standalone.input",file_out="namelist_standalone.output"
 character(len=128)::msg
+character(len=9), dimension(2)::model=(/'Rothermel','Balbi    '/)
 
 !*** executable
 
-fire_print_msg = -1  ! suppress messages and warnings from WRF-SFIRE
+! fire_print_msg = -1  ! suppress messages and warnings from WRF-SFIRE
 
 ! read namelist.fire into fuels
 ! also create file fuels.m read and visualize the results as described in 
 ! https://wiki.openwfm.org/wiki/How_to_diagnose_fuel_properties_in_WRF-SFIRE
 
-print *,'Initializing fuel categories from namelist.fire, writing fuels.m'
+print *,'Initializing fuel categories from file namelist.fire, writing file fuels.m'
+print *,'See https://wiki.openwfm.org/wiki/How_to_diagnose_fuel_properties_in_WRF-SFIRE how to get graphics'
 call init_fuel_cats(init_fuel_moisture=.false.) 
+print *,'Fire ROS model from file namelist.fire is ibeh=',ibeh,' ',model(ibeh)
 
 namelist /size/n
 namelist /data/propx,propy,vx,vy,dzdxf,dzdyf,fmc_g,nfuel_cat,t2f,psfcf,ffw,ros
@@ -124,6 +127,8 @@ call set_fire_params( &
                            0.,0.,0,  &
                            nfuel_cat,fp%fuel_time, &
                            fp )
+
+
 i=1
 do j=1,n
          call fire_ros(ros(i,j), &
@@ -136,8 +141,8 @@ OPEN(iounit, FILE=trim(file_out),FORM='FORMATTED',STATUS='UNKNOWN',ACTION='WRITE
 if(ierr.ne.0)call crash('cannot open file '//trim(file_out)//' for writing')
 write(iounit,size,iostat=ierr)
 if(have_data)then
-     write(*,*)       'ros computed from inputs  file '//trim(file_in)
-     write(iounit,*)'! ros computed from inputs  file '//trim(file_in)
+     write(*,*)       'ros computed from inputs in file '//trim(file_in)
+     write(iounit,*)'! ros computed from inputs in file '//trim(file_in)
 else
      write(*,*)       'ros computed from defaults, use as a template ONLY:'
      write(iounit,*)'! ros computed from defaults, use as a template ONLY:'
