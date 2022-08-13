@@ -3,6 +3,8 @@ program fire_ros_main
 use module_fr_sfire_phys
 use module_fr_sfire_util
 
+!*** variables
+
 implicit none
 type(fire_params)::fp
 
@@ -16,11 +18,14 @@ real,pointer,dimension(:,:):: psfcf                ! surface pressure (Pa) (Balb
 real,pointer,dimension(:,:):: ffw                  ! fire front width (m) (Balbi model only)
 real,pointer,dimension(:,:):: ros                  ! fire rate of spread (m/s) 
 
-
 integer:: n=10, iounit=9, ierr, i, j
-logical:: have_data=.false.
+logical:: have_data=.true.
 character(len=50)::file_in="namelist_standalone.input",file_out="namelist_standalone.output"
 character(len=128)::msg
+
+!*** executable
+
+fire_print_msg = -1  ! suppress messages and warnings from WRF-SFIRE
 
 ! read namelist.fire into fuels
 ! also create file fuels.m read and visualize the results as described in 
@@ -36,16 +41,20 @@ print *,'Reading file '//trim(file_in)
 OPEN(iounit, FILE=trim(file_in),FORM='FORMATTED',STATUS='OLD',ACTION='READ',IOSTAT=ierr)
 if(ierr.ne.0)then 
      print *,'cannot open file '//trim(file_in)//' for reading'
-     n=5
+     n=1
+     have_data=.false.
      goto 100
 endif
 read(iounit,size,iostat=ierr)
 if(ierr.ne.0)then
-     n=5
+     n=1
      print *,'cannot read namelist &size in file '//trim(file_in)
+     have_data=.false.
      goto 100
 endif
-print *,'Got size n=',n
+
+100 continue
+print *,'Using size n=',n
 
 ! allocate our arrays used in namelist
 allocate(propx(1,n),propy(1,n),vx(1,n),vy(1,n),dzdxf(1,n),dzdyf(1,n),fmc_g(1,n),nfuel_cat(1,n),t2f(1,n),psfcf(1,n),ffw(1,n),ros(1,n))
@@ -67,16 +76,15 @@ psfcf = 1e5   ! pressure Pa
 ffw = 10.     ! fire front width m
 ros = 0.
 
-
-read(iounit,data,iostat=ierr)
-if(ierr.ne.0)then
-     print *,'cannot read namelist &data in file '//trim(file_in)
-     goto 100
+if(have_data)then
+     read(iounit,data,iostat=ierr)
+     if(ierr.ne.0)then
+          print *,'cannot read namelist &data in file '//trim(file_in)
+          have_data=.false.
+     endif
 endif
-have_data=.true.
 
 close(iounit,iostat=ierr)
-if(ierr.ne.0)call crash('cannot close file '//trim(file_in))
 
 print *,'propx=',propx
 print *,'propy=',propy
@@ -123,20 +131,20 @@ do j=1,n
          if(ierr.ne.0)call crash(msg)
 enddo
 
-100 continue
-if(.not. have_data)then 
-    close(iounit,iostat=ierr)
-    if(ierr.ne.0)call crash('cannot close file '//trim(file_in))
-    print *,'creating dummy namelist in file '//trim(file_out)//' as a template'
-endif
-
+print *,'writing file '//trim(file_out)
 OPEN(iounit, FILE=trim(file_out),FORM='FORMATTED',STATUS='UNKNOWN',ACTION='WRITE',IOSTAT=ierr)
 if(ierr.ne.0)call crash('cannot open file '//trim(file_out)//' for writing')
 write(iounit,size,iostat=ierr)
-if(ierr.ne.0)call crash('cannot write namelist &size in file '//trim(file_out))
+if(have_data)then
+     write(*,*)       'ros computed from inputs  file '//trim(file_in)
+     write(iounit,*)'! ros computed from inputs  file '//trim(file_in)
+else
+     write(*,*)       'ros computed from defaults, use as a template ONLY:'
+     write(iounit,*)'! ros computed from defaults, use as a template ONLY:'
+     write(*,*)       'cp '//trim(file_out)//' '//trim(file_in)//' and edit'
+     write(iounit,*)'! cp '//trim(file_out)//' '//trim(file_in)//' and edit'
+endif
 write(iounit,data,iostat=ierr)
-if(ierr.ne.0)call crash('cannot write namelist &data in file '//trim(file_out))
 close(iounit,iostat=ierr)
-if(ierr.ne.0)call crash('cannot close file '//trim(file_out))
 
 end program fire_ros_main
