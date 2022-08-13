@@ -26,48 +26,51 @@ character(len=9), dimension(2)::model=(/'Rothermel','Balbi    '/)
 
 !*** executable
 
-! fire_print_msg = -1  ! suppress messages and warnings from WRF-SFIRE
-
+! defaults, can set in &control
+fire_print_msg = -1  ! suppress messages and warnings from WRF-SFIRE
 balbi_msglevel = 1           ! prints in fire_ros_balbi
 call_write_fuels_m = .false. ! create fuels.m for graphics 
-
-print *,'fire_ros parameters using parameters in module_fr_sfire_phys:'
-print *,'balbi_msglevel     =',balbi_msglevel
-print *,'call_write_fuels_m =',call_write_fuels_m
-print *,'compare_rothermel  =',compare_rothermel
-
 
 ! read namelist.fire into fuels
 ! also create file fuels.m read and visualize the results as described in 
 ! https://wiki.openwfm.org/wiki/How_to_diagnose_fuel_properties_in_WRF-SFIRE
 
-print *,'Initializing fuel categories from file namelist.fire, writing file fuels.m'
-print *,'See https://wiki.openwfm.org/wiki/How_to_diagnose_fuel_properties_in_WRF-SFIRE how to get graphics'
-call init_fuel_cats(init_fuel_moisture=.false.) 
-print *,'Fire ROS model from file namelist.fire is ibeh=',ibeh,' ',model(ibeh)
-
-namelist /size/n
+namelist /control/n,fire_print_msg,balbi_msglevel,call_write_fuels_m,compare_rothermel
 namelist /data/propx,propy,vx,vy,dzdxf,dzdyf,fmc_g,nfuel_cat,t2f,psfcf,ffw,ros
 
 print *,'Reading file '//trim(file_in)
 OPEN(iounit, FILE=trim(file_in),FORM='FORMATTED',STATUS='OLD',ACTION='READ',IOSTAT=ierr)
 if(ierr.ne.0)then 
-     print *,'cannot open file '//trim(file_in)//' for reading'
+     print *,'Cannot open file '//trim(file_in)//' for reading,using defaults'
      n=1
      have_data=.false.
      goto 100
 endif
-read(iounit,size,iostat=ierr)
+read(iounit,control,iostat=ierr)
 if(ierr.ne.0)then
      n=1
-     print *,'cannot read namelist &size in file '//trim(file_in)
+     print *,'Cannot read namelist &control in file '//trim(file_in)//', using defaults'
      have_data=.false.
      goto 100
 endif
 
 100 continue
-print *,'Using size n=',n
+print *,'fire_ros using control parameters:'
+print *,'number of cases in namelist &data                n=',n
+print *,'WRF-SFIRE print level               fire_print_msg=',fire_print_msg
+print *,'print level in fire_ros_balbi       balbi_msglevel=',balbi_msglevel
+print *,'write file fuels.m for graphics call_write_fuels_m=',call_write_fuels_m
+print *,'compare codes (ibeh=1 only)      compare_rothermel=',compare_rothermel
+write(*,control)
 
+print *,'Initializing fuel categories from file namelist.fire'
+if(call_write_fuels_m)then
+     print *,'and writing file fuels.m. For a guide how to use fuels.m, see' 
+     print *,'https://wiki.openwfm.org/wiki/How_to_diagnose_fuel_properties_in_WRF-SFIRE'
+endif
+call init_fuel_cats(init_fuel_moisture=.false.) 
+print *,'Fire ROS model from file namelist.fire is ibeh=',ibeh,' ',model(ibeh)
+ 
 ! allocate our arrays used in namelist
 allocate(propx(1,n),propy(1,n),vx(1,n),vy(1,n),dzdxf(1,n),dzdyf(1,n),fmc_g(1,n),nfuel_cat(1,n),t2f(1,n),psfcf(1,n),ffw(1,n),ros(1,n))
 
@@ -148,7 +151,7 @@ enddo
 print *,'writing file '//trim(file_out)
 OPEN(iounit, FILE=trim(file_out),FORM='FORMATTED',STATUS='UNKNOWN',ACTION='WRITE',IOSTAT=ierr)
 if(ierr.ne.0)call crash('cannot open file '//trim(file_out)//' for writing')
-write(iounit,size,iostat=ierr)
+write(iounit,control,iostat=ierr)
 if(have_data)then
      write(*,*)       'ros computed from inputs in file '//trim(file_in)
      write(iounit,*)'! ros computed from inputs in file '//trim(file_in)
