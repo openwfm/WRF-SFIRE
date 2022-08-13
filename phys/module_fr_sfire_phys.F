@@ -28,7 +28,10 @@ real,pointer,dimension(:,:):: ffw                  ! fire front width (m) (Balbi
 
 end type fire_params
 
-logical:: compare_rothermel=.false.                ! run comparison in fire_ros
+! verbosity and diagnostic switches, can be activated when this module is USEd
+logical, public:: compare_rothermel=.false.        ! run comparison in fire_ros
+logical, public:: call_write_fuels_m=.true.        ! create file fuels_m for graphics postprocessing 
+integer, public:: balbi_msglevel=2                 ! prints in fire_ros_balbi, 0=nothing 1=errors 2=warnings 3=diagnostics 4=iterations
 
 ! subroutines and functions 
 PUBLIC:: init_fuel_cats,fire_ros,heat_fluxes,set_nfuel_cat,set_fire_params, &
@@ -43,7 +46,6 @@ PUBLIC:: fire_wind_height,fcz0,fcwh,have_fuel_cats,nfuelcats, &
   no_fuel_cat,no_fuel_cat2,windrf,moisture_classes,itree,fueldepthm,ibeh
 PUBLIC:: mfuelcats
 ! NOTE: fcwh and fcz0 are called fwh and fz0 in read/write statements
-public:: compare_rothermel
 
 
 ! moisture behavior, see Mandel et al EGU 2012
@@ -957,7 +959,7 @@ endif
 have_fuel_cats=.true.
 
 ! and print to file
-IF ( wrf_dm_on_monitor() ) THEN
+IF ( wrf_dm_on_monitor() .and. call_write_fuels_m) THEN
   call write_fuels_m(61,30.,1.)
 ENDIF
 
@@ -1470,6 +1472,7 @@ real::cor_wind,cor_slope,nvx,nvy,scale
 scale=1.
 nvx=propx/scale
 nvy=propy/scale
+
 if (fire_advection.ne.0) then ! from flags in module_fr_sfire_util
     call crash('fire_advection no longer supported')
     ! wind speed is total speed 
@@ -1488,7 +1491,6 @@ else
     cor_wind=1.
     cor_slope=1.
 endif
-
 ierrx=0
 if (ibeh .eq. 2) then
     call fire_ros_balbi(ros,fp%nfuel_cat(i,j),speed,tanphi,fp%fmc_g(i,j),ierrx,msg)
@@ -1609,7 +1611,9 @@ subroutine fire_ros_balbi(ros,nfuel,speed,tanphi,fmc_g,ierrx,msg)
 ! out
 !       ros     rate of spread
 !       ierrx   error code
-!       msg     message
+!       msg     message (last, if printed)
+! global
+!       balbi_msglevel 0=nothing 1=errors 2=warnings 3=diagnostics 4=iterations
 
 !*** arguments
 
@@ -1645,7 +1649,6 @@ real, parameter:: rho_a = 1.125                  ! Air density [kg/m3]
 real, parameter:: rho_flame = 0.25                            ! Gas Flame Density [kg/m^3]
 real, parameter:: pi=3.141592653589793
 
-integer::msglevel=2
 
 !*** local
 real:: m, rho_v, e, DeltaH, sigma, sigma_t, beta, beta_t, s, LAI, LAI_t, nu, lv, alpha, U, K_drag, q, &
@@ -1654,6 +1657,16 @@ integer::k,i
 
 
 !*** executable
+! print *,'balbi_msglevel=',balbi_msglevel 
+if(balbi_msglevel.ge.3)then
+!$OMP CRITICAL(SFIRE_PHYS_CRIT)
+    write(msg,*)'fire_ros_balbi called with balbi_msglevel=',balbi_msglevel
+    call message(msg)
+    call message('0=nothing 1=errors 2=warnings 3=diagnostics 4=iterations')
+    ! more comes here
+!$OMP END CRITICAL(SFIRE_PHYS_CRIT)
+endif
+
 
 !print *,'nfuel ',nfuel,' speed ',speed,' tanphi ',tanphi,' fmc_g ',fmc_g
 
@@ -1745,7 +1758,7 @@ do i=1,maxit_R
         R=0.
     endif
     change = R-R_old
-    if (msglevel .ge. 4)then 
+    if (balbi_msglevel .ge. 4)then 
 !$OMP CRITICAL(SFIRE_PHYS_CRIT)
         write(msg,1)i,R,change
         call message(msg)
@@ -1758,7 +1771,7 @@ do i=1,maxit_R
 enddo
 1 format('fire_ros_balbi: iteration',i3,' R=',f6.3,' diff=',g12.3,a)
 if (abs(change) <tol_R) then
-    if (msglevel .ge. 3)then 
+    if (balbi_msglevel .ge. 3)then 
 !$OMP CRITICAL(SFIRE_PHYS_CRIT)
         write(msg,1)i,R,change,' converged'
         call message(msg)
@@ -1768,7 +1781,7 @@ if (abs(change) <tol_R) then
 else
 !$OMP CRITICAL(SFIRE_PHYS_CRIT)
     write(msg,1)i,R,change,' did not converge'
-    if (msglevel .ge. 2)then 
+    if (balbi_msglevel .ge. 2)then 
         call warning(msg)
     endif
 !$OMP END CRITICAL(SFIRE_PHYS_CRIT)

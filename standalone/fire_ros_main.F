@@ -28,6 +28,15 @@ character(len=9), dimension(2)::model=(/'Rothermel','Balbi    '/)
 
 ! fire_print_msg = -1  ! suppress messages and warnings from WRF-SFIRE
 
+balbi_msglevel = 1           ! prints in fire_ros_balbi
+call_write_fuels_m = .false. ! create fuels.m for graphics 
+
+print *,'fire_ros parameters using parameters in module_fr_sfire_phys:'
+print *,'balbi_msglevel     =',balbi_msglevel
+print *,'call_write_fuels_m =',call_write_fuels_m
+print *,'compare_rothermel  =',compare_rothermel
+
+
 ! read namelist.fire into fuels
 ! also create file fuels.m read and visualize the results as described in 
 ! https://wiki.openwfm.org/wiki/How_to_diagnose_fuel_properties_in_WRF-SFIRE
