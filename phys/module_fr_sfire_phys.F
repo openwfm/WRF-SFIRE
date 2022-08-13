@@ -28,6 +28,8 @@ real,pointer,dimension(:,:):: ffw                  ! fire front width (m) (Balbi
 
 end type fire_params
 
+logical:: compare_rothermel=.false.                ! run comparison in fire_ros
+
 ! subroutines and functions 
 PUBLIC:: init_fuel_cats,fire_ros,heat_fluxes,set_nfuel_cat,set_fire_params, &
 write_fuels_m,fire_risk,fire_intensity,fuel_moisture,advance_moisture,fuel_name,&
@@ -41,6 +43,7 @@ PUBLIC:: fire_wind_height,fcz0,fcwh,have_fuel_cats,nfuelcats, &
   no_fuel_cat,no_fuel_cat2,windrf,moisture_classes,itree,fueldepthm,ibeh
 PUBLIC:: mfuelcats
 ! NOTE: fcwh and fcz0 are called fwh and fz0 in read/write statements
+public:: compare_rothermel
 
 
 ! moisture behavior, see Mandel et al EGU 2012
@@ -1499,14 +1502,14 @@ else
         call warning(msg)
     endif
     ros = ros_back+ros_wind+ros_slope
-#ifdef DEBUG
-    call fire_ros_rothermel(rr,fp%nfuel_cat(i,j),speed,tanphi,fp%fmc_g(i,j))
-    if (abs(ros-rr)>1e-4)then
-        write(msg,'(2(a,i6),2(a,f10.6),a,g15.4)')'i=',i,' j=',j,  &
-        ' fire_ros_cawfe:',ros,' rothermel:',rr,' diff:',ros-rr
-        call warning(msg)
+    if(compare_rothermel)then
+        call fire_ros_rothermel(rr,fp%nfuel_cat(i,j),speed,tanphi,fp%fmc_g(i,j))
+        if (abs(ros-rr)>1e-4)then
+            write(msg,'(2(a,i6),2(a,f10.6),a,g15.4)')'i=',i,' j=',j,  &
+                ' fire_ros_cawfe:',ros,' rothermel:',rr,' diff:',ros-rr
+            call warning(msg)
+        endif
     endif
-#endif
 endif
 if(fire_grows_only.gt.0)ros=max(ros,0.)
 
