@@ -2158,19 +2158,10 @@ intrinsic max,min,sqrt,nint,tiny,huge
                 upwind_err=1
             end select
   
-            ! normal direction, from central differences
-            scale=sqrt(diffCx*diffCx+diffCy*diffCy+eps) 
-            nvx=diffCx/scale
-            nvy=diffCy/scale
-                      
-            ! wind speed in direction of spread
-            ! speed =  vx(i,j)*nvx + vy(i,j)*nvy
-        
-    
             ! get rate of spread from wind speed and slope
 
             call fire_ros(rr, &
-            nvx,nvy,i,j,fp,ierrx,msg2)
+            diffCx,diffCy,i,j,fp,ierrx,msg2)
             nerr = nerr + ierrx
 
             if(fire_grows_only.gt.0)rr=max(rr,0.)
@@ -2305,18 +2296,14 @@ type(fire_params),intent(in)::fp
 integer, intent(out)::ierrx
 character(len=*), intent(out)::msg
 !*** local
-real::scale,nvx,nvy,r
+real::scale,r
 real, parameter:: eps=epsilon(0.0)
 !*** executable
             ! normal direction, from central differences
-            scale=sqrt(diffCx*diffCx+diffCy*diffCy+eps) 
-            nvx=diffCx/scale
-            nvy=diffCy/scale
-                      
             ! get rate of spread from wind speed and slope
 
             call fire_ros(r, &
-            nvx,nvy,i,j,fp,ierrx,msg)
+            diffCx,diffCy,i,j,fp,ierrx,msg)
 
             if(fire_grows_only.gt.0)r=max(r,0.)
             speed_func=r

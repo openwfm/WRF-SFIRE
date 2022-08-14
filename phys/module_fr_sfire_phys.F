@@ -1434,11 +1434,7 @@ character(len=128)::msg ! error message
 real:: speed, tanphi, ros
 
 !*** executable
-scale=sqrt(propx*propx+propy*propy)
-if (.not. scale > 0.) scale =1.
-nvx=propx/scale
-nvy=propy/scale
-call fire_ros(rr, nvx,nvy,i,j,fp,ierrx,msg)
+call fire_ros(rr,propx,propy,i,j,fp,ierrx,msg)
 fire_rate_of_spread = rr
 
 end function fire_rate_of_spread
@@ -1454,7 +1450,7 @@ implicit none
 
 !*** arguments
 real, intent(out)::ros ! rate of spread: backing, due to wind, due to slope
-real, intent(in)::propx,propy  ! direction, needs to be normalized
+real, intent(in)::propx,propy  ! direction, not normalized
 integer, intent(in)::i,j         ! node mesh coordinates
 type(fire_params),intent(in)::fp ! everything else on the fire grid, indexed by i,j
 integer, intent(out)::ierrx
@@ -1467,9 +1463,18 @@ real::cor_wind,cor_slope,nvx,nvy,scale
 
 !*** executable
 
-! make sure normal direction is size 1
-!scale=sqrt(propx*propx+propy*propy)+tiny(scale)
-scale=1.
+! make normal direction length 1 unless 0
+! scale=sqrt(propx*propx+propy*propy)
+! if(scale > 0.)then
+!      nvx = propx/scale
+!      nvx = propx/scale
+! else
+!     nvx = 0.
+!     nvy = 0.
+! endif
+
+! normalize direction 
+scale=sqrt(propx*propx+propy*propy + epsilon(0.))
 nvx=propx/scale
 nvy=propy/scale
 
@@ -1491,6 +1496,7 @@ else
     cor_wind=1.
     cor_slope=1.
 endif
+
 ierrx=0
 if (ibeh .eq. 2) then
     call fire_ros_balbi(ros,fp%nfuel_cat(i,j),speed,tanphi,fp%fmc_g(i,j),ierrx,msg)
