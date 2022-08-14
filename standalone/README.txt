@@ -11,18 +11,18 @@ It does not read the namelist.input so WRF does not need to be built first.
 1. Select compiler: ln -s make.inc.ifort make.inc or one of the others or make your own
 2. Build the executables: make fire_ros 
 3. Run: cd ../test/em_fire/balbi or cd ../test/em_fire/hill;  ./fire_ros.exe
-4. The first time, fire_ros.exe will create a file namelist_standalone.input,
+4. The first time, fire_ros.exe will create a file namelist_standalone.output,
    which has the same format as the input and can be used as a template.
 5. cp namelist_standalone.output namelist_standalone.input
-6. Edit namelist_standalone.input to change the inputs to fire_ros_balbi, run again, repeat.  
-7. If call_write_fuels_m=T in in input, fire_ros.exe will create file fuels.m. 
-   Follow the directions to use it
+6. Edit namelist_standalone.input to change the inputs to fire_ros_balbi as desired, run again, repeat.  
+7. If call_write_fuels_m=T in in input, fire_ros.exe will create file fuels.m. Follow the directions in
    https://wiki.openwfm.org/wiki/How_to_diagnose_fuel_properties_in_WRF-SFIRE
+   to examine fuels.m and make graphics.
 
 B. fire.exe 
 fire.exe is the complete fire model running with atmosphere from WRF-SFIRE output.
 
-1. build WRF-SFIRE as usual: cd ..; ./configure; compile em_fire
+1. build WRF-SFIRE as usual, options do not matter: cd ..; ./configure; compile em_fire
 2. Select compiler: ln -s make.inc.ifort make.inc or one of the others or make your own
 3. go back here: cd standalone
 4. build the executable: make fire 
