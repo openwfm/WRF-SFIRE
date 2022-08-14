@@ -9,9 +9,14 @@ It reads namelist.fire if present in the current directory.
 It does not read the namelist.input so WRF does not need to be built first. 
 
 1. Select compiler: ln -s make.inc.ifort make.inc or one of the others or make your own
-2. Build the executable: make fire_ros
-3. Run it: ./fire_ros.exe
-   This will create Matlab file fuels.m. Follow the directions to use it in Matlab at
+2. Build the executables: make fire_ros 
+3. Run: cd ../test/em_fire/balbi or cd ../test/em_fire/hill;  ./fire_ros.exe
+4. The first time, fire_ros.exe will create a file namelist_standalone.input,
+   which has the same format as the input and can be used as a template.
+5. cp namelist_standalone.output namelist_standalone.input
+6. Edit namelist_standalone.input to change the inputs to fire_ros_balbi, run again, repeat.  
+7. If call_write_fuels_m=T in in input, fire_ros.exe will create file fuels.m. 
+   Follow the directions to use it
    https://wiki.openwfm.org/wiki/How_to_diagnose_fuel_properties_in_WRF-SFIRE
 
 B. fire.exe 
