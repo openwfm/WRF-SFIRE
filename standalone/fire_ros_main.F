@@ -85,7 +85,7 @@ vy = 0.
 dzdxf = 0.
 dzdyf = 0.
 fmc_g = 0.
-nfuel_cat=14  ! no fuel
+nfuel_cat=1   ! some fuel
 t2f = 273.    ! temp K 
 psfcf = 1e5   ! pressure Pa
 ffw = 10.     ! fire front width m
@@ -147,6 +147,8 @@ do j=1,n
                  propx(i,j),propy(i,j),i,j,fp,ierr,msg)
          if(ierr.ne.0)call crash(msg)
 enddo
+
+print *,'computed ros=',ros
 
 print *,'writing file '//trim(file_out)
 OPEN(iounit, FILE=trim(file_out),FORM='FORMATTED',STATUS='UNKNOWN',ACTION='WRITE',IOSTAT=ierr)
