@@ -1478,32 +1478,32 @@ scale=sqrt(propx*propx+propy*propy + epsilon(0.))
 nvx=propx/scale
 nvy=propy/scale
 
-if (fire_advection.ne.0) then ! from flags in module_fr_sfire_util
-    call crash('fire_advection no longer supported')
-    ! wind speed is total speed 
-    speed =  sqrt(fp%vx(i,j)*fp%vx(i,j)+ fp%vy(i,j)*fp%vy(i,j))+tiny(speed)
-    ! slope is total slope
-    tanphi = sqrt(fp%dzdxf(i,j)*fp%dzdxf(i,j) + fp%dzdyf(i,j)*fp%dzdyf(i,j))+tiny(tanphi)
-    ! cos of wind and spread, if >0
-    cor_wind =  max(0.,(fp%vx(i,j)*nvx + fp%vy(i,j)*nvy)/speed)
-    ! cos of slope and spread, if >0
-    cor_slope = max(0., (fp%dzdxf(i,j)*nvx + fp%dzdyf(i,j)*nvy)/tanphi)
-else
-    ! wind speed in spread direction
-    speed =  fp%vx(i,j)*nvx + fp%vy(i,j)*nvy
-    ! slope in spread direction
-    tanphi = fp%dzdxf(i,j)*nvx + fp%dzdyf(i,j)*nvy
-    cor_wind=1.
-    cor_slope=1.
-endif
 
 ierrx=0
 if (ibeh .eq. 2) then
-    call fire_ros_balbi(ros,fp%nfuel_cat(i,j),speed,tanphi,fp%fmc_g(i,j),ierrx,msg)
+    call fire_ros_balbi(ros,nvx,nvy,i,j,fp,ierrx,msg)
     if (ierrx.ne.0)then
         call warning(msg)
     endif
 else
+    if (fire_advection.ne.0) then ! from flags in module_fr_sfire_util
+        call crash('fire_advection no longer supported')
+        ! wind speed is total speed 
+        speed =  sqrt(fp%vx(i,j)*fp%vx(i,j)+ fp%vy(i,j)*fp%vy(i,j))+tiny(speed)
+        ! slope is total slope
+        tanphi = sqrt(fp%dzdxf(i,j)*fp%dzdxf(i,j) + fp%dzdyf(i,j)*fp%dzdyf(i,j))+tiny(tanphi)
+        ! cos of wind and spread, if >0
+        cor_wind =  max(0.,(fp%vx(i,j)*nvx + fp%vy(i,j)*nvy)/speed)
+        ! cos of slope and spread, if >0
+        cor_slope = max(0., (fp%dzdxf(i,j)*nvx + fp%dzdyf(i,j)*nvy)/tanphi)
+    else
+        ! wind speed in spread direction
+        speed =  fp%vx(i,j)*nvx + fp%vy(i,j)*nvy
+        ! slope in spread direction
+        tanphi = fp%dzdxf(i,j)*nvx + fp%dzdyf(i,j)*nvy
+        cor_wind=1.
+        cor_slope=1.
+    endif
     call fire_ros_cawfe(ros_back,ros_wind,ros_slope, &
     speed,tanphi,cor_wind,cor_slope,i,j,fp,ierrx,msg)
     if (ierrx.ne.0)then
@@ -1608,23 +1608,25 @@ end subroutine fire_ros_rothermel
 !
 
 
-subroutine fire_ros_balbi(ros,nfuel,speed,tanphi,fmc_g,ierrx,msg)
+subroutine fire_ros_balbi(ros,nvx,nvy,i,j,fp,ierrx,msg)
 ! in
-!       nfuel   number of fuel description
-!       speed   wind speed
-!       tanphi  slope
-!       fmc_g   fuel moisture content
+!       nvx,nvy direction of propagation, normalized 
+!       i,j     indices in the fire grid
+!       fp      fire grid arrays 
 ! out
 !       ros     rate of spread
 !       ierrx   error code
-!       msg     message (last, if printed)
+!       msg     error message
 ! global
 !       balbi_msglevel 0=nothing 1=errors 2=warnings 3=diagnostics 4=iterations
+!       fuel categories from namelist.fire
 
 !*** arguments
 
 implicit none
-real, intent(in):: nfuel,speed,tanphi,fmc_g
+real, intent(in):: nvx,nvy
+integer, intent(in):: i,j
+type(fire_params):: fp
 real, intent(out):: ros
 integer, intent(out)::ierrx 
 character(len=*), intent(out)::msg
@@ -1659,24 +1661,44 @@ real, parameter:: pi=3.141592653589793
 !*** local
 real:: m, rho_v, e, DeltaH, sigma, sigma_t, beta, beta_t, s, LAI, LAI_t, nu, lv, alpha, U, K_drag, q, &
    A, R_1st_guess, R, gamma, Chi, T_f, u_0, H_f, b0, R_b, R_f, R_c, R_old, change
-integer::k,i
+integer::k,it
+real:: speed,tanphi,fmc_g,t2f,psfcf,ffw,fgip,nfuel_cat
+! nfuel_cat is real only because real array was easier than integer in WPS long ago
 
 
 !*** executable
-! print *,'balbi_msglevel=',balbi_msglevel 
-if(balbi_msglevel.ge.3)then
+
+! retrieve balbi inputs 
+speed  = fp%vx(i,j)*nvx + fp%vy(i,j)*nvy       ! wind speed in the spread direction
+tanphi = fp%dzdxf(i,j)*nvx + fp%dzdyf(i,j)*nvy ! slope in spread the direction
+fmc_g  = fp%fmc_g(i,j)                         ! fuel moisture content (water / dry)
+nfuel_cat = fp%nfuel_cat(i,j)                  ! fuel categories
+t2f = fp%t2f(i,j)                              ! temperature at 2m interpolated to the fire grid
+psfcf = fp%psfcf(i,j)                          ! surface pressure interpolated to the fire grid
+ffw = fp%ffw(i,j)                              ! fire front width = 1/fireline curvature (?)
+fgip = fp%fgip(i,j)                            ! fuel load
+
+! retrieve static values by indexing from fuel categories, as fgip = fp%fgi(i,j) instead of above
+! do not delete any fields from fp they are used by Rothermel model
+ 
+if(balbi_msglevel.ge.3)then  ! print the inputs
 !$OMP CRITICAL(SFIRE_PHYS_CRIT)
     write(msg,*)'fire_ros_balbi called with balbi_msglevel=',balbi_msglevel
     call message(msg)
     call message('0=nothing 1=errors 2=warnings 3=diagnostics 4=iterations')
-    ! more comes here
+    call message('inputs:')
+    write(msg,*)'wind speed projected on propagation direction speed=',speed
+    write(msg,*)'slope projected on propagation direction tanphi=',speed
+    write(msg,*)'nfuel_cat=',nfuel_cat
+    write(msg,*)'temperature at 2m t2f=',t2f
+    write(msg,*)'surface pressure psfcf=',psfcf
+    write(msg,*)'fire front width=',ffw
 !$OMP END CRITICAL(SFIRE_PHYS_CRIT)
 endif
 
+!*** continue here
 
-!print *,'nfuel ',nfuel,' speed ',speed,' tanphi ',tanphi,' fmc_g ',fmc_g
-
-k = nfuel                        ! fuel index
+k = nfuel_cat                        ! converting fuel index to integer
 
 m = fmc_g                   ! FUEL PARTICLE MOISTURE CONTENT as fraction (0 - 1) [-]
 rho_v = fueldens(k)*16.0185       ! FUEL Particle Density [Kg/m^3]
@@ -1706,13 +1728,13 @@ q = C_p * (T_i - T_a) + m * deltah_w
 A = min (s/(2*pi), beta/beta_t) * Chi_0 * DeltaH / (4 * q)
 
 ! as a first guess take Rothermell ROS
-call fire_ros_rothermel(R_1st_guess,nfuel,speed,tanphi,fmc_g)
+call fire_ros_rothermel(R_1st_guess,nfuel_cat,speed,tanphi,fmc_g)
 R = R_1st_guess
 R_old = R
 gamma = alpha         ! first guess no extra tilt
 
-do i=1,maxit_R
-    !print *,'i',i
+do it=1,maxit_R
+    !print *,'it',it
 
     ! compute radiative fraction (eq. 20)
     if (simple_radiation) then
@@ -1755,7 +1777,7 @@ do i=1,maxit_R
 
     if (R<0.)then
 !$OMP CRITICAL(SFIRE_PHYS_CRIT)
-        write(msg,1)i,R,change
+        write(msg,1)it,R,change
         call message(msg)
         write(msg,'(3(a,f8.3,1x))') 'R_b=',R_b,'R_f=',R_f,'R_c=',R_c
         call message(msg)
