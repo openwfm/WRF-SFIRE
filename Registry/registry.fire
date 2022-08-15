@@ -99,6 +99,9 @@ state    real     ros       *i*j      fire        1         z    hr    "ROS" "ra
 state    real     burnt_area_dt *i*j      fire        1         z    hr    "BURNT_AREA_DT" "fraction of cell area burnt on current dt" "-"
 state    real     flame_length  *i*j      fire        1         z    hr    "FLAME_LENGTH"     "fire flame length" "m"
 state    real     ros_front     *i*j      fire        1         z    hr    "ROS_FRONT"     "rate of spread at fire front" "m/s"
+state    real     t2f       *i*j      fire        1         z    hr    "T2F"     "temperature at 2m"  "K"
+state    real     psfcf     *i*j      fire        1         z    hr    "PSFCF"    "surface pressure"  "Pa"
+state    real     ffwidth   *i*j      fire        1         z    hr    "FFWIDTH"  "fire front width"  "m"
 # 
 # ------------------------------------------------------------------------------------------------------------------------
 # fuel moisture variables

@@ -24,7 +24,7 @@ real,pointer,dimension(:,:):: fmc_g                ! fuel moisture contents, gro
 real,pointer,dimension(:,:):: nfuel_cat            ! fuel category (integer values)
 real,pointer,dimension(:,:):: t2f                  ! temperature at 2m (K) (Balbi model only)
 real,pointer,dimension(:,:):: psfcf                ! surface pressure (Pa) (Balbi model only)
-real,pointer,dimension(:,:):: ffw                  ! fire front width (m) (Balbi model only)
+real,pointer,dimension(:,:):: ffwidth              ! fire front width (m) (Balbi model only)
 
 end type fire_params
 
@@ -1662,7 +1662,7 @@ real, parameter:: pi=3.141592653589793
 real:: m, rho_v, e, DeltaH, sigma, sigma_t, beta, beta_t, s, LAI, LAI_t, nu, lv, alpha, U, K_drag, q, &
    A, R_1st_guess, R, gamma, Chi, T_f, u_0, H_f, b0, R_b, R_f, R_c, R_old, change
 integer::k,it
-real:: speed,tanphi,fmc_g,t2f,psfcf,ffw,fgip,nfuel_cat
+real:: speed,tanphi,fmc_g,t2f,psfcf,ffwidth,fgip,nfuel_cat
 ! nfuel_cat is real only because real array was easier than integer in WPS long ago
 
 
@@ -1675,7 +1675,7 @@ fmc_g  = fp%fmc_g(i,j)                         ! fuel moisture content (water / 
 nfuel_cat = fp%nfuel_cat(i,j)                  ! fuel categories
 t2f = fp%t2f(i,j)                              ! temperature at 2m interpolated to the fire grid
 psfcf = fp%psfcf(i,j)                          ! surface pressure interpolated to the fire grid
-ffw = fp%ffw(i,j)                              ! fire front width = 1/fireline curvature (?)
+ffwidth = fp%ffwidth(i,j)                              ! fire front width = 1/fireline curvature (?)
 fgip = fp%fgip(i,j)                            ! fuel load
 
 ! retrieve static values by indexing from fuel categories, as fgip = fp%fgi(i,j) instead of above
@@ -1692,7 +1692,7 @@ if(balbi_msglevel.ge.3)then  ! print the inputs
     write(msg,*)'nfuel_cat=',nfuel_cat
     write(msg,*)'temperature at 2m t2f=',t2f
     write(msg,*)'surface pressure psfcf=',psfcf
-    write(msg,*)'fire front width=',ffw
+    write(msg,*)'fire front width=',ffwidth
 !$OMP END CRITICAL(SFIRE_PHYS_CRIT)
 endif
 

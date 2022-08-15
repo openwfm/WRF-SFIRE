@@ -1750,6 +1750,9 @@ subroutine set_fp_from_grid(grid,fp)
     fp%fuel_time => grid%fuel_time ! time for fuel to burn to 1/e
     fp%fmc_g => grid%fmc_g   ! fuel moisture, ground
     fp%nfuel_cat => grid%nfuel_cat ! fuel category
+    fp%t2f => grid%t2f       ! temperature
+    fp%zsf => grid%psfcf     ! surface pressure 
+    fp%ffwidth => grid%ffwidth     ! fire front width 
 
 
 end subroutine set_fp_from_grid
