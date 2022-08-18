@@ -1120,23 +1120,32 @@ do ij=1,num_tiles
                 ifts,ifte, 1,nfmw+1, jfts,jfte,                    &
                 0,0,0,       &
                 u0_fmw)
-            print *,"time step ",itimestep," chsum0_fmw ", chsum0_fmw
+            !write(msg,*)"time step ",itimestep," chsum0_fmw ", chsum0_fmw
+            !call message(msg)
             chsum0_fmw = ieor(chsum0_fmw,get_chsum(  &
                 ifms,ifme, 1,nfmw, jfms,jfme,                    &
                 ifds,ifde, 1,nfmw+1, jfds,jfde,                    & ! atm grid dimensions
                 ifts,ifte, 1,nfmw+1, jfts,jfte,                    &
                 0,0,0,       &
                 v0_fmw))
-            print *,"time step ",itimestep," chsum0_fmw ", chsum0_fmw
+            !write(msg,*)"time step ",itimestep," chsum0_fmw ", chsum0_fmw
+            !call message(msg)
             chsum0_fmw = ieor(chsum0_fmw,get_chsum(  &
                 ifms,ifme, 1,nfmw, jfms,jfme,                    &
                 ifds,ifde, 1,nfmw+1, jfds,jfde,                    & ! atm grid dimensions
                 ifts,ifte, 1,nfmw+1, jfts,jfte,                    &
                 0,0,0,       &
                 w0_fmw))
-            print *,"time step ",itimestep," chsum0_fmw ", chsum0_fmw
-            print *, "size ",ifts,ifte, 1,nfmw, jfts,jfte
-            print *,"corner values",u0_fmw(1,1,1),v0_fmw(1,1,1),w0_fmw(1,1,1)
+            if(fire_print_msg.ge.2)then
+!$OMP CRITICAL(SFIRE_DRIVER_CRIT)
+                write(msg,*)"time step ",itimestep," chsum0_fmw ", chsum0_fmw
+                call message(msg)
+                write(msg,*)"size ",ifts,ifte, 1,nfmw, jfts,jfte
+                call message(msg)
+                write(msg,*)"corner values",u0_fmw(ifts,1,jfts),v0_fmw(ifts,1,jfts),w0_fmw(ifts,1,jfts)
+                call message(msg)
+!$OMP END CRITICAL(SFIRE_DRIVER_CRIT)
+            endif
          endif
 
 #ifdef PNETCDF
