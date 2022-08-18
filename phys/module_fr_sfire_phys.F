@@ -1631,56 +1631,41 @@ real, intent(out):: ros
 integer, intent(out)::ierrx 
 character(len=*), intent(out)::msg
 
-!*** constants
-
-! Universal constants
-real:: g = 9.81                        ! Gravitational acceleration [m/s2]
-real:: st = 17                         ! Stochiometric coefficient
-real:: Chi_0 = 0.3                     ! Thin Flame Radiant Fraction - ?Balbi 2009?
-real:: B = 5.67e-8                     ! Stefan-Boltzman [W/m2/K4)
-real:: deltah_w = 2.257e6                ! Water Evap Enthalpy [J/kg]
-real:: tau_0 = 75591                   ! Anderson's residence time coefficient
-real:: T_a = 293.15                    ! air temperature [K]
-real:: T_i = 600                       ! ignition temperature [K]
-! Fuel Constants
-real:: C_p = 2e3                      ! Specific heat of fuel [J/kg/K] - Balbi 2009
-real:: C_pa = 1150                    ! Specific heat of air [J/Kg/K]
-
-!Model parameters
-real, parameter:: K1 = 100                                    ! 100 for field, 1400 for the lab
-real, parameter:: r_00 = 2.5e-5                               ! Model parameter
-logical, parameter:: simple_radiation = .false.
-real, parameter:: tol_R = 1e-5                   ! tolerance to compute R
-integer, parameter:: maxit_R = 20                   ! max iterations to compute R
-real, parameter:: rho = 1500                      ! Fuel density [kg/m3]
-real, parameter:: rho_a = 1.125                  ! Air density [kg/m3]
-real, parameter:: rho_flame = 0.25                            ! Gas Flame Density [kg/m^3]
+! Constants
+real, parameter:: tol_R = 1e-5          ! tolerance to compute R
+integer, parameter:: maxit_R = 20       ! max iterations to compute R
 real, parameter:: pi=3.141592653589793
 
-
 !*** local
-real:: m, rho_v, e, DeltaH, sigma, sigma_t, beta, beta_t, s, LAI, LAI_t, nu, lv, alpha, U, K_drag, q, &
-   A, R_1st_guess, R, gamma, Chi, T_f, u_0, H_f, b0, R_b, R_f, R_c, R_old, change
-integer::k,it
-real:: speed,tanphi,fmc_g,t2f,psfcf,ffw,fgip,nfuel_cat
+real:: vx, vy, dzdxf, dzdyf, speed, tanphi, fmc_g, nfuel_cat, t2f, psfcf, ffw, fgip, W_0
+real:: B_, chi_0, r_00, delta_h, tau_0, rho_a, s_t, T_i, g, C_pa, U, alpha 
+real:: m, sigma, sigma_t, h, s, rho_v, delta_H_, C_p
+real:: beta, beta_t, S_, S_t_, nu, T_a, delta_T, q, T_f, u_0
+real:: R_b, A, gamma, H_f, l_f
+real:: W_00, a_up, a_lat, K_, b
+real:: R_old, R_r, R_c, R, change
+integer:: k, it
 ! nfuel_cat is real only because real array was easier than integer in WPS long ago
-
 
 !*** executable
 
-! retrieve balbi inputs 
-speed  = fp%vx(i,j)*nvx + fp%vy(i,j)*nvy       ! wind speed in the spread direction
-tanphi = fp%dzdxf(i,j)*nvx + fp%dzdyf(i,j)*nvy ! slope in spread the direction
-fmc_g  = fp%fmc_g(i,j)                         ! fuel moisture content (water / dry)
-nfuel_cat = fp%nfuel_cat(i,j)                  ! fuel categories
-t2f = fp%t2f(i,j)                              ! temperature at 2m interpolated to the fire grid
-psfcf = fp%psfcf(i,j)                          ! surface pressure interpolated to the fire grid
-ffw = fp%ffw(i,j)                              ! fire front width = 1/fireline curvature (?)
-fgip = fp%fgip(i,j)                            ! fuel load
+! retrieve balbi inputs
+vx = fp%vx(i,j)
+vy = fp%vy(i,j)
+dzdxf = fp%dzdxf(i,j)
+dzdyf = fp%dzdyf(i,j)
+speed  = vx*nvx + vy*nvy            ! wind speed in the spread direction
+tanphi = dzdxf*nvx + dzdyf*nvy      ! slope in spread the direction
+fmc_g  = fp%fmc_g(i,j)              ! fuel moisture content (water / dry)
+nfuel_cat = fp%nfuel_cat(i,j)       ! fuel categories
+t2f = fp%t2f(i,j)                   ! temperature at 2m interpolated to the fire grid
+psfcf = fp%psfcf(i,j)               ! surface pressure interpolated to the fire grid
+ffw = fp%ffw(i,j)                   ! fire front width = 1/fireline curvature (?)
+fgip = fp%fgip(i,j)                 ! fuel load
 
 ! retrieve static values by indexing from fuel categories, as fgip = fp%fgi(i,j) instead of above
 ! do not delete any fields from fp they are used by Rothermel model
- 
+
 if(balbi_msglevel.ge.3)then  ! print the inputs
 !$OMP CRITICAL(SFIRE_PHYS_CRIT)
     write(msg,*)'fire_ros_balbi called with balbi_msglevel=',balbi_msglevel
@@ -1688,127 +1673,158 @@ if(balbi_msglevel.ge.3)then  ! print the inputs
     call message('0=nothing 1=errors 2=warnings 3=diagnostics 4=iterations')
     call message('inputs:')
     write(msg,*)'wind speed projected on propagation direction speed=',speed
-    write(msg,*)'slope projected on propagation direction tanphi=',speed
+    write(msg,*)'slope projected on propagation direction tanphi=',tanphi
+    write(msg,*)'fuel moisture content (water / dry) fmc_g=',fmc_g
     write(msg,*)'nfuel_cat=',nfuel_cat
     write(msg,*)'temperature at 2m t2f=',t2f
     write(msg,*)'surface pressure psfcf=',psfcf
     write(msg,*)'fire front width=',ffw
+    write(msg,*)'total fuel load fgip=',fgip
 !$OMP END CRITICAL(SFIRE_PHYS_CRIT)
 endif
 
 !*** continue here
 
-k = nfuel_cat                        ! converting fuel index to integer
-
-m = fmc_g                   ! FUEL PARTICLE MOISTURE CONTENT as fraction (0 - 1) [-]
-rho_v = fueldens(k)*16.0185       ! FUEL Particle Density [Kg/m^3]
-e = fueldepthm(k)                  ! Fuel thickness (depth) (m)
-DeltaH = cmbcnst               ! Combustion Enthalpy [J/kg]
-sigma = fgi(k)                    ! Dead fuel load [kg/m2]
-sigma_t = fgi(k)                  ! Total fuel load [kg/m2]
-beta    = sigma/(e * rho)                   ! packing ratio of the dead fuel (eq. 1)
-beta_t  = sigma_t/(e * rho)                 ! total packing ratio (eq. 2)
-s = savr(k)/0.3048                             ! surface area to volume ratio 1/m converted form 1/ft
-LAI = (s * e * beta) / 2            ! Leaf area index for dead fuel (eq. 3)
-LAI_t= (s * e * beta_t) / 2         ! Total fuel leaf area index (eq. 4)
-nu = min(2*LAI,2*pi*beta/beta_t)            ! Absorption coeffcient (eq. 5) 
-lv =   e                                    ! fuel length (m)
-
-alpha = atan(tanphi)           ! Slope angle [rad]
-U = max(speed,0.)              ! winds speed normal to the fire front line (m/s), >=0 ONLY
+k = nfuel_cat       ! converting fuel index to integer
 
 
-! compute drag force coefficient (eq. 7)
-K_drag = K1 * beta_t * min(e/lv,1.)
+! --- Constants and model parameters (Balbi 20220622 slide 9) ---
+! TODO: WRF-SFIRE enhancement - get air density (rho_a) from atmospheric model (not air pressure)
+B_ = 5.67e-8            ! Stefan-Boltzman constant              [W/m^2/K^4]
+chi_0 = 0.3             ! Radiative factor
+r_00 = 2.5e-5           ! Model parameter
+delta_h = 2.3e6         ! Heat of latent evaporation            [J/kg]
+tau_0 = 75591           ! Anderson's residence time coefficient
+rho_a = 1.125           ! Air density                           [kg/m3]
+s_t = 16                ! Stoichiometric coefficient
+T_i = 600               ! Ignition temperature                  [K]
+g = 9.81                ! Gravitational acceleration            [m/s^2]
+C_pa = 1150             ! Specific heat of air                  [J/kg/K]
 
-! compute activation energy (eq. 14)
-q = C_p * (T_i - T_a) + m * deltah_w
+U = speed               ! Normal component of wind speed        [m/s]
+alpha = atan(tanphi)    ! Local terrain slope angle             [rad]
+W_0 = ffw               ! Length of the ignition line           [m]
 
-! compute radiant coeffcient (eq. 13)
-A = min (s/(2*pi), beta/beta_t) * Chi_0 * DeltaH / (4 * q)
 
-! as a first guess take Rothermell ROS
-call fire_ros_rothermel(R_1st_guess,nfuel_cat,speed,tanphi,fmc_g)
-R = R_1st_guess
-R_old = R
-gamma = alpha         ! first guess no extra tilt
+! --- Input fuel data (Balbi 20220622 slide 2) ---
+! TODO: Compute dead fuel load (sigma) based on dead/live fuel ratio tables (fmc_gwNN)
+m = fmc_g               ! Dead fuel moisture content
+sigma = fgip            ! Dead fine fuel load                   [kg/m^2]
+sigma_t = fgip          ! Total fine fuel load                  [kg/m^2]
+h = fueldepthm(k)       ! Fuel height                           [m]
+s = savr(k)/0.3048      ! Surface area to volume ratio          [1/m]
+rho_v = 500             ! Fuel density                          [kg/m^3]
+delta_H_ = cmbcnst      ! Heat of combustion of pyrolysis gases [J/kg]
+C_p = 2e3               ! Specific heat                         [J/kg/K]
 
+
+! --- Preliminary computations (Balbi 20220622 slide 3) ---
+! Packing ratios - dead, total
+beta = sigma / (h * rho_v)
+beta_t = sigma_t / (h * rho_v)
+
+! Leaf areas - dead, total
+S_ = s * h * beta
+S_t_ = s * h * beta_t
+
+! Absorbtion coefficient
+nu = S_t_
+
+! Temperature difference
+T_a = t2f
+delta_T = T_i - T_a
+
+! Activation energy
+q = C_p * delta_T + m * delta_h
+
+! Flame temperature
+T_f = T_a + (delta_H_ * (1 - chi_0)) / ((s_t + 1) * C_pa)
+
+! Upward gas velocity
+u_0 = 2 * nu * ((s_t + 1) / tau_0) * (rho_v / rho_a) * (T_f / T_a)
+
+
+! --- Radiative contributions (slide 4) ---
+! Flame base radiation contribution to ROS
+R_b = min(S_t_ / (2 * pi), 1.) * (beta / beta_t)**2 * (B_ * T_f**4) / (beta * rho_v * q)
+
+! Radiative coefficient
+A = min(S_t_ / (2 * pi), beta / beta_t) * chi_0 * delta_H_ / (4 * q)
+
+! Flame tilt angle
+gamma = atan(tan(alpha) + U / u_0)
+
+! Flame height
+H_f = (u_0**2) / (g * (T_f / T_a - 1) * (cos(alpha))**2)
+
+! Flame length
+l_f = H_f / (cos(gamma - alpha))
+
+
+! --- Convective contribution (slide 5) ---
+! Heat loss coefficients
+! TODO: Get W_00 from fuel table yet to be defined
+W_00 = 50.
+a_up = 0.025 * s * beta_t * sqrt(h)
+a_lat = min(W_0 / W_00, 1.)
+
+! Drag force coefficient
+! NOTE: denominator is identical to a_lat above; perhaps slide meant to
+! specified a_lat instead?
+K_ = (beta_t / min(W_0 / W_00, 1.))
+
+! Convective coefficient
+b = (a_up * a_lat * rho_a * delta_H_ * T_a) / (2 * q * (s_t + 1) * rho_v * beta_t * T_f)
+
+
+! --- Algorithm (slide 7) ---
+! Iteratively solve for the total ROS.  Seed the search using the flame
+! base radiation contribution, which is invariant.
+R_old = R_b
 do it=1,maxit_R
-    !print *,'it',it
+    ! Update the iterative ROS contributions, then recompute the total ROS.
+    R_r = A * R_old * ((1. + sin(gamma) - cos(gamma)) / (1. + ((R_old * cos(gamma)) / (s * r_00))))
+    R_c = b * (u_0 * (tan(alpha) / 2) + (U * exp(-K_ * R_old)))
+    R = R_b + R_r + R_c
+    change = R - R_old
 
-    ! compute radiative fraction (eq. 20)
-    if (simple_radiation) then
-        Chi = Chi_0 ! start from the initial guess
-    else
-        Chi = Chi_0/(1 + R * cos(gamma) / (s * r_00)) ! compute radiative fraction from rate of spread and gamma which are unkown...
-    endif
-    !print *,'Chi',Chi
-
-    ! compute flame temperature (eq. 16)
-    T_f = T_a + DeltaH * (1-Chi) / ((st+1) * C_pa)
-    !print *,'T_f',T_f
-
-    ! compute upward gas velocity (eq. 19)
-    u_0 = 2*nu * ((st+1)/tau_0) * (rho/rho_a)  * (T_f/T_a)
-
-    ! compute flame tilt angle (eq. 15)
-    gamma = atan(tan(alpha) + U / u_0)
-    !print *,'gamma',gamma
-
-    ! compute flame height (eq. 17)
-    H_f = (u_0)*(u_0) / (g * (T_f/T_a -1) * (cos(alpha))**2)
-    !print *,'H_f',H_f
-
-    ! compute convective coefficient (eq. 8)
-    b0 = 1 / (q * tau_0 * u_0 * beta_t) * deltah_w * nu * min( st/30.,1.)
-
-    ! compute rate of spread 
-    ! rate of spread from base radiation
-    R_b = min (s * e *  beta_t/pi , 1.) * (beta/beta_t)**2 * (B*T_f**4)/(beta * rho * q)
-
-    ! compute rate of spread due to flame radiation (eq. 11)
-    R_f = A * R * (1 + sin(gamma) - cos(gamma)) / (1 + R * cos(gamma) / (s * r_00))
-
-    ! compute rate of spread due to convection
-    R_c = b0 * (tan(alpha) + 2*U/u_0 * exp (-K_drag * R))
-
-    ! compute the total rate of spread
-    R = R_b + R_f + R_c
-
+    ! TODO: Review if this non-negative check is still needed
     if (R<0.)then
 !$OMP CRITICAL(SFIRE_PHYS_CRIT)
         write(msg,1)it,R,change
         call message(msg)
-        write(msg,'(3(a,f8.3,1x))') 'R_b=',R_b,'R_f=',R_f,'R_c=',R_c
+        write(msg,'(3(a,f8.3,1x))') 'R_b=',R_b,'R_r=',R_r,'R_c=',R_c
         call message(msg)
         call warning('not allowing R<0')
 !$OMP END CRITICAL(SFIRE_PHYS_CRIT)
         R=0.
     endif
-    change = R-R_old
+
     if (balbi_msglevel .ge. 4)then 
 !$OMP CRITICAL(SFIRE_PHYS_CRIT)
-        write(msg,1)i,R,change
+        write(msg,1)it,R,change
         call message(msg)
 !$OMP END CRITICAL(SFIRE_PHYS_CRIT)
     endif
-    if (abs( change) < tol_R)then
+
+    if (abs(change) < tol_R)then
         exit
     endif
-    R_old = R;
+    R_old = R
 enddo
+
 1 format('fire_ros_balbi: iteration',i3,' R=',f6.3,' diff=',g12.3,a)
-if (abs(change) <tol_R) then
-    if (balbi_msglevel .ge. 3)then 
+if (abs(change) < tol_R)then
+    if (balbi_msglevel .ge. 3)then
 !$OMP CRITICAL(SFIRE_PHYS_CRIT)
-        write(msg,1)i,R,change,' converged'
+        write(msg,1)it,R,change,' converged'
         call message(msg)
 !$OMP END CRITICAL(SFIRE_PHYS_CRIT)
     endif
     ierrx = 0
 else
 !$OMP CRITICAL(SFIRE_PHYS_CRIT)
-    write(msg,1)i,R,change,' did not converge'
+    write(msg,1)it,R,change,' did not converge'
     if (balbi_msglevel .ge. 2)then 
         call warning(msg)
     endif
