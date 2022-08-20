@@ -1487,7 +1487,6 @@ if (ibeh .eq. 2) then
     endif
 else
     if (fire_advection.ne.0) then ! from flags in module_fr_sfire_util
-        call crash('fire_advection no longer supported')
         ! wind speed is total speed 
         speed =  sqrt(fp%vx(i,j)*fp%vx(i,j)+ fp%vy(i,j)*fp%vy(i,j))+tiny(speed)
         ! slope is total slope
