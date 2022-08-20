@@ -1750,8 +1750,8 @@ subroutine set_fp_from_grid(grid,fp)
     fp%fuel_time => grid%fuel_time ! time for fuel to burn to 1/e
     fp%fmc_g => grid%fmc_g   ! fuel moisture, ground
     fp%nfuel_cat => grid%nfuel_cat ! fuel category
-    fp%t2f => grid%t2f       ! temperature
-    fp%zsf => grid%psfcf     ! surface pressure 
+    fp%tempf => grid%tempf     ! temperature
+    fp%rhof => grid%rhof     ! surface air density
     fp%ffwidth => grid%ffwidth     ! fire front width 
 
 
@@ -1855,6 +1855,11 @@ subroutine check_grid_alloc(grid,config_flags)
     call message('check_grid_alloc: checking if grid arrays used in emissions are allocated',level=2)
     call check_size(size(grid%chem),'chem',config_flags%chem_opt)
     call check_size(size(grid%tracer),'tracer',config_flags%tracer_opt)
+    !if(ibeh.eq.2)then
+        call check_size(size(grid%tempf),'tempf')
+        call check_size(size(grid%rhof),'rhof')
+    !endif
+        
 
 end subroutine check_grid_alloc
 
