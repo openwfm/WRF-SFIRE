@@ -1858,6 +1858,7 @@ subroutine check_grid_alloc(grid,config_flags)
     !if(ibeh.eq.2)then
         call check_size(size(grid%tempf),'tempf')
         call check_size(size(grid%rhof),'rhof')
+        call check_size(size(grid%ffwidth),'ffwidth')
     !endif
         
 
