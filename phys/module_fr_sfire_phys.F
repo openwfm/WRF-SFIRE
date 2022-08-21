@@ -1983,7 +1983,7 @@ real, intent(out), dimension(ifms:ifme,jfms:jfme) :: &
 integer:: i,j,k, ierrx
 real::r
 character(len=128)::msg
-real,parameter::s=1.41421356237,o=1.,z=0.
+real,parameter::s=1.0/1.41421356237,o=1.,z=0.
 integer,parameter::nv=8
 real, dimension(nv)::nvx=(/o,s,z,-s,-o,-s,z,s/),  &
                      nvy=(/z,s,o,s,z,-s,-o,-s/)
