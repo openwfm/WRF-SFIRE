@@ -65,7 +65,7 @@ PUBLIC:: mfuelcats
   integer:: moisture_classes=3
   real, dimension(max_moisture_classes):: drying_lag,wetting_lag,saturation_moisture,saturation_rain, &
          rain_threshold,rec_drying_lag_sec,rec_wetting_lag_sec
-  integer, dimension(max_moisture_classes):: drying_model,wetting_model,fmc_gc_initialization
+  integer, dimension(max_moisture_classes):: drying_model,wetting_model,fmc_gc_initialization,is_dead
    ! relative weights of moisture class for each fuel category
    integer::itmp
    CHARACTER (len=80), DIMENSION(max_moisture_classes), save :: moisture_class_name
@@ -85,6 +85,7 @@ PUBLIC:: mfuelcats
   data drying_model               /1,   1,   1,    zm*1 /
   data wetting_model              /1,   1,   1,    zm*1 /
   data fmc_gc_initialization      /2,   2,   2,    zm*2 /  ! initialization 0=input, 1=from fuelmc_g, 2=from equilibrium
+  data is_dead                    /1,   1,   1,    zm*0 /  ! identify moisture classes representing dead fuel
   real, dimension(7)::eq_p
   data eq_p/  1.035e-09, &   !(3.893e-10, 1.681e-09) ! coefficients of the equilibrium fuel moisture polynomial
               -2.62e-07, &   !(-4.593e-07, -6.473e-08) ! fitted from the graph in Schroeder and Buck (1970)
@@ -703,7 +704,7 @@ namelist /fuel_categories/ fuel_name,windrf,fgi,fueldepthm,savr, &
     adjr0,adjrw,adjrs,fmc_gw01,fmc_gw02,fmc_gw03,fmc_gw04,fmc_gw05
 
 namelist /moisture/ moisture_classes,drying_lag,wetting_lag,saturation_moisture,saturation_rain,rain_threshold, &
-    drying_model,wetting_model, moisture_class_name,fmc_gc_initialization
+    drying_model,wetting_model, moisture_class_name,fmc_gc_initialization,is_dead
 
 !$  if (OMP_GET_THREAD_NUM() .ne. 0)then
 !$     call crash('init_fuel_cats: must be called from master thread')
@@ -803,6 +804,7 @@ call wrf_dm_bcast_real(rain_threshold,     max_moisture_classes)
 call wrf_dm_bcast_integer(drying_model,     max_moisture_classes)
 call wrf_dm_bcast_integer(wetting_model,     max_moisture_classes)
 call wrf_dm_bcast_integer(fmc_gc_initialization,     max_moisture_classes)
+call wrf_dm_bcast_integer(is_dead,     max_moisture_classes)
 call wrf_dm_bcast_real(fmc_gw,     mfuelcats*max_moisture_classes)
 
 ! moisture model derived scalars
@@ -951,6 +953,8 @@ if(init_fuel_moisture)then
         call message(msg)    
         write(msg,8)'rain_threshold (mm/h)  ',(rain_threshold(ii),ii=i,k)
         call message(msg)    
+        write(msg,7)'is_dead                ',(is_dead(ii),ii=i,k)
+        call message(msg)
     enddo
     call message(' ')
     call message('**********************************************************')
@@ -1637,14 +1641,15 @@ integer, parameter:: maxit_R = 20       ! max iterations to compute R
 real, parameter:: pi=3.141592653589793
 
 !*** local
-real:: vx, vy, dzdxf, dzdyf, speed, tanphi, fmc_g, nfuel_cat, t2f, psfcf, ffw, fgip, W_0
-real:: B_, chi_0, r_00, delta_h, tau_0, rho_a, s_t, T_i, g, C_pa, U, alpha 
+real:: vx, vy, dzdxf, dzdyf, speed, tanphi, fmc_g, nfuel_cat, t2f, psfcf, ffw, fgip
+real:: dead_fract
+real:: B_, chi_0, r_00, delta_h, tau_0, rho_a, s_t, T_i, g, C_pa, U, alpha, W_0
 real:: m, sigma, sigma_t, h, s, rho_v, delta_H_, C_p
 real:: beta, beta_t, S_, S_t_, nu, T_a, delta_T, q, T_f, u_0
 real:: R_b, A, gamma, H_f, l_f
 real:: W_00, a_up, a_lat, K_, b
 real:: R_old, R_r, R_c, R, change
-integer:: k, it
+integer:: k, mc, it
 ! nfuel_cat is real only because real array was easier than integer in WPS long ago
 
 !*** executable
@@ -1685,8 +1690,15 @@ endif
 
 !*** continue here
 
-k = nfuel_cat       ! converting fuel index to integer
+k = nfuel_cat           ! converting fuel index to integer
 
+! Determine the dead fuel fraction from the moisture tables.
+dead_fract = 0.0
+do mc=1,max_moisture_classes
+    if (is_dead(mc).ne.0)then
+        dead_fract = dead_fract + fmc_gw(k,mc)
+    endif
+enddo
 
 ! --- Constants and model parameters (Balbi 20220622 slide 9) ---
 ! TODO: WRF-SFIRE enhancement - get air density (rho_a) from atmospheric model (not air pressure)
@@ -1707,15 +1719,14 @@ W_0 = ffw               ! Length of the ignition line           [m]
 
 
 ! --- Input fuel data (Balbi 20220622 slide 2) ---
-! TODO: Compute dead fuel load (sigma) based on dead/live fuel ratio tables (fmc_gwNN)
-m = fmc_g               ! Dead fuel moisture content
-sigma = fgip            ! Dead fine fuel load                   [kg/m^2]
-sigma_t = fgip          ! Total fine fuel load                  [kg/m^2]
-h = fueldepthm(k)       ! Fuel height                           [m]
-s = savr(k)/0.3048      ! Surface area to volume ratio          [1/m]
-rho_v = 500             ! Fuel density                          [kg/m^3]
-delta_H_ = cmbcnst      ! Heat of combustion of pyrolysis gases [J/kg]
-C_p = 2e3               ! Specific heat                         [J/kg/K]
+m = fmc_g                   ! Dead fuel moisture content
+sigma = fgip * dead_fract   ! Dead fine fuel load                   [kg/m^2]
+sigma_t = fgip              ! Total fine fuel load                  [kg/m^2]
+h = fueldepthm(k)           ! Fuel height                           [m]
+s = savr(k)/0.3048          ! Surface area to volume ratio          [1/m]
+rho_v = 500                 ! Fuel density                          [kg/m^3]
+delta_H_ = cmbcnst          ! Heat of combustion of pyrolysis gases [J/kg]
+C_p = 2e3                   ! Specific heat                         [J/kg/K]
 
 
 ! --- Preliminary computations (Balbi 20220622 slide 3) ---
