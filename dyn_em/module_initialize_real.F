@@ -4238,10 +4238,13 @@ endif
           DO j = (jde + jds)/2 - 4, (jde + jds)/2 + 4, 1
             DO i = (ide + ids)/2 - 4, (ide + ids)/2 + 4, 1
                IF ( its .LE. i .and. ite .GE. i .and. jts .LE. j .and. jte .GE. j ) THEN
-                 tracer(i, 1, j, P_tr17_1) = 1.
-                 tracer(i, 1, j, P_tr17_2) = 1.
-                 tracer(i, 1, j, P_tr17_3) = 1.
-                 tracer(i, 1, j, P_tr17_4) = 1.
+!===================================================================================
+! KH, 2021-06-10, modified to remove spurious box in pm2.5 - based on Angel Farguell
+!                 tracer(i, 1, j, P_tr17_1) = 1.
+!                 tracer(i, 1, j, P_tr17_2) = 1.
+!                 tracer(i, 1, j, P_tr17_3) = 1.
+!                 tracer(i, 1, j, P_tr17_4) = 1.
+!===================================================================================
 !                tracer(i, 1, j, P_tr17_5) = 1.
 !                tracer(i, 1, j, P_tr17_6) = 1.
 !                tracer(i, 1, j, P_tr17_7) = 1.
