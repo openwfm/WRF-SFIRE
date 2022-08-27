@@ -24,6 +24,9 @@ character(len=50)::file_in="namelist_standalone.input",file_out="namelist_standa
 character(len=128)::msg
 character(len=9), dimension(2)::model=(/'Rothermel','Balbi    '/)
 
+namelist /control/n,fire_print_msg,balbi_msglevel,call_write_fuels_m,compare_rothermel
+namelist /data/propx,propy,vx,vy,dzdxf,dzdyf,fmc_g,nfuel_cat,t2f,psfcf,ffw,ros
+
 !*** executable
 
 ! defaults, can set in &control
@@ -34,9 +37,6 @@ call_write_fuels_m = .false. ! create fuels.m for graphics
 ! read namelist.fire into fuels
 ! also create file fuels.m read and visualize the results as described in 
 ! https://wiki.openwfm.org/wiki/How_to_diagnose_fuel_properties_in_WRF-SFIRE
-
-namelist /control/n,fire_print_msg,balbi_msglevel,call_write_fuels_m,compare_rothermel
-namelist /data/propx,propy,vx,vy,dzdxf,dzdyf,fmc_g,nfuel_cat,t2f,psfcf,ffw,ros
 
 print *,'Reading file '//trim(file_in)
 OPEN(iounit, FILE=trim(file_in),FORM='FORMATTED',STATUS='OLD',ACTION='READ',IOSTAT=ierr)
