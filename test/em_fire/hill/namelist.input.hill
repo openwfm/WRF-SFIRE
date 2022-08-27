@@ -196,5 +196,5 @@
  sfire_upwinding=3,              ! 0=none, 1=standard, 2=godunov, 3=eno, 4=sethian
  fire_fuel_left_method=1,        ! for now, use 1 only
  fire_lfn_ext_up=1.0,           ! 0.=extend level set function at boundary by reflection, 1.=always up
- fire_advection=0,              ! 0 = cawfe, 1 = use abs speed/slope in spread rate, then project on normal to fireline
+ fire_advection=1,              ! 0 = cawfe, 1 = use abs speed/slope in spread rate, then project on normal to fireline
 /
