@@ -13,9 +13,9 @@ real,pointer,dimension(:,:):: vx,vy                ! wind velocity (m/s)
 real,pointer,dimension(:,:):: dzdxf,dzdyf          ! terrain grad (1)
 real,pointer,dimension(:,:):: fmc_g                ! fuel moisture contents, ground (1)
 real,pointer,dimension(:,:):: nfuel_cat            ! fuel category (integer values)
-real,pointer,dimension(:,:):: t2f                  ! temperature at 2m (K) (Balbi model only)
-real,pointer,dimension(:,:):: psfcf                ! surface pressure (Pa) (Balbi model only)
-real,pointer,dimension(:,:):: ffw                  ! fire front width (m) (Balbi model only)
+real,pointer,dimension(:,:):: tempf                ! temperature at 2m (K) (Balbi model only)
+real,pointer,dimension(:,:):: rhof                 ! surface air density (kg/m^3) (Balbi model only)
+real,pointer,dimension(:,:):: ffwidth              ! fire front width (m) (Balbi model only)
 real,pointer,dimension(:,:):: ros                  ! fire rate of spread (m/s) 
 
 integer:: n=10, iounit=9, ierr, i, j
@@ -36,7 +36,7 @@ call_write_fuels_m = .false. ! create fuels.m for graphics
 ! https://wiki.openwfm.org/wiki/How_to_diagnose_fuel_properties_in_WRF-SFIRE
 
 namelist /control/n,fire_print_msg,balbi_msglevel,call_write_fuels_m,compare_rothermel
-namelist /data/propx,propy,vx,vy,dzdxf,dzdyf,fmc_g,nfuel_cat,t2f,psfcf,ffw,ros
+namelist /data/propx,propy,vx,vy,dzdxf,dzdyf,fmc_g,nfuel_cat,tempf,rhof,ffwidth,ros
 
 print *,'Reading file '//trim(file_in)
 OPEN(iounit, FILE=trim(file_in),FORM='FORMATTED',STATUS='OLD',ACTION='READ',IOSTAT=ierr)
@@ -72,7 +72,7 @@ call init_fuel_cats(init_fuel_moisture=.false.)
 print *,'Fire ROS model from file namelist.fire is ibeh=',ibeh,' ',model(ibeh)
  
 ! allocate our arrays used in namelist
-allocate(propx(1,n),propy(1,n),vx(1,n),vy(1,n),dzdxf(1,n),dzdyf(1,n),fmc_g(1,n),nfuel_cat(1,n),t2f(1,n),psfcf(1,n),ffw(1,n),ros(1,n))
+allocate(propx(1,n),propy(1,n),vx(1,n),vy(1,n),dzdxf(1,n),dzdyf(1,n),fmc_g(1,n),nfuel_cat(1,n),tempf(1,n),rhof(1,n),ffwidth(1,n),ros(1,n))
 
 ! allocate the rest of the arrays in fp 
 allocate(fp%fgip(1,n),fp%ischap(1,n),fp%phisc(1,n),fp%bbb(1,n),fp%fuel_time(1,n),fp%phiwc(1,n),fp%r_0(1,n))
@@ -86,9 +86,9 @@ dzdxf = 0.
 dzdyf = 0.
 fmc_g = 0.
 nfuel_cat=1   ! some fuel
-t2f = 273.    ! temp K 
-psfcf = 1e5   ! pressure Pa
-ffw = 10.     ! fire front width m
+tempf = 273.    ! temp K 
+rhof = 1.2    ! air density (kg/m^3)
+ffwidth = 10. ! fire front width m
 ros = 0.
 
 if(have_data)then
@@ -109,17 +109,17 @@ print *,'dzdxf=',dzdxf
 print *,'dzdyf=',dzdyf
 print *,'fmc_g=',fmc_g
 print *,'nfuel_cat=',nfuel_cat
-print *,'t2f=',t2f
-print *,'psfcf=',psfcf
-print *,'ffw=',ffw
+print *,'tempf=',tempf
+print *,'rhof=',rhof
+print *,'ffwidth=',ffwidth
 fp%vx => vx
 fp%vy => vy
 fp%dzdxf => dzdxf
 fp%dzdyf => dzdyf
 fp%fmc_g => fmc_g
-fp%t2f => t2f
-fp%psfcf => psfcf
-fp%ffw => ffw
+fp%tempf => tempf
+fp%rhof => rhof
+fp%ffwidth => ffwidth
 fp%nfuel_cat => nfuel_cat
 
 

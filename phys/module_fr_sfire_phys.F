@@ -22,9 +22,9 @@ real,pointer,dimension(:,:):: ischap               ! 1 if chapparal
 real,pointer,dimension(:,:):: fuel_time            ! time to burn to 1/e (s)
 real,pointer,dimension(:,:):: fmc_g                ! fuel moisture contents, ground (1)
 real,pointer,dimension(:,:):: nfuel_cat            ! fuel category (integer values)
-real,pointer,dimension(:,:):: t2f                  ! temperature at 2m (K) (Balbi model only)
-real,pointer,dimension(:,:):: psfcf                ! surface pressure (Pa) (Balbi model only)
-real,pointer,dimension(:,:):: ffw                  ! fire front width (m) (Balbi model only)
+real,pointer,dimension(:,:):: tempf                ! air temperature (K) (Balbi model only)
+real,pointer,dimension(:,:):: rhof                ! air pressure (Pa) (Balbi model only)
+real,pointer,dimension(:,:):: ffwidth              ! fire front width (m) (Balbi model only)
 
 end type fire_params
 
@@ -95,7 +95,7 @@ PUBLIC:: mfuelcats
                -0.05901, &   !(-0.3721, 0.254)
                   3.043/   !(2.17, 3.915)
    
-   ! =========================================================================
+! =========================================================================
 
 ! Following table copied from module_fr_cawfe_fuel by Ned Patton with minor changes. 
 ! Based on:           Clark, T. L., J. L. Coen and D. Latham: 2004, 
@@ -1491,7 +1491,6 @@ if (ibeh .eq. 2) then
     endif
 else
     if (fire_advection.ne.0) then ! from flags in module_fr_sfire_util
-        call crash('fire_advection no longer supported')
         ! wind speed is total speed 
         speed =  sqrt(fp%vx(i,j)*fp%vx(i,j)+ fp%vy(i,j)*fp%vy(i,j))+tiny(speed)
         ! slope is total slope
@@ -1641,7 +1640,7 @@ integer, parameter:: maxit_R = 20       ! max iterations to compute R
 real, parameter:: pi=3.141592653589793
 
 !*** local
-real:: vx, vy, dzdxf, dzdyf, speed, tanphi, fmc_g, nfuel_cat, t2f, psfcf, ffw, fgip
+real:: vx, vy, dzdxf, dzdyf, speed, tanphi, fmc_g, nfuel_cat, tempf, rhof, ffwidth, fgip
 real:: dead_fract
 real:: B_, chi_0, r_00, delta_h, tau_0, rho_a, s_t, T_i, g, C_pa, U, alpha, W_0
 real:: m, sigma, sigma_t, h, s, rho_v, delta_H_, C_p
@@ -1663,9 +1662,9 @@ speed  = vx*nvx + vy*nvy            ! wind speed in the spread direction
 tanphi = dzdxf*nvx + dzdyf*nvy      ! slope in spread the direction
 fmc_g  = fp%fmc_g(i,j)              ! fuel moisture content (water / dry)
 nfuel_cat = fp%nfuel_cat(i,j)       ! fuel categories
-t2f = fp%t2f(i,j)                   ! temperature at 2m interpolated to the fire grid
-psfcf = fp%psfcf(i,j)               ! surface pressure interpolated to the fire grid
-ffw = fp%ffw(i,j)                   ! fire front width = 1/fireline curvature (?)
+tempf = fp%tempf(i,j)               ! temperature interpolated to the fire grid
+rhof  = fp%rhof(i,j)                ! air density interpolated to the fire grid
+ffwidth = fp%ffwidth(i,j)           ! fire front width = 1/fireline curvature (?)
 fgip = fp%fgip(i,j)                 ! fuel load
 
 ! retrieve static values by indexing from fuel categories, as fgip = fp%fgi(i,j) instead of above
@@ -1681,9 +1680,9 @@ if(balbi_msglevel.ge.3)then  ! print the inputs
     write(msg,*)'slope projected on propagation direction tanphi=',tanphi
     write(msg,*)'fuel moisture content (water / dry) fmc_g=',fmc_g
     write(msg,*)'nfuel_cat=',nfuel_cat
-    write(msg,*)'temperature at 2m t2f=',t2f
-    write(msg,*)'surface pressure psfcf=',psfcf
-    write(msg,*)'fire front width=',ffw
+    write(msg,*)'temperature tempf=',tempf
+    write(msg,*)'surface pressure rhof=',rhof
+    write(msg,*)'fire front width=',ffwidth
     write(msg,*)'total fuel load fgip=',fgip
 !$OMP END CRITICAL(SFIRE_PHYS_CRIT)
 endif
@@ -1715,7 +1714,7 @@ C_pa = 1150             ! Specific heat of air                  [J/kg/K]
 
 U = speed               ! Normal component of wind speed        [m/s]
 alpha = atan(tanphi)    ! Local terrain slope angle             [rad]
-W_0 = ffw               ! Length of the ignition line           [m]
+W_0 = ffwidth           ! Length of the ignition line           [m]
 
 
 ! --- Input fuel data (Balbi 20220622 slide 2) ---
@@ -1742,7 +1741,7 @@ S_t_ = s * h * beta_t
 nu = S_t_
 
 ! Temperature difference
-T_a = t2f
+T_a = tempf
 delta_T = T_i - T_a
 
 ! Activation energy
@@ -2011,7 +2010,7 @@ real, intent(out), dimension(ifms:ifme,jfms:jfme) :: &
 integer:: i,j,k, ierrx
 real::r
 character(len=128)::msg
-real,parameter::s=1.41421356237,o=1.,z=0.
+real,parameter::s=1.0/1.41421356237,o=1.,z=0.
 integer,parameter::nv=8
 real, dimension(nv)::nvx=(/o,s,z,-s,-o,-s,z,s/),  &
                      nvy=(/z,s,o,s,z,-s,-o,-s/)
