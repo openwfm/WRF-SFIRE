@@ -33,6 +33,7 @@ namelist /data/propx,propy,vx,vy,dzdxf,dzdyf,fmc_g,nfuel_cat,tempf,rhof,ffwidth,
 fire_print_msg = -1  ! suppress messages and warnings from WRF-SFIRE
 balbi_msglevel = 1           ! prints in fire_ros_balbi
 call_write_fuels_m = .false. ! create fuels.m for graphics 
+fire_fmc_read = 0            ! prevent overwing of fmc_f in init_fuels_cat
 
 ! read namelist.fire into fuels
 ! also create file fuels.m read and visualize the results as described in 
