@@ -1700,13 +1700,12 @@ do mc=1,max_moisture_classes
 enddo
 
 ! --- Constants and model parameters (Balbi 20220622 slide 9) ---
-! TODO: WRF-SFIRE enhancement - get air density (rho_a) from atmospheric model (not air pressure)
 B_ = 5.6e-8                     ! Stefan-Boltzman constant              [W/m^2/K^4]
 chi_0 = 0.3                     ! Radiative factor
 r_00 = 2.5e-5                   ! Model parameter
 delta_h = 2.3e6                 ! Heat of latent evaporation            [J/kg]
 tau_0 = 75591                   ! Anderson's residence time coefficient
-rho_a = 1.125                   ! Air density                           [kg/m3]
+rho_a = rhof                    ! Air density                           [kg/m3]
 s_t = 16                        ! Stoichiometric coefficient
 T_i = 600                       ! Ignition temperature                  [K]
 g = 9.81                        ! Gravitational acceleration            [m/s^2]
