@@ -701,10 +701,10 @@ namelist /fuel_scalars/ cmbcnst,hfgl,fuelmc_g,fuelmc_c,nfuelcats,no_fuel_cat,no_
 namelist /fuel_categories/ fuel_name,windrf,fgi,fueldepthm,savr, &
     fuelmce,fueldens,st,se,weight,fci_d,fct,ichap,itree,fwh,fz0,ffw, &
     fmc_gl_ndwi_0,fmc_gl_ndwi_rate,fmc_gl_ndwi_stdev, fmc_gl_stdev, &
-    adjr0,adjrw,adjrs,fmc_gw01,fmc_gw02,fmc_gw03,fmc_gw04,fmc_gw05
+    adjr0,adjrw,adjrs,fmc_gw01,fmc_gw02,fmc_gw03,fmc_gw04,fmc_gw05,is_dead
 
 namelist /moisture/ moisture_classes,drying_lag,wetting_lag,saturation_moisture,saturation_rain,rain_threshold, &
-    drying_model,wetting_model, moisture_class_name,fmc_gc_initialization,is_dead
+    drying_model,wetting_model, moisture_class_name,fmc_gc_initialization
 
 !$  if (OMP_GET_THREAD_NUM() .ne. 0)then
 !$     call crash('init_fuel_cats: must be called from master thread')
@@ -1635,7 +1635,7 @@ integer, intent(out)::ierrx
 character(len=*), intent(out)::msg
 
 ! Constants
-real, parameter:: tol_R = 1e-5          ! tolerance to compute R
+real, parameter:: tol_R = 1e-7          ! tolerance to compute R
 integer, parameter:: maxit_R = 20       ! max iterations to compute R
 real, parameter:: pi=3.141592653589793
 
@@ -1701,31 +1701,31 @@ enddo
 
 ! --- Constants and model parameters (Balbi 20220622 slide 9) ---
 ! TODO: WRF-SFIRE enhancement - get air density (rho_a) from atmospheric model (not air pressure)
-B_ = 5.67e-8            ! Stefan-Boltzman constant              [W/m^2/K^4]
-chi_0 = 0.3             ! Radiative factor
-r_00 = 2.5e-5           ! Model parameter
-delta_h = 2.3e6         ! Heat of latent evaporation            [J/kg]
-tau_0 = 75591           ! Anderson's residence time coefficient
-rho_a = 1.125           ! Air density                           [kg/m3]
-s_t = 16                ! Stoichiometric coefficient
-T_i = 600               ! Ignition temperature                  [K]
-g = 9.81                ! Gravitational acceleration            [m/s^2]
-C_pa = 1150             ! Specific heat of air                  [J/kg/K]
+B_ = 5.6e-8                     ! Stefan-Boltzman constant              [W/m^2/K^4]
+chi_0 = 0.3                     ! Radiative factor
+r_00 = 2.5e-5                   ! Model parameter
+delta_h = 2.3e6                 ! Heat of latent evaporation            [J/kg]
+tau_0 = 75591                   ! Anderson's residence time coefficient
+rho_a = 1.125                   ! Air density                           [kg/m3]
+s_t = 16                        ! Stoichiometric coefficient
+T_i = 600                       ! Ignition temperature                  [K]
+g = 9.81                        ! Gravitational acceleration            [m/s^2]
+C_pa = 1150                     ! Specific heat of air                  [J/kg/K]
 
-U = speed               ! Normal component of wind speed        [m/s]
-alpha = atan(tanphi)    ! Local terrain slope angle             [rad]
-W_0 = ffwidth           ! Length of the ignition line           [m]
+U = speed                       ! Normal component of wind speed        [m/s]
+alpha = atan(tanphi)            ! Local terrain slope angle             [rad]
+W_0 = ffwidth                   ! Length of the ignition line           [m]
 
 
 ! --- Input fuel data (Balbi 20220622 slide 2) ---
-m = fmc_g                   ! Dead fuel moisture content
-sigma = fgip * dead_fract   ! Dead fine fuel load                   [kg/m^2]
-sigma_t = fgip              ! Total fine fuel load                  [kg/m^2]
-h = fueldepthm(k)           ! Fuel height                           [m]
-s = savr(k)/0.3048          ! Surface area to volume ratio          [1/m]
-rho_v = 500                 ! Fuel density                          [kg/m^3]
-delta_H_ = cmbcnst          ! Heat of combustion of pyrolysis gases [J/kg]
-C_p = 2e3                   ! Specific heat                         [J/kg/K]
+m = fmc_g                       ! Dead fuel moisture content
+sigma = fgip * dead_fract       ! Dead fine fuel load                   [kg/m^2]
+sigma_t = fgip                  ! Total fine fuel load                  [kg/m^2]
+h = fueldepthm(k)               ! Fuel height                           [m]
+s = savr(k)/0.3048              ! Surface area to volume ratio          [1/m]
+rho_v = fueldens(k)*16.018462   ! Fuel density                          [kg/m^3]
+delta_H_ = cmbcnst              ! Heat of combustion of pyrolysis gases [J/kg]
+C_p = 2e3                       ! Specific heat                         [J/kg/K]
 
 
 ! --- Preliminary computations (Balbi 20220622 slide 3) ---
