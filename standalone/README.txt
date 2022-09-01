@@ -20,13 +20,14 @@ It does not read the namelist.input so WRF does not need to be built first.
    to examine fuels.m and make graphics.
 
 B. fire.exe 
+
 fire.exe is the complete fire model running with atmosphere from WRF-SFIRE output.
 
-1. build WRF-SFIRE as usual, options do not matter: cd ..; ./configure; compile em_fire
+1. build WRF-SFIRE as usual, options do not matter: cd ..; ./configure; compile em_fire (or em_real)
 2. Select compiler: ln -s make.inc.ifort make.inc or one of the others or make your own
 3. go back here: cd standalone
 4. build the executable: make fire 
-5. Create the atmospheric forcing: cd test/em_fire/hill; ideal.exe; wrf.exe
+5. Create the atmospheric forcing: cd test/em_fire/hill; ideal.exe; wrf.exe (or your real simulation)
 6. link the atmospheric forcing: ln -s <the_wrfout_just_createdi> fire_input.nc
 7. Run the standalone: ../../../standalone/fire.exe
 
@@ -40,7 +41,8 @@ wrf_fakes.F        fake WRF subroutines
 wrf_netcdf.F       read and write files in WRF compatible format
 util_netcdf.F      convenience stubs to netcdf API   
 
-The following main programs almost certainly do not work:
+The following legacy main programs almost certainly do not work. 
+They served as aids in development and may be updated in future.
 
 init.F                     generate a basic fire_input.nc 
 moisture_main.F            run the fuel  moisture model
@@ -52,10 +54,10 @@ fuel_interp_test_main.F    not sure
 See also old guide for the original 2012 pre-WRF-SFIRE version at 
 http://wiki.openwfm.org/wiki/How_to_run_the_standalone_fire_model_in_WRF-Fire
 
-If you still get errors, it means that the standalone fell behind the fire
-code (again) and some hand updating is needed.
+If you still get errors, it can be that the standalone fell behind the WRF-SFIRE 
+code (again) and some hand updating is needed. Please let us know.
 
 Jan Mandel
 June 18, 2010
 Updated December 22, 2012
-Updated August 1, 2022
+Updated August 2022
