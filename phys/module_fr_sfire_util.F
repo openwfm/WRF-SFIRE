@@ -110,6 +110,82 @@ isnotfinite=(aa.ne.aa.or..not.aa.le.huge(aa).or..not.aa.ge.-huge(aa))
 end function isnotfinite
 
 
+subroutine interpolate_b2fire( id,       &
+    ids,ide, kds,kde, jds,jde,           & ! atm domain dimensions
+    ims,ime, kms,kme, jms,jme,           & ! atm memory dimensions
+    ips,ipe, kps,kpe, jps,jpe,           & ! atm patch dimensions
+    its,ite, kts,kte, jts,jte,           & ! atm tile dimensions
+    ifds, ifde, jfds, jfde,              & ! fire grid dimensions
+    ifms, ifme, jfms, jfme,              & ! fire memory dimensions
+    ifts,ifte,jfts,jfte,                 & ! fire tildemensions
+    ir,jr,                               & ! atm/fire grid ratio
+    a, afire )                             ! 3d array, 2d fire array
+
+implicit none
+
+!*** Purpose
+! interpolate the lowest layer of 3d atmosphere field to the fire grid.
+
+!*** arguments
+integer, intent(in):: id,                &
+    ids,ide, kds,kde, jds,jde,           & ! atm domain dimensions
+    ims,ime, kms,kme, jms,jme,           & ! atm memory dimensions
+    ips,ipe, kps,kpe, jps,jpe,           & ! atm patch dimensions
+    its,ite, kts,kte, jts,jte,           & ! atm tile dimensions
+    ifds, ifde, jfds, jfde,              & ! fire grid dimensions
+    ifms, ifme, jfms, jfme,              &
+    ifts,ifte,jfts,jfte,                 &
+    ir,jr                                  ! atm/fire grid ratio
+
+real,intent(in),dimension(ims:ime,kms:kme,jms:jme) :: a
+real,intent(out),dimension(ifms:ifme,jfms:jfme):: afire 
+
+!**** local
+real, dimension(its-1:ite+1,jts-1:jte+1):: a2  ! copy of a(:,1,:) 
+integer::i,j
+integer::ibs,ibe,jbs,jbe
+
+character(len=128)::msg
+
+call check_mesh_2dim(ifts,ifte,jfts,jfte,ifds,ifde,jfds,jfde) ! check if fire tile fits into domain
+call check_mesh_2dim(ifts,ifte,jfts,jfte,ifms,ifme,jfms,jfme) ! check if fire tile fits into memory
+
+! one beyond the tile but not beyond the domain boundary
+ibs=max(ids,its-1)
+ibe=min(ide,ite+1)
+jbs=max(jds,jts-1)
+jbe=min(jde,jte+1)
+
+call check_mesh_2dim(ibs,ibe,jbs,jbe,ims,ime,jms,jme) ! check if tile with halo fits into memory
+
+! copy with halo beyond the tile but not beyond the domain boundary
+    do j=jbs,jbe
+        do i=ibs,ibe
+            a2(i,j)=a(i,ifds,j)      ! copy slice to 2d array
+        enddo
+    enddo
+
+    call print_2d_stats(ibs,ibe,jbs,jbe,its-1,ite+1,jts-1,jte+1,a2,'interpolate_a2fire: a2')
+
+    ! to the fire mesh
+    call interpolate_z2fire(id,0,        & ! for debug output, <= 0 no output
+    ids,ide,jds,jde,                     & ! atm grid dimensions
+    its-1,ite+1,jts-1,jte+1,             & ! memory dimensions
+    ips,ipe,jps,jpe,                     &
+    its,ite,jts,jte,                     &
+    ifds, ifde, jfds, jfde,              & ! fire grid dimensions
+    ifts, ifte, jfts, jfte,              &
+    ifts,ifte,  jfts,jfte,               &
+    ir,jr,                               & ! atm/fire grid ratio
+    a2,                               & ! atm grid arrays in
+    afire)                                 ! fire grid arrays out
+
+end subroutine interpolate_b2fire
+
+!
+!***
+!
+
 subroutine interpolate_z2fire(id,                 & ! for debug output, <= 0 no output
     istrip,                              & ! width of strip to extrapolate to around domain
     ids,ide, jds,jde,                    & ! atm grid dimensions
