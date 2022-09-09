@@ -70,7 +70,7 @@ module module_fr_sfire_driver
 use module_fr_sfire_model, only: sfire_model
 use module_fr_sfire_phys, only: fire_params, init_fuel_cats, fuel_moisture, &
    advance_moisture, moisture_classes, &
-   fire_rate_of_spread
+   fire_rate_of_spread, ibeh
 use module_fr_sfire_atm, only: apply_windrf,interpolate_wind2fire_height,interpolate_atm2fire, &
    interpolate_z2fire,setup_wind_log_interpolation,find_trees_fmesh,massman_fwh
 use module_fr_sfire_util
@@ -942,9 +942,9 @@ do ij=1,num_tiles
  
      endif !restart
 
-    elseif(ifun.eq.3)then  ! interpolate winds to the fire grid
+    elseif(ifun.eq.3)then  ! interpolate atmosphere variables to the fire grid
  
-      if(use_atm_vars)then                                  
+      use_atm: if(use_atm_vars)then                                  
      
         call write_array_m(its,ite,jts,jte,ims,ime,jms,jme,z0,'z0',id)
         call write_array_m3(its,ite1,kts,kde-1,jts,jte,ims,ime,kms,kme,jms,jme,u,'u_2',id)
@@ -952,7 +952,7 @@ do ij=1,num_tiles
         call write_array_m3(its,ite,kts,kde,jts,jte,ims,ime,kms,kme,jms,jme,ph,'ph_2',id)
         call write_array_m3(its,ite,kts,kde,jts,jte,ims,ime,kms,kme,jms,jme,phb,'phb',id)
         
-        if(fire_wind_log_interp.eq.4)then
+        wind_log: if(fire_wind_log_interp.eq.4)then
           call print_2d_stats(its,ite,jts,jte,ims,ime,jms,jme,z0,'driver_phys:z0')
           call interpolate_atm2fire(id,                     & ! flag for debug output
             ids,ide, kds,kde, jds,jde,                    & ! atm grid dimensions
@@ -978,8 +978,10 @@ do ij=1,num_tiles
 
             wz0 = 0             !Set WRF roughness length to 0 since we dont use this for option 4.
 
-        else
+        else wind_log
+
           call print_2d_stats(ifts,ifte,jfts,jfte,ifms,ifme,jfms,jfme,fz0,'driver_phys:fz0')        
+
           call interpolate_wind2fire_height(id,       & ! to identify debugging prints and files if needed
             ids,ide, kds,kde, jds,jde,                    & ! atm grid dimensions
             ims,ime, kms,kme, jms,jme,                    &
@@ -992,15 +994,14 @@ do ij=1,num_tiles
             ir,jr,                                        & ! atm/fire grid ratio
             u_frame, v_frame,                             & ! velocity frame correction
             u,v,ph,phb,                                   & ! input atmospheric arrays
-            fz0,fwh,                                      & ! input fire arrays
+            fz0,fwh,                                      & ! input fire terrain height and wind height 
             fp%vx,fp%vy)                                          ! output fire arrays
 
-          if(fire_use_windrf.eq.1)then
+          wind_rf: if(fire_use_windrf.eq.1)then             ! wind reduction factors below fwh
             call apply_windrf(                      &
             ifms,ifme,jfms,jfme,                    &
             ifts,ifte,jfts,jfte,                    &
             nfuel_cat,fp%vx,fp%vy)
-          endif
 
 
           !If we are deploying the Massman parameterization, we need to interpolate our winds
@@ -1009,11 +1010,13 @@ do ij=1,num_tiles
           !this is just going to be hard coded for now). Once this is done, we can use the massman 
           !parameterization to scale the winds down to the FWH.
 
-          if(fire_use_windrf.eq.4)then
+          elseif(fire_use_windrf.eq.4)then wind_rf          ! massman interpolation below fwh
           
+!$OMP CRITICAL(SFIRE_DRIVER_CRIT)
             call message('fire_use_windrf option 4 has been selected....!')
             write(msg, '(A20,I1)') 'fire_can_top_read = ', fire_can_top_read
             call message(msg)
+!$OMP END CRITICAL(SFIRE_DRIVER_CRIT)
 
             !Lets set the canopy height, using either a look up table, or just explictly setting it 
             !using WRF input data from LANDFIRE.
@@ -1075,9 +1078,9 @@ do ij=1,num_tiles
             can_top,                                      & ! canopy top (input)
             fp%vx,fp%vy)
 
-          endif
-        endif
-      endif
+          end if wind_rf
+        end if wind_log 
+      end if use_atm ! use_atm_vars
 
     elseif(ifun.eq.4)then
     
@@ -1855,11 +1858,11 @@ subroutine check_grid_alloc(grid,config_flags)
     call message('check_grid_alloc: checking if grid arrays used in emissions are allocated',level=2)
     call check_size(size(grid%chem),'chem',config_flags%chem_opt)
     call check_size(size(grid%tracer),'tracer',config_flags%tracer_opt)
-    !if(ibeh.eq.2)then
+    if(ibeh.eq.2)then
         call check_size(size(grid%tempf),'tempf')
         call check_size(size(grid%rhof),'rhof')
         call check_size(size(grid%ffwidth),'ffwidth')
-    !endif
+    endif
         
 
 end subroutine check_grid_alloc
