@@ -147,7 +147,7 @@ PUBLIC:: mfuelcats
 !
 
 ! scalar fuel coefficients
-   REAL, SAVE:: cmbcnst,hfgl,fuelmc_g,fuelmc_c, fire_wind_height
+   REAL, SAVE:: cmbcnst,hfgl,fuelmc_g,fuelmc_c, fire_wind_height,ffwidth_thresh
 ! computed values
    REAL, SAVE:: fuelheat
 
@@ -157,6 +157,7 @@ PUBLIC:: mfuelcats
    DATA fuelmc_g / 0.08  /                ! set = 0 for dry ground fuel
    DATA fuelmc_c / 1.00  /                ! set = 0 for dry canopy
    DATA fire_wind_height/6.096/           ! m, 6.096m Behave, 0 to use fwh in each category
+   DATA ffwidth_thresh /0.0/              ! Balbi ROS threshold for convective cooling (W_00)
 !  REAL, PARAMETER :: bmst     = fuelmc_g/(1+fuelmc_g)
 !  REAL, PARAMETER :: fuelheat = cmbcnst * 4.30e-04     ! convert J/kg to BTU/lb
 !  real, parameter :: xlv      = 2.5e6                  ! to make it selfcontained
@@ -697,7 +698,8 @@ REAL   , DIMENSION( mfuelcats ) :: fwh, fz0
 !*** executable
 
 ! read 
-namelist /fuel_scalars/ cmbcnst,hfgl,fuelmc_g,fuelmc_c,nfuelcats,no_fuel_cat,no_fuel_cat2,fire_wind_height,ibeh
+namelist /fuel_scalars/ cmbcnst,hfgl,fuelmc_g,fuelmc_c,nfuelcats,no_fuel_cat,no_fuel_cat2,fire_wind_height,ibeh, &
+    ffwidth_thresh
 namelist /fuel_categories/ fuel_name,windrf,fgi,fueldepthm,savr, &
     fuelmce,fueldens,st,se,weight,fci_d,fct,ichap,itree,fwh,fz0,ffw, &
     fmc_gl_ndwi_0,fmc_gl_ndwi_rate,fmc_gl_ndwi_stdev, fmc_gl_stdev, &
@@ -767,6 +769,7 @@ call wrf_dm_bcast_real(hfgl,1)
 call wrf_dm_bcast_real(fuelmc_g,1)
 call wrf_dm_bcast_real(fuelmc_c,1)
 call wrf_dm_bcast_real(fire_wind_height,1)
+call wrf_dm_bcast_real(ffwidth_thresh,1)
 call wrf_dm_bcast_integer(nfuelcats,1)
 call wrf_dm_bcast_integer(no_fuel_cat,1)
 call wrf_dm_bcast_integer(no_fuel_cat2,1)
@@ -1772,8 +1775,14 @@ l_f = H_f / (cos(gamma - alpha))
 
 ! --- Convective contribution (slide 5) ---
 ! Heat loss coefficients
-! TODO: Get W_00 from fuel table yet to be defined
-W_00 = 50.
+! For most fires, the fire front width (W_0) and corresponding threshold for
+! convective cooling (W_00) can be ignored; typical values for W_00 are in the
+! 33-100 m range, depending on the fuel.
+W_00 = ffwidth_thresh
+if (W_00 == 0.) then    ! force min(W_0 / W_00, 1.) to 1 => no convective cooling
+    W_0 = 1.
+    W_00 = 1.
+endif
 a_up = 0.025 * s * beta_t * sqrt(h)
 a_lat = min(W_0 / W_00, 1.)
 
