@@ -943,6 +943,37 @@ do ij=1,num_tiles
      endif !restart
 
     elseif(ifun.eq.3)then  ! interpolate atmosphere variables to the fire grid
+  
+      for_balbi: if(ibeh.eq.2)then
+
+         call message('ibeh=2: interpolating atmosphere input for Balbi rate of spread model')
+         if(.not.use_atm_vars)call crash('ibeh=2 Balbi model requires atmosphere but use_atm_vars=false')
+         
+         call interpolate_b2fire( id,       &
+             ids,ide, kds,kde, jds,jde,           & ! atm domain dimensions
+             ims,ime, kms,kme, jms,jme,           & ! atm memory dimensions
+             ips,ipe, kps,kpe, jps,jpe,           & ! atm patch dimensions
+             its,ite, kts,kte, jts,jte,           & ! atm tile dimensions
+             ifds, ifde, jfds, jfde,              & ! fire grid dimensions
+             ifms, ifme, jfms, jfme,              & ! fire memory dimensions
+             ifts,ifte,jfts,jfte,                 & ! fire tildemensions
+             ir,jr,                               & ! atm/fire grid ratio
+             rho, rhof )                            ! lowest layer density
+
+         call interpolate_z2fire(id,1,            & ! for debug output, <= 0 no output
+            ids,ide,  jds,jde,                    & ! atm grid dimensions
+            ims,ime,  jms,jme,                    &
+            ips,ipe,jps,jpe,                              &
+            its,ite,jts,jte,                              &
+            ifds, ifde, jfds, jfde,                       & ! fire grid dimensions
+            ifms, ifme, jfms, jfme,                       &
+            ifts,ifte,jfts,jfte,                          &
+            ir,jr,                                        & ! atm/fire grid ratio
+            t2,                                          & ! atm grid arrays in
+            tempf)                                      ! fire grid arrays out
+        endif !interpolate_long_lat 
+
+      end if for_balbi
  
       use_atm: if(use_atm_vars)then                                  
      
@@ -1859,6 +1890,7 @@ subroutine check_grid_alloc(grid,config_flags)
     call check_size(size(grid%chem),'chem',config_flags%chem_opt)
     call check_size(size(grid%tracer),'tracer',config_flags%tracer_opt)
     if(ibeh.eq.2)then
+        !? call check_size(size(grid%rho),'rho')
         call check_size(size(grid%tempf),'tempf')
         call check_size(size(grid%rhof),'rhof')
         call check_size(size(grid%ffwidth),'ffwidth')
