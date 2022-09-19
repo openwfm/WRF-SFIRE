@@ -72,7 +72,7 @@ use module_fr_sfire_phys, only: fire_params, init_fuel_cats, fuel_moisture, &
    advance_moisture, moisture_classes, &
    fire_rate_of_spread, ibeh
 use module_fr_sfire_atm, only: apply_windrf,interpolate_wind2fire_height,interpolate_atm2fire, &
-   interpolate_z2fire,setup_wind_log_interpolation,find_trees_fmesh,massman_fwh
+   interpolate_z2fire,setup_wind_log_interpolation,find_trees_fmesh,massman_fwh, rho2fire
 use module_fr_sfire_util
 !use module_fr_sfire_util, only: lines_type,fire_max_lines
 ! Driver layer modules
@@ -474,6 +474,7 @@ call print_2d_stats(ifps,min(ifpe,ifde-ir),jfps,min(jfpe,jfde-jr),ifms,ifme,jfms
             grid%fuel_time,                      & 
             grid%wz0,                            &          !wrf roughness length on fire mesh
             grid%fz0, grid%fwh,grid%can_top,grid%cuf,grid%cvf, &
+            grid%tempf, grid%rhof,                        & ! variables for Balbi ROS model
             fp,                                    & ! structure with pointers passed to spread rate calculation
             config_flags%nfmc,         & ! moisture model variables start
             run_advance_moisture,run_fuel_moisture,dt_moisture,     &    ! moisture model control
@@ -585,7 +586,8 @@ subroutine sfire_driver_phys (ifun,    &
     nfuel_cat,                                    & ! in array, data, fire grid, or constant internal
     fuel_time,                                    & ! save constant internal data, fire grid
     wz0,                                          &
-    fz0,fwh,can_top,cuf,cvf,                  &
+    fz0,fwh,can_top,cuf,cvf,                      & ! input fuel map/vegetation variables on fire mesh
+    tempf,rhof,                                   & ! variables for Balbi ROS model
     fp,                                           & ! fire params
     nfmc,                                     & ! number of fuel moisture classes
     run_advance_moisture,run_fuel_moisture,dt_moisture,& ! moisture model control
@@ -663,8 +665,9 @@ real, intent(inout), dimension(ifms:ifme, jfms:jfme)::     &
     lfn_out                                    ! fire wind velocities
 
 real, intent(out), dimension(ifms:ifme, jfms:jfme)::  &
-    fire_area, &                               ! fraction of each cell burning
-    fuel_frac_burnt
+    fire_area, &                                 ! fraction of area of each cell burning
+    fuel_frac_burnt,                           & ! fraction of mass of fuel burnt
+    tempf,rhof                                   ! variables for Balbi ROS model
 
 real, intent(out), dimension(ims:ime, jms:jme):: &  ! redundant arrays, for display purposes only (atm grid)
     avg_fuel_frac,                               &  ! average fuel fraction
@@ -949,16 +952,17 @@ do ij=1,num_tiles
          call message('ibeh=2: interpolating atmosphere input for Balbi rate of spread model')
          if(.not.use_atm_vars)call crash('ibeh=2 Balbi model requires atmosphere but use_atm_vars=false')
          
-         call interpolate_b2fire( id,       &
-             ids,ide, kds,kde, jds,jde,           & ! atm domain dimensions
-             ims,ime, kms,kme, jms,jme,           & ! atm memory dimensions
-             ips,ipe, kps,kpe, jps,jpe,           & ! atm patch dimensions
-             its,ite, kts,kte, jts,jte,           & ! atm tile dimensions
+         call rho2fire( id,       &
+             ids,ide, jds,jde,                    & ! atm domain dimensions
+             ims,ime, jms,jme,                    & ! atm memory dimensions
+             ips,ipe, jps,jpe,                    & ! atm patch dimensions
+             its,ite, jts,jte,                    & ! atm tile dimensions
              ifds, ifde, jfds, jfde,              & ! fire grid dimensions
              ifms, ifme, jfms, jfme,              & ! fire memory dimensions
              ifts,ifte,jfts,jfte,                 & ! fire tildemensions
              ir,jr,                               & ! atm/fire grid ratio
-             rho, rhof )                            ! lowest layer density
+             t2, psfc, q2,                        & ! atm surface variables
+             rhof)                                  ! surface air density
 
          call interpolate_z2fire(id,1,            & ! for debug output, <= 0 no output
             ids,ide,  jds,jde,                    & ! atm grid dimensions
@@ -971,7 +975,6 @@ do ij=1,num_tiles
             ir,jr,                                        & ! atm/fire grid ratio
             t2,                                          & ! atm grid arrays in
             tempf)                                      ! fire grid arrays out
-        endif !interpolate_long_lat 
 
       end if for_balbi
  
@@ -1890,12 +1893,13 @@ subroutine check_grid_alloc(grid,config_flags)
     call check_size(size(grid%chem),'chem',config_flags%chem_opt)
     call check_size(size(grid%tracer),'tracer',config_flags%tracer_opt)
     if(ibeh.eq.2)then
-        !? call check_size(size(grid%rho),'rho')
+        call check_size(size(grid%t2),'t2')
+        call check_size(size(grid%psfc),'psfc')
+        call check_size(size(grid%q2),'q2')
         call check_size(size(grid%tempf),'tempf')
         call check_size(size(grid%rhof),'rhof')
         call check_size(size(grid%ffwidth),'ffwidth')
     endif
-        
 
 end subroutine check_grid_alloc
 
