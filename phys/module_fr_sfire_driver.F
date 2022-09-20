@@ -1791,7 +1791,6 @@ subroutine set_fp_from_grid(grid,fp)
     fp%rhof => grid%rhof     ! surface air density
     fp%ffwidth => grid%ffwidth     ! fire front width 
 
-
 end subroutine set_fp_from_grid
 
 subroutine check_grid_alloc(grid,config_flags)
@@ -1892,6 +1891,7 @@ subroutine check_grid_alloc(grid,config_flags)
     call message('check_grid_alloc: checking if grid arrays used in emissions are allocated',level=2)
     call check_size(size(grid%chem),'chem',config_flags%chem_opt)
     call check_size(size(grid%tracer),'tracer',config_flags%tracer_opt)
+    
     if(ibeh.eq.2)then
         call check_size(size(grid%t2),'t2')
         call check_size(size(grid%psfc),'psfc')

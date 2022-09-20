@@ -978,7 +978,7 @@ real, intent(in):: maxwind,maxslope ! from zero to these
 
 integer:: iounit,k,j,i,isave
 type(fire_params)::fp
-real, dimension(1:3,1:nsteps), target::vx,vy,zsf,dzdxf,dzdyf,bbb,phisc,phiwc,r_0,fgip,ischap,fmc_g,wind,nfuel_cat
+real, dimension(1:3,1:nsteps), target::vx,vy,zsf,dzdxf,dzdyf,bbb,phisc,phiwc,r_0,fgip,ischap,fmc_g,wind,nfuel_cat,rhof,tempf,ffwidth
 real, dimension(1:3,1:nsteps)::fuel_time,ros,fwh,fz0
 real::ros_back,ros_wind,ros_slope,propx,propy,r,speed,tanphi
 integer::ierrx
@@ -998,6 +998,13 @@ fp%fgip=>fgip
 fp%ischap=>ischap
 fp%fmc_g=>fmc_g
 fp%nfuel_cat=>nfuel_cat
+fp%rhof=>rhof
+fp%tempf=>tempf
+fp%ffwidth=>ffwidth
+
+rhof = 1.
+tempf = 300.
+ffwidth = 100.
 
 iounit = open_text_file('fuels.m','write')
 
