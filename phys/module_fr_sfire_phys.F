@@ -1684,13 +1684,21 @@ if(balbi_msglevel.ge.3)then  ! print the inputs
     call message('0=nothing 1=errors 2=warnings 3=diagnostics 4=iterations')
     call message('inputs:')
     write(msg,*)'wind speed projected on propagation direction speed=',speed
+    call message(msg)
     write(msg,*)'slope projected on propagation direction tanphi=',tanphi
+    call message(msg)
     write(msg,*)'fuel moisture content (water / dry) fmc_g=',fmc_g
+    call message(msg)
     write(msg,*)'nfuel_cat=',nfuel_cat
+    call message(msg)
     write(msg,*)'temperature tempf=',tempf
+    call message(msg)
     write(msg,*)'surface pressure rhof=',rhof
+    call message(msg)
     write(msg,*)'fire front width=',ffwidth
+    call message(msg)
     write(msg,*)'total fuel load fgip=',fgip
+    call message(msg)
 !$OMP END CRITICAL(SFIRE_PHYS_CRIT)
 endif
 
