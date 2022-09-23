@@ -32,6 +32,8 @@ end type fire_params
 logical, public:: compare_rothermel=.false.        ! run comparison in fire_ros
 logical, public:: call_write_fuels_m=.true.        ! create file fuels_m for graphics postprocessing 
 integer, public:: balbi_msglevel=2                 ! prints in fire_ros_balbi, 0=nothing 1=errors 2=warnings 3=diagnostics 4=iterations
+integer, public:: balbi_nc_max=10                 ! max number of balbi no convergence cases
+integer, public:: balbi_nc_count=0                ! counter of balbi no convergence cases
 
 ! subroutines and functions 
 PUBLIC:: init_fuel_cats,fire_ros,heat_fluxes,set_nfuel_cat,set_fire_params, &
@@ -1471,6 +1473,7 @@ character(len=*), intent(out)::msg
 real::ros_back,ros_wind,ros_slope, rr ! rate of spread: backing, due to wind, due to slope
 real:: speed, tanphi ! windspeed and slope in the directino normal to the fireline
 real::cor_wind,cor_slope,nvx,nvy,scale
+integer::isave
 
 !*** executable
 
@@ -1495,6 +1498,14 @@ if (ibeh .eq. 2) then
     call fire_ros_balbi(ros,nvx,nvy,i,j,fp,ierrx,msg)
     if (ierrx.ne.0)then
         call warning(msg)
+        balbi_nc_count = balbi_nc_count + 1
+        if(balbi_nc_count > balbi_nc_max) call crash('fire_ros_balbi failed limit exceeded')
+        call message('running fire_ros_balbi again with detailed messages')
+        isave = balbi_msglevel
+        balbi_msglevel=4
+        call fire_ros_balbi(ros,nvx,nvy,i,j,fp,ierrx,msg)
+        call warning(msg)
+        balbi_msglevel=isave
     endif
 else
     if (fire_advection.ne.0) then ! from flags in module_fr_sfire_util
@@ -1815,13 +1826,15 @@ do it=1,maxit_R
 
     ! TODO: Review if this non-negative check is still needed
     if (R<0.)then
+        if (balbi_msglevel .ge. 3)then
 !$OMP CRITICAL(SFIRE_PHYS_CRIT)
-        write(msg,1)it,R,change
-        call message(msg)
-        write(msg,'(3(a,f8.3,1x))') 'R_b=',R_b,'R_r=',R_r,'R_c=',R_c
-        call message(msg)
-        call message('fire_ros_balbi R<0 resetting to R=0')
+            write(msg,1)it,R,change
+            call message(msg)
+            write(msg,'(3(a,f8.3,1x))') 'R_b=',R_b,'R_r=',R_r,'R_c=',R_c
+            call message(msg)
+            call message('fire_ros_balbi R<0 resetting to R=0')
 !$OMP END CRITICAL(SFIRE_PHYS_CRIT)
+        endif
         R=0.
     endif
 
@@ -1850,12 +1863,12 @@ if (abs(change) < tol_R)then
     endif
     ierrx = 0
 else
-!$OMP CRITICAL(SFIRE_PHYS_CRIT)
-    write(msg,1)it,R,change,' did not converge'
     if (balbi_msglevel .ge. 2)then 
+!$OMP CRITICAL(SFIRE_PHYS_CRIT)
+        write(msg,1)it,R,change,' did not converge'
         call warning(msg)
-    endif
 !$OMP END CRITICAL(SFIRE_PHYS_CRIT)
+    endif
     ierrx=1
 endif
 ros=R

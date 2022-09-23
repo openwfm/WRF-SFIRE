@@ -952,7 +952,7 @@ do ij=1,num_tiles
          call message('ibeh=2: interpolating atmosphere input for Balbi rate of spread model')
          if(.not.use_atm_vars)call crash('ibeh=2 Balbi model requires atmosphere but use_atm_vars=false')
          
-         balbi_msglevel = 4
+         ! balbi_msglevel = 4
 
          call rho2fire( id,       &
              ids,ide, jds,jde,                    & ! atm domain dimensions
