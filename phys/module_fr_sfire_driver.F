@@ -70,7 +70,7 @@ module module_fr_sfire_driver
 use module_fr_sfire_model, only: sfire_model
 use module_fr_sfire_phys, only: fire_params, init_fuel_cats, fuel_moisture, &
    advance_moisture, moisture_classes, &
-   fire_rate_of_spread, ibeh
+   fire_rate_of_spread, ibeh, balbi_msglevel
 use module_fr_sfire_atm, only: apply_windrf,interpolate_wind2fire_height,interpolate_atm2fire, &
    interpolate_z2fire,setup_wind_log_interpolation,find_trees_fmesh,massman_fwh, rho2fire
 use module_fr_sfire_util
@@ -474,7 +474,7 @@ call print_2d_stats(ifps,min(ifpe,ifde-ir),jfps,min(jfpe,jfde-jr),ifms,ifme,jfms
             grid%fuel_time,                      & 
             grid%wz0,                            &          !wrf roughness length on fire mesh
             grid%fz0, grid%fwh,grid%can_top,grid%cuf,grid%cvf, &
-            grid%tempf, grid%rhof,                        & ! variables for Balbi ROS model
+            grid%tempf, grid%rhof,grid%ffwidth,             & ! variables for Balbi ROS model
             fp,                                    & ! structure with pointers passed to spread rate calculation
             config_flags%nfmc,         & ! moisture model variables start
             run_advance_moisture,run_fuel_moisture,dt_moisture,     &    ! moisture model control
@@ -587,7 +587,7 @@ subroutine sfire_driver_phys (ifun,    &
     fuel_time,                                    & ! save constant internal data, fire grid
     wz0,                                          &
     fz0,fwh,can_top,cuf,cvf,                      & ! input fuel map/vegetation variables on fire mesh
-    tempf,rhof,                                   & ! variables for Balbi ROS model
+    tempf,rhof,ffwidth,                           & ! variables for Balbi ROS model
     fp,                                           & ! fire params
     nfmc,                                     & ! number of fuel moisture classes
     run_advance_moisture,run_fuel_moisture,dt_moisture,& ! moisture model control
@@ -667,7 +667,7 @@ real, intent(inout), dimension(ifms:ifme, jfms:jfme)::     &
 real, intent(out), dimension(ifms:ifme, jfms:jfme)::  &
     fire_area, &                                 ! fraction of area of each cell burning
     fuel_frac_burnt,                           & ! fraction of mass of fuel burnt
-    tempf,rhof                                   ! variables for Balbi ROS model
+    tempf,rhof,ffwidth                           ! variables for Balbi ROS model
 
 real, intent(out), dimension(ims:ime, jms:jme):: &  ! redundant arrays, for display purposes only (atm grid)
     avg_fuel_frac,                               &  ! average fuel fraction
@@ -952,6 +952,8 @@ do ij=1,num_tiles
          call message('ibeh=2: interpolating atmosphere input for Balbi rate of spread model')
          if(.not.use_atm_vars)call crash('ibeh=2 Balbi model requires atmosphere but use_atm_vars=false')
          
+         ! balbi_msglevel = 3
+
          call rho2fire( id,       &
              ids,ide, jds,jde,                    & ! atm domain dimensions
              ims,ime, jms,jme,                    & ! atm memory dimensions
@@ -975,6 +977,8 @@ do ij=1,num_tiles
             ir,jr,                                        & ! atm/fire grid ratio
             t2,                                          & ! atm grid arrays in
             tempf)                                      ! fire grid arrays out
+
+         ffwidth(ifts:ifte,jfts:jfte)     = 100.     ! default for now
 
       end if for_balbi
  

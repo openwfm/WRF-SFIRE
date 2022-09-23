@@ -1642,7 +1642,7 @@ integer, intent(out)::ierrx
 character(len=*), intent(out)::msg
 
 ! Constants
-real, parameter:: tol_R = 1e-7          ! tolerance to compute R
+real, parameter:: tol_R = 1e-5          ! tolerance to compute R
 integer, parameter:: maxit_R = 20       ! max iterations to compute R
 real, parameter:: pi=3.141592653589793
 
@@ -1693,7 +1693,7 @@ if(balbi_msglevel.ge.3)then  ! print the inputs
     call message(msg)
     write(msg,*)'temperature tempf=',tempf
     call message(msg)
-    write(msg,*)'surface pressure rhof=',rhof
+    write(msg,*)'surface air density rhof=',rhof
     call message(msg)
     write(msg,*)'fire front width=',ffwidth
     call message(msg)
@@ -1701,6 +1701,7 @@ if(balbi_msglevel.ge.3)then  ! print the inputs
     call message(msg)
 !$OMP END CRITICAL(SFIRE_PHYS_CRIT)
 endif
+if (.not.ffwidth > 0.) call crash('fire_ros_balbi: ffwidth must be >0')
 
 !*** continue here
 
