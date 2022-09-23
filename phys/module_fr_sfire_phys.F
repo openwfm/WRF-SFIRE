@@ -1837,7 +1837,7 @@ do it=1,maxit_R
     if (R<0.)then
         if (balbi_msglevel .ge. 3)then
 !$OMP CRITICAL(SFIRE_PHYS_CRIT)
-            write(msg,1)it,R,change
+            write(msg,1)it,i,j,R,change
             call message(msg)
             write(msg,'(3(a,f8.3,1x))') 'R_b=',R_b,'R_r=',R_r,'R_c=',R_c
             call message(msg)
@@ -1851,7 +1851,7 @@ do it=1,maxit_R
 
     if (balbi_msglevel .ge. 4)then 
 !$OMP CRITICAL(SFIRE_PHYS_CRIT)
-        write(msg,1)it,R,change
+        write(msg,1)it,i,j,R,change
         call message(msg)
 !$OMP END CRITICAL(SFIRE_PHYS_CRIT)
     endif
@@ -1862,21 +1862,21 @@ do it=1,maxit_R
     R_old = R
 enddo
 
-1 format('fire_ros_balbi: iteration',i3,' R=',f6.3,' diff=',g12.3,a)
+1 format('fire_ros_balbi: iteration',i3,' at ij=',2i5,' R=',f6.3,' diff=',g12.3,a)
 if (abs(change) < tol_R)then
     if (balbi_msglevel .ge. 3)then
 !$OMP CRITICAL(SFIRE_PHYS_CRIT)
-        write(msg,1)it,R,change,' converged'
+        write(msg,1)it,i,j,R,change,' converged'
         call message(msg)
 !$OMP END CRITICAL(SFIRE_PHYS_CRIT)
     endif
     ierrx = 0
 else
-    if (balbi_msglevel .ge. 2)then 
 !$OMP CRITICAL(SFIRE_PHYS_CRIT)
-        write(msg,1)it,R,change,' did not converge'
-        call warning(msg)
+    write(msg,1)it,i,j,R,change,' did not converge'
 !$OMP END CRITICAL(SFIRE_PHYS_CRIT)
+    if (balbi_msglevel .ge. 3)then 
+        call warning(msg)
     endif
     ierrx=1
 endif
