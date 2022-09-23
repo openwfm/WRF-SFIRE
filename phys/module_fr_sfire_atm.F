@@ -2801,8 +2801,8 @@ call check_mesh_2dim(ibs,ibe,jbs,jbe,ims,ime,jms,jme) ! check if tile with halo 
     call print_2d_stats(ibs,ibe,jbs,jbe,its-1,ite+1,jts-1,jte+1,t2,'rho2fire: t2')
     do j=jbs,jbe
         do i=ibs,ibe
-            if(.not.t2(i,j)>0.0)goto 9
-            rho(i,j)=psfc(i,j)/(287.0*(1.0 + 0.61*q2(i,j)*t2(i,j)))
+            if(.not.t2(i,j)>0.0 .or. .not. psfc(i,j)>0.0)goto 9
+            rho(i,j)=psfc(i,j)/(287.0*(1.0 + 0.61*q2(i,j))*t2(i,j))
         enddo
     enddo
 
@@ -2826,7 +2826,7 @@ return
 
 9   continue
 !$OMP CRITICAL(SFIRE_ATM_CRIT)
-    write(msg,*)'t2(',i,',',j,')=',t2(i,j),' is not > 0'
+    write(msg,*)'t2(',i,',',j,')=',t2(i,j),'psfc(',i,',',j,')=',psfc(i,j),' must be > 0'
 !$OMP END CRITICAL(SFIRE_ATM_CRIT)
     call crash(msg)
 
