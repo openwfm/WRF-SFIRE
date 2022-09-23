@@ -1820,10 +1820,12 @@ do it=1,maxit_R
         call message(msg)
         write(msg,'(3(a,f8.3,1x))') 'R_b=',R_b,'R_r=',R_r,'R_c=',R_c
         call message(msg)
-        call warning('not allowing R<0')
+        call message('fire_ros_balbi R<0 resetting to R=0')
 !$OMP END CRITICAL(SFIRE_PHYS_CRIT)
         R=0.
     endif
+
+    if (R .ne. R)call crash('fire_ros_balbi: R is NaN')
 
     if (balbi_msglevel .ge. 4)then 
 !$OMP CRITICAL(SFIRE_PHYS_CRIT)
