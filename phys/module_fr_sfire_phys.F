@@ -701,7 +701,7 @@ REAL   , DIMENSION( mfuelcats ) :: fwh, fz0
 
 ! read 
 namelist /fuel_scalars/ cmbcnst,hfgl,fuelmc_g,fuelmc_c,nfuelcats,no_fuel_cat,no_fuel_cat2,fire_wind_height,ibeh, &
-    ffwidth_thresh
+    ffwidth_thresh, balbi_msglevel
 namelist /fuel_categories/ fuel_name,windrf,fgi,fueldepthm,savr, &
     fuelmce,fueldens,st,se,weight,fci_d,fct,ichap,itree,fwh,fz0,ffw, &
     fmc_gl_ndwi_0,fmc_gl_ndwi_rate,fmc_gl_ndwi_stdev, fmc_gl_stdev, &
@@ -1502,12 +1502,14 @@ if (ibeh .eq. 2) then
     if (ierrx.ne.0)then
         balbi_nc_count = balbi_nc_count + 1
         if(balbi_nc_count > balbi_nc_max) call crash('fire_ros_balbi failed limit exceeded')
-        call message('running fire_ros_balbi again with more detailed messages')
-        isave = balbi_msglevel
-        balbi_msglevel=4
-        call fire_ros_balbi(ros,nvx,nvy,i,j,fp,ierrx,msg)
+        if ( balbi_msglevel < 4)then
+            call message('running fire_ros_balbi again with more detailed messages')
+            isave = balbi_msglevel
+            balbi_msglevel=4
+            call fire_ros_balbi(ros,nvx,nvy,i,j,fp,ierrx,msg)
+            balbi_msglevel=isave
+        endif
         call warning(msg)
-        balbi_msglevel=isave
     endif
 else
     if (fire_advection.ne.0) then ! from flags in module_fr_sfire_util
