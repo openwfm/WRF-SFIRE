@@ -1,0 +1,24 @@
+ &CONTROL
+ N       =           1,
+ FIRE_PRINT_MSG  =          -1,
+ BALBI_MSGLEVEL  =           4,
+ fire_print_msg  = 2
+ CALL_WRITE_FUELS_M      = F,
+ COMPARE_ROTHERMEL       = F
+ /
+ ! ros computed from defaults, use as a template ONLY:
+ ! cp namelist_standalone.output namelist_standalone.input and edit
+ &DATA
+ PROPX   =  1.0000000E+00,
+ PROPY   =  0.0000000E+00,
+ VX      =  1.0000000E+00,
+ VY      =  0.0000000E+00,
+ DZDXF   =  0.0000000E+00,
+ DZDYF   =  0.0000000E+00,
+ FMC_G   =  0.0000000E+00,
+ NFUEL_CAT       =   1.000000    ,
+ TEMPF   =   273.0000    ,
+ RHOF    =   1.200000    ,
+ FFWIDTH =   10.00000    ,
+ ROS     =  4.9060974E-02
+ /
