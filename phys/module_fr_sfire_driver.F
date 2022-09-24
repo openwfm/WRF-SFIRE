@@ -70,9 +70,9 @@ module module_fr_sfire_driver
 use module_fr_sfire_model, only: sfire_model
 use module_fr_sfire_phys, only: fire_params, init_fuel_cats, fuel_moisture, &
    advance_moisture, moisture_classes, &
-   fire_rate_of_spread
+   fire_rate_of_spread, ibeh, balbi_msglevel
 use module_fr_sfire_atm, only: apply_windrf,interpolate_wind2fire_height,interpolate_atm2fire, &
-   interpolate_z2fire,setup_wind_log_interpolation,find_trees_fmesh,massman_fwh
+   interpolate_z2fire,setup_wind_log_interpolation,find_trees_fmesh,massman_fwh, rho2fire
 use module_fr_sfire_util
 !use module_fr_sfire_util, only: lines_type,fire_max_lines
 ! Driver layer modules
@@ -474,6 +474,7 @@ call print_2d_stats(ifps,min(ifpe,ifde-ir),jfps,min(jfpe,jfde-jr),ifms,ifme,jfms
             grid%fuel_time,                      & 
             grid%wz0,                            &          !wrf roughness length on fire mesh
             grid%fz0, grid%fwh,grid%can_top,grid%cuf,grid%cvf, &
+            grid%tempf, grid%rhof,grid%ffwidth,             & ! variables for Balbi ROS model
             fp,                                    & ! structure with pointers passed to spread rate calculation
             config_flags%nfmc,         & ! moisture model variables start
             run_advance_moisture,run_fuel_moisture,dt_moisture,     &    ! moisture model control
@@ -585,7 +586,8 @@ subroutine sfire_driver_phys (ifun,    &
     nfuel_cat,                                    & ! in array, data, fire grid, or constant internal
     fuel_time,                                    & ! save constant internal data, fire grid
     wz0,                                          &
-    fz0,fwh,can_top,cuf,cvf,                  &
+    fz0,fwh,can_top,cuf,cvf,                      & ! input fuel map/vegetation variables on fire mesh
+    tempf,rhof,ffwidth,                           & ! variables for Balbi ROS model
     fp,                                           & ! fire params
     nfmc,                                     & ! number of fuel moisture classes
     run_advance_moisture,run_fuel_moisture,dt_moisture,& ! moisture model control
@@ -663,8 +665,9 @@ real, intent(inout), dimension(ifms:ifme, jfms:jfme)::     &
     lfn_out                                    ! fire wind velocities
 
 real, intent(out), dimension(ifms:ifme, jfms:jfme)::  &
-    fire_area, &                               ! fraction of each cell burning
-    fuel_frac_burnt
+    fire_area, &                                 ! fraction of area of each cell burning
+    fuel_frac_burnt,                           & ! fraction of mass of fuel burnt
+    tempf,rhof,ffwidth                           ! variables for Balbi ROS model
 
 real, intent(out), dimension(ims:ime, jms:jme):: &  ! redundant arrays, for display purposes only (atm grid)
     avg_fuel_frac,                               &  ! average fuel fraction
@@ -942,9 +945,44 @@ do ij=1,num_tiles
  
      endif !restart
 
-    elseif(ifun.eq.3)then  ! interpolate winds to the fire grid
+    elseif(ifun.eq.3)then  ! interpolate atmosphere variables to the fire grid
+  
+      for_balbi: if(ibeh.eq.2)then
+
+         call message('ibeh=2: interpolating atmosphere input for Balbi rate of spread model')
+         if(.not.use_atm_vars)call crash('ibeh=2 Balbi model requires atmosphere but use_atm_vars=false')
+         
+         ! balbi_msglevel = 4
+
+         call rho2fire( id,       &
+             ids,ide, jds,jde,                    & ! atm domain dimensions
+             ims,ime, jms,jme,                    & ! atm memory dimensions
+             ips,ipe, jps,jpe,                    & ! atm patch dimensions
+             its,ite, jts,jte,                    & ! atm tile dimensions
+             ifds, ifde, jfds, jfde,              & ! fire grid dimensions
+             ifms, ifme, jfms, jfme,              & ! fire memory dimensions
+             ifts,ifte,jfts,jfte,                 & ! fire tildemensions
+             ir,jr,                               & ! atm/fire grid ratio
+             t2, psfc, q2,                        & ! atm surface variables
+             rhof)                                  ! surface air density
+
+         call interpolate_z2fire(id,1,            & ! for debug output, <= 0 no output
+            ids,ide,  jds,jde,                    & ! atm grid dimensions
+            ims,ime,  jms,jme,                    &
+            ips,ipe,jps,jpe,                              &
+            its,ite,jts,jte,                              &
+            ifds, ifde, jfds, jfde,                       & ! fire grid dimensions
+            ifms, ifme, jfms, jfme,                       &
+            ifts,ifte,jfts,jfte,                          &
+            ir,jr,                                        & ! atm/fire grid ratio
+            t2,                                          & ! atm grid arrays in
+            tempf)                                      ! fire grid arrays out
+
+         ffwidth(ifts:ifte,jfts:jfte)     = 100.     ! default for now
+
+      end if for_balbi
  
-      if(use_atm_vars)then                                  
+      use_atm: if(use_atm_vars)then                                  
      
         call write_array_m(its,ite,jts,jte,ims,ime,jms,jme,z0,'z0',id)
         call write_array_m3(its,ite1,kts,kde-1,jts,jte,ims,ime,kms,kme,jms,jme,u,'u_2',id)
@@ -952,7 +990,7 @@ do ij=1,num_tiles
         call write_array_m3(its,ite,kts,kde,jts,jte,ims,ime,kms,kme,jms,jme,ph,'ph_2',id)
         call write_array_m3(its,ite,kts,kde,jts,jte,ims,ime,kms,kme,jms,jme,phb,'phb',id)
         
-        if(fire_wind_log_interp.eq.4)then
+        wind_log: if(fire_wind_log_interp.eq.4)then
           call print_2d_stats(its,ite,jts,jte,ims,ime,jms,jme,z0,'driver_phys:z0')
           call interpolate_atm2fire(id,                     & ! flag for debug output
             ids,ide, kds,kde, jds,jde,                    & ! atm grid dimensions
@@ -978,8 +1016,10 @@ do ij=1,num_tiles
 
             wz0 = 0             !Set WRF roughness length to 0 since we dont use this for option 4.
 
-        else
+        else wind_log
+
           call print_2d_stats(ifts,ifte,jfts,jfte,ifms,ifme,jfms,jfme,fz0,'driver_phys:fz0')        
+
           call interpolate_wind2fire_height(id,       & ! to identify debugging prints and files if needed
             ids,ide, kds,kde, jds,jde,                    & ! atm grid dimensions
             ims,ime, kms,kme, jms,jme,                    &
@@ -992,15 +1032,14 @@ do ij=1,num_tiles
             ir,jr,                                        & ! atm/fire grid ratio
             u_frame, v_frame,                             & ! velocity frame correction
             u,v,ph,phb,                                   & ! input atmospheric arrays
-            fz0,fwh,                                      & ! input fire arrays
+            fz0,fwh,                                      & ! input fire terrain height and wind height 
             fp%vx,fp%vy)                                          ! output fire arrays
 
-          if(fire_use_windrf.eq.1)then
+          wind_rf: if(fire_use_windrf.eq.1)then             ! wind reduction factors below fwh
             call apply_windrf(                      &
             ifms,ifme,jfms,jfme,                    &
             ifts,ifte,jfts,jfte,                    &
             nfuel_cat,fp%vx,fp%vy)
-          endif
 
 
           !If we are deploying the Massman parameterization, we need to interpolate our winds
@@ -1009,11 +1048,13 @@ do ij=1,num_tiles
           !this is just going to be hard coded for now). Once this is done, we can use the massman 
           !parameterization to scale the winds down to the FWH.
 
-          if(fire_use_windrf.eq.4)then
+          elseif(fire_use_windrf.eq.4)then wind_rf          ! massman interpolation below fwh
           
+!$OMP CRITICAL(SFIRE_DRIVER_CRIT)
             call message('fire_use_windrf option 4 has been selected....!')
             write(msg, '(A20,I1)') 'fire_can_top_read = ', fire_can_top_read
             call message(msg)
+!$OMP END CRITICAL(SFIRE_DRIVER_CRIT)
 
             !Lets set the canopy height, using either a look up table, or just explictly setting it 
             !using WRF input data from LANDFIRE.
@@ -1075,9 +1116,9 @@ do ij=1,num_tiles
             can_top,                                      & ! canopy top (input)
             fp%vx,fp%vy)
 
-          endif
-        endif
-      endif
+          end if wind_rf
+        end if wind_log 
+      end if use_atm ! use_atm_vars
 
     elseif(ifun.eq.4)then
     
@@ -1754,7 +1795,6 @@ subroutine set_fp_from_grid(grid,fp)
     fp%rhof => grid%rhof     ! surface air density
     fp%ffwidth => grid%ffwidth     ! fire front width 
 
-
 end subroutine set_fp_from_grid
 
 subroutine check_grid_alloc(grid,config_flags)
@@ -1855,12 +1895,15 @@ subroutine check_grid_alloc(grid,config_flags)
     call message('check_grid_alloc: checking if grid arrays used in emissions are allocated',level=2)
     call check_size(size(grid%chem),'chem',config_flags%chem_opt)
     call check_size(size(grid%tracer),'tracer',config_flags%tracer_opt)
-    !if(ibeh.eq.2)then
+    
+    if(ibeh.eq.2)then
+        call check_size(size(grid%t2),'t2')
+        call check_size(size(grid%psfc),'psfc')
+        call check_size(size(grid%q2),'q2')
         call check_size(size(grid%tempf),'tempf')
         call check_size(size(grid%rhof),'rhof')
         call check_size(size(grid%ffwidth),'ffwidth')
-    !endif
-        
+    endif
 
 end subroutine check_grid_alloc
 
