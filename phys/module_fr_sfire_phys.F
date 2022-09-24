@@ -1500,10 +1500,9 @@ ierrx=0
 if (ibeh .eq. 2) then
     call fire_ros_balbi(ros,nvx,nvy,i,j,fp,ierrx,msg)
     if (ierrx.ne.0)then
-        call warning(msg)
         balbi_nc_count = balbi_nc_count + 1
         if(balbi_nc_count > balbi_nc_max) call crash('fire_ros_balbi failed limit exceeded')
-        call message('running fire_ros_balbi again with detailed messages')
+        call message('running fire_ros_balbi again with more detailed messages')
         isave = balbi_msglevel
         balbi_msglevel=4
         call fire_ros_balbi(ros,nvx,nvy,i,j,fp,ierrx,msg)
@@ -1673,6 +1672,9 @@ integer:: k, mc, it
 ! nfuel_cat is real only because real array was easier than integer in WPS long ago
 
 !*** executable
+
+! initialize error flag
+ierrx = 0
 
 ! retrieve balbi inputs
 vx = fp%vx(i,j)
@@ -1857,29 +1859,23 @@ do it=1,maxit_R
     endif
 
     if (abs(change) < tol_R)then
-        exit
+        if (balbi_msglevel .ge. 3)then
+!$OMP CRITICAL(SFIRE_PHYS_CRIT)
+            write(msg,1)it,i,j,R,change,' converged'
+            call message(msg)
+!$OMP END CRITICAL(SFIRE_PHYS_CRIT)
+        endif
+        ros = R
+        return 
     endif
     R_old = R
 enddo
 
 1 format('fire_ros_balbi: iteration',i3,' at ij=',2i5,' R=',f6.3,' diff=',g12.3,a)
-if (abs(change) < tol_R)then
-    if (balbi_msglevel .ge. 3)then
 !$OMP CRITICAL(SFIRE_PHYS_CRIT)
-        write(msg,1)it,i,j,R,change,' converged'
-        call message(msg)
+write(msg,1)it,i,j,R,change,' did not converge'
 !$OMP END CRITICAL(SFIRE_PHYS_CRIT)
-    endif
-    ierrx = 0
-else
-!$OMP CRITICAL(SFIRE_PHYS_CRIT)
-    write(msg,1)it,i,j,R,change,' did not converge'
-!$OMP END CRITICAL(SFIRE_PHYS_CRIT)
-    if (balbi_msglevel .ge. 3)then 
-        call warning(msg)
-    endif
-    ierrx=1
-endif
+ierrx=1
 ros=R
 end subroutine fire_ros_balbi
 
