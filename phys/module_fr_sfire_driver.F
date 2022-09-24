@@ -81,7 +81,8 @@ use module_fr_sfire_util
     USE module_comm_dm , ONLY : halo_fire_fuel1_sub, halo_fire_tign_sub, halo_fire_wind_f_sub, &
 HALO_SFIRE_WIND_A_sub, halo_fire_ph_sub, halo_fire_zsf_sub, halo_fire_longlat_sub, &
 halo_fire_phb_sub, halo_fire_z0_sub, halo_fire_lfn1_sub, HALO_FIRE_LFN_OUT_sub, &
-HALO_FIRE_MAG_sub, HALO_FIRE_MFG_sub, halo_fire_ndwi_sub
+HALO_FIRE_MAG_sub, HALO_FIRE_MFG_sub, halo_fire_ndwi_sub, & 
+HALO_SFIRE_RHO2FIRE_ATM_sub, HALO_SFIRE_RHO2FIRE_SUB_sub
 #endif
 use module_fr_sfire_atm, only: read_emissions_table, add_fire_emissions
 
@@ -396,11 +397,15 @@ call print_2d_stats(ifps,min(ifpe,ifde-ir),jfps,min(jfpe,jfde-jr),ifms,ifme,jfms
 !           halo exchange on atm winds and geopotential for interpolation
 #include "HALO_SFIRE_WIND_A.inc"
 #include "HALO_FIRE_PH.inc"
-
+            if(ibeh.eq.2)then
+#include "HALO_SFIRE_RHO2FIRE_ATM.inc"
+            endif
         elseif(fire_ifun.eq.4)then
 !           halo exchange on fire winds width 2 for a 2-step RK method
 #include "HALO_FIRE_WIND_F.inc"
-
+            if(ibeh.eq.2)then
+#include "HALO_SFIRE_RHO2FIRE_SUB.inc"
+            endif
             if(run_fuel_moisture)then
             ! have interpolated to the fire grid
 #include "HALO_FIRE_MFG.inc"
@@ -954,6 +959,8 @@ do ij=1,num_tiles
          
          ! balbi_msglevel = 4
 
+         !! halo on t2, psfc, q2 before
+
          call rho2fire( id,       &
              ids,ide, jds,jde,                    & ! atm domain dimensions
              ims,ime, jms,jme,                    & ! atm memory dimensions
@@ -977,6 +984,8 @@ do ij=1,num_tiles
             ir,jr,                                        & ! atm/fire grid ratio
             t2,                                          & ! atm grid arrays in
             tempf)                                      ! fire grid arrays out
+
+         !! halo on rhof,tempf after
 
          ffwidth(ifts:ifte,jfts:jfte)     = 100.     ! default for now
 

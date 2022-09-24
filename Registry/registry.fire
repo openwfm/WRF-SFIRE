@@ -526,7 +526,7 @@ halo      HALO_FIRE_FUEL1 dyn_em 8:fuel_frac,fuel_time,bbb,phiwc,phisc,r_0,fgip,
 #
 halo      HALO_SFIRE_WIND_A dyn_em 24:u_2,v_2
 halo      HALO_SFIRE_RHO2FIRE_ATM dyn_em 8:t2,q2,psfc
-halo      HALO_SFIRE_RHO2FIRE_SUB dyn_em 24:rhof,tempf
+halo      HALO_SFIRE_RHO2FIRE_SUB dyn_em 24:rhof,tempf,ffwidth
 #
 # ----------------------------------------
 #  end fire variables and configuration
