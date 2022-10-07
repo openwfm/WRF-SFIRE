@@ -2666,5 +2666,179 @@ subroutine massman_fwh(id,       & ! to identify debugging prints and files if n
 
 end subroutine massman_fwh
 
+!
+!***
+!
+
+subroutine interpolate_b2fire( id,       &
+    ids,ide, kds,kde, jds,jde,           & ! atm domain dimensions
+    ims,ime, kms,kme, jms,jme,           & ! atm memory dimensions
+    ips,ipe, kps,kpe, jps,jpe,           & ! atm patch dimensions
+    its,ite, kts,kte, jts,jte,           & ! atm tile dimensions
+    ifds, ifde, jfds, jfde,              & ! fire grid dimensions
+    ifms, ifme, jfms, jfme,              & ! fire memory dimensions
+    ifts,ifte,jfts,jfte,                 & ! fire tildemensions
+    ir,jr,                               & ! atm/fire grid ratio
+    a, afire )                             ! 3d array, 2d fire array
+
+implicit none
+
+!*** Purpose
+! interpolate the lowest layer of 3d atmosphere field to the fire grid.
+
+!*** arguments
+integer, intent(in):: id,                &
+    ids,ide, kds,kde, jds,jde,           & ! atm domain dimensions
+    ims,ime, kms,kme, jms,jme,           & ! atm memory dimensions
+    ips,ipe, kps,kpe, jps,jpe,           & ! atm patch dimensions
+    its,ite, kts,kte, jts,jte,           & ! atm tile dimensions
+    ifds, ifde, jfds, jfde,              & ! fire grid dimensions
+    ifms, ifme, jfms, jfme,              &
+    ifts,ifte,jfts,jfte,                 &
+    ir,jr                                  ! atm/fire grid ratio
+
+real,intent(in),dimension(ims:ime,kms:kme,jms:jme) :: a
+real,intent(out),dimension(ifms:ifme,jfms:jfme):: afire 
+
+!**** local
+real, dimension(its-1:ite+1,jts-1:jte+1):: a2  ! copy of a(:,1,:) 
+integer::i,j
+integer::ibs,ibe,jbs,jbe
+
+character(len=128)::msg
+
+call check_mesh_2dim(ifts,ifte,jfts,jfte,ifds,ifde,jfds,jfde) ! check if fire tile fits into domain
+call check_mesh_2dim(ifts,ifte,jfts,jfte,ifms,ifme,jfms,jfme) ! check if fire tile fits into memory
+
+! one beyond the tile but not beyond the domain boundary
+ibs=max(ids,its-1)
+ibe=min(ide,ite+1)
+jbs=max(jds,jts-1)
+jbe=min(jde,jte+1)
+
+call check_mesh_2dim(ibs,ibe,jbs,jbe,ims,ime,jms,jme) ! check if tile with halo fits into memory
+
+! copy with halo beyond the tile but not beyond the domain boundary
+    do j=jbs,jbe
+        do i=ibs,ibe
+            a2(i,j)=a(i,ifds,j)      ! copy slice to 2d array
+        enddo
+    enddo
+
+    call print_2d_stats(ibs,ibe,jbs,jbe,its-1,ite+1,jts-1,jte+1,a2,'interpolate_a2fire: a2')
+
+    ! to the fire mesh
+    call interpolate_z2fire(id,0,        & ! for debug output, <= 0 no output
+    ids,ide,jds,jde,                     & ! atm grid dimensions
+    its-1,ite+1,jts-1,jte+1,             & ! memory dimensions
+    ips,ipe,jps,jpe,                     &
+    its,ite,jts,jte,                     &
+    ifds, ifde, jfds, jfde,              & ! fire grid dimensions
+    ifts, ifte, jfts, jfte,              &
+    ifts,ifte,  jfts,jfte,               &
+    ir,jr,                               & ! atm/fire grid ratio
+    a2,                               & ! atm grid arrays in
+    afire)                                 ! fire grid arrays out
+
+end subroutine interpolate_b2fire
+
+!
+!***
+!
+
+subroutine rho2fire( id,       &
+             ids,ide, jds,jde,                    & ! atm domain dimensions
+             ims,ime, jms,jme,                    & ! atm memory dimensions
+             ips,ipe, jps,jpe,                    & ! atm patch dimensions
+             its,ite, jts,jte,                    & ! atm tile dimensions
+             ifds, ifde, jfds, jfde,              & ! fire grid dimensions
+             ifms, ifme, jfms, jfme,              & ! fire memory dimensions
+             ifts,ifte,jfts,jfte,                 & ! fire tildemensions
+             ir,jr,                               & ! atm/fire grid ratio
+             t2, psfc, q2,                        & ! atm surface variables
+             rhof)                                  ! surface air density
+
+implicit none
+
+!*** Purpose
+! compute surface air density from 2D diagnostic variables 
+
+!*** arguments
+integer, intent(in):: id,                &
+             ids,ide, jds,jde,                    & ! atm domain dimensions
+             ims,ime, jms,jme,                    & ! atm memory dimensions
+             ips,ipe, jps,jpe,                    & ! atm patch dimensions
+             its,ite, jts,jte,                    & ! atm tile dimensions
+             ifds, ifde, jfds, jfde,              & ! fire grid dimensions
+             ifms, ifme, jfms, jfme,              & ! fire memory dimensions
+             ifts,ifte,jfts,jfte,                 & ! fire tildemensions
+    ir,jr                                  ! atm/fire grid ratio
+
+real,intent(in),dimension(ims:ime,jms:jme) :: t2, psfc, q2
+real,intent(out),dimension(ifms:ifme,jfms:jfme):: rhof 
+
+!**** local
+real, dimension(:,:), allocatable:: rho 
+integer::i,j
+integer::ibs,ibe,jbs,jbe,ils,ile,jls,jle
+
+character(len=128)::msg
+
+! memory dimensions for the local rho array
+ils = its-2
+ile = ite+2
+jls = jts-2
+jle = jte+2
+
+allocate(rho(ils:ile,jls:jle))
+
+call check_mesh_2dim(its,ite,jts,jte,ids,ide,jds,jde) ! check if tile fits into domain
+call check_mesh_2dim(ifts,ifte,jfts,jfte,ifms,ifme,jfms,jfme) ! check if fire tile fits into memory
+
+! memory size one beyond the tile but not beyond the domain boundary
+ibs=max(ids,its-1)
+ibe=min(ide,ite+1)
+jbs=max(jds,jts-1)
+jbe=min(jde,jte+1)
+
+call check_mesh_2dim(ibs,ibe,jbs,jbe,ims,ime,jms,jme) ! check if tile with halo fits into memory
+
+! compute rho halo beyond the tile but not beyond the domain boundary
+    do j=jbs,jbe
+        do i=ibs,ibe
+            if(.not.t2(i,j)>0.0 .or. .not. psfc(i,j)>0.0)goto 9
+            rho(i,j)=psfc(i,j)/(287.0*(1.0 + 0.61*q2(i,j))*t2(i,j))
+            if(.not.rho(i,j) > 0.0)goto 9
+        enddo
+    enddo
+
+    call print_2d_stats(ibs,ibe,jbs,jbe,ils,ile,jts,jte,rho,'rho2fire: rho')
+
+    ! to the fire mesh
+    call interpolate_z2fire(id,          & ! for debug output, <= 0 no output
+    1,                                   & ! extrapolate strip 1 at boundary
+    ids,ide,jds,jde,                     & ! atm grid dimensions
+    ils,ile,jls,jle,                     & ! memory dimensions
+    ips,ipe,jps,jpe,                     &
+    its,ite,jts,jte,                     &
+    ifds, ifde, jfds, jfde,              & ! fire grid dimensions
+    ifms, ifme, jfms, jfme,              & ! memory dimension
+    ifts,ifte,  jfts, jfte,              & ! tile 
+    ir,jr,                               & ! atm/fire grid ratio
+    rho,                               & ! atm grid arrays in
+    rhof)                                 ! fire grid arrays out
+
+    call print_2d_stats(ifts,ifte,jfts,jfte,ifms,ifme,jfms,jfme,rhof,'rho2fire: rhof')
+
+deallocate(rho)
+return
+
+9   continue
+!$OMP CRITICAL(SFIRE_ATM_CRIT)
+    write(msg,*)'rho2fire: at i,j=',i,j,' t2=',t2(i,j),' psfc=',psfc(i,j),' rho=',rho(i,j),' must be all > 0'
+!$OMP END CRITICAL(SFIRE_ATM_CRIT)
+    call crash(msg)
+
+end subroutine rho2fire
 
 end module module_fr_sfire_atm

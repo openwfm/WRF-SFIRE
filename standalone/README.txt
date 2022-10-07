@@ -1,36 +1,63 @@
-This directory contains SFIRE (the fire component of wrf-fire) test driver.
-It links the fire model from the files wrfv2_fire/phys/module_fr_sfire_*.F with the 
-files in this directory:
+This directory contains SFIRE (the fire component of wrf-fire) test drivers.
+It builds executables from the files sources in WRF-SFIRE, files generated
+in a WRF-SFIRE build, and the files in this directory.
 
-model_test_main.F	the main program that calls the model
-wrf_fakes.F             stubs that perform various wrf functions
+A. fire_ros.exe
 
-To build the standalone driver, create your own make.inc, or link an existing one, and type make. 
-This will create file model_test_main.exe, then just execute this file.
+fire_ros.exe calls the fuels and rate of spread (ROS) subsystem. 
+It reads namelist.fire if present in the current directory.
+It does not read the namelist.input so WRF does not need to be built first. 
 
-For more information see http://www.openwfm.org/wiki/How_to_run_the_standalone_fire_model_in_WRF-Fire
+1. Select compiler: ln -s make.inc.ifort make.inc or one of the others or make your own
+2. Build the executables: make fire_ros 
+3. Run: cd ../test/em_fire/balbi or cd ../test/em_fire/hill;  ./fire_ros.exe
+4. The first time, fire_ros.exe will create a file namelist_standalone.output,
+   which has the same format as the input and can be used as a template.
+5. cp namelist_standalone.output namelist_standalone.input
+6. Edit namelist_standalone.input to change the inputs to fire_ros_balbi as desired, run again, repeat.  
+7. If call_write_fuels_m=T in in input, fire_ros.exe will create file fuels.m. Follow the directions in
+   https://wiki.openwfm.org/wiki/How_to_diagnose_fuel_properties_in_WRF-SFIRE
+   to examine fuels.m and make graphics.
 
-Keeping the standalone up to date (for programmers)
+B. fire.exe 
 
-If you get errors about missing configure_flags%something it means that the registry 
-has changed and the include files need to be updated as follows:
+fire.exe is the complete fire model running with atmosphere from WRF-SFIRE output.
 
- - build wrf in the wrf2_fire directory
- - in this directory: make sync_inc
- - commit the resulting include files
+1. build WRF-SFIRE as usual, options do not matter: cd ..; ./configure; compile em_fire (or em_real)
+2. Select compiler: ln -s make.inc.ifort make.inc or one of the others or make your own
+3. go back here: cd standalone
+4. build the executable: make fire 
+5. Create the atmospheric forcing: cd test/em_fire/hill; ideal.exe; wrf.exe (or your real simulation)
+6. link the atmospheric forcing: ln -s <the_wrfout_just_createdi> fire_input.nc
+7. Run the standalone: ../../../standalone/fire.exe
 
-If you still get errors, it means that the standalone fell behind (again) and some hand updating is
-needed. Let me know.
 
-Spread rate calculation interface:
+Files:
 
-The spread rate is computed in module_fr_sfire_phys.F (maybe it should be renamed to 
-module_fr_sfire_spread.F?). This module defines derived type fire_params which contains only
-pointers.  The driver declares an object type fire_params and assigns the pointers to 
-parameter arrays. This object is passed down the call chain to the spread rate calculation.
-This way, when the parameters passed to the spread rate calculation change, no changes
-are required in the code between the driver and the spread rate calculation.
+fire.F             the main fire program 
+module_domain.F    fake WRF declaration of grid
+module_configure.F fake WRF declaration of namelist 
+wrf_fakes.F        fake WRF subroutines
+wrf_netcdf.F       read and write files in WRF compatible format
+util_netcdf.F      convenience stubs to netcdf API   
+
+The following legacy main programs almost certainly do not work. 
+They served as aids in development and may be updated in future.
+
+init.F                     generate a basic fire_input.nc 
+moisture_main.F            run the fuel  moisture model
+moisture_test_main.F       another one
+fuels_main.F               not sure
+atm.F                      not sure
+fuel_interp_test_main.F    not sure
+
+See also old guide for the original 2012 pre-WRF-SFIRE version at 
+http://wiki.openwfm.org/wiki/How_to_run_the_standalone_fire_model_in_WRF-Fire
+
+If you still get errors, it can be that the standalone fell behind the WRF-SFIRE 
+code (again) and some hand updating is needed. Please let us know.
 
 Jan Mandel
 June 18, 2010
 Updated December 22, 2012
+Updated August 2022

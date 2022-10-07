@@ -1,20 +1,21 @@
-# fefines FC, FCFLAGS, FFREE
+# defines FC, FCFLAGS, FFREE
 include make.inc
 DEFS =
-WRF = ../wrfv2_fire
-FPFLAGS= -I$(NETCDF)/include -I.
+WRF = ..
+INC = $(WRF)/inc
+FPFLAGS= -I$(NETCDF)/include -I $(INC) -I. 
 LDFLAGS = -L$(NETCDF)/lib -lnetcdff -lnetcdf
 #LDFLAGS = `$(NETCDF)/bin/nc-config --flibs`
 FFLAGS=$(FPFLAGS) $(FCFLAGS) $(FFREE)
-INC = $(WRF)/inc
-
 
 MAKEFILE=Makefile
 
+# to compile WRF sources
 %.o: $(WRF)/phys/%.F 
 	$(FP) $(FFLAGS) $(DEFS) -E $(WRF)/phys/$*.F | sed 's/^#.*//' > $*.f90
 	$(FC) -c $(FFLAGS) $*.f90
 
+# to compile local sources
 %.o: %.F 
 	$(FP) $(FFLAGS) $(DEFS) -E $*.F | sed 's/^#.*//' > $*.f90
 	$(FC) -c $(FFLAGS) $*.f90
@@ -54,14 +55,14 @@ FUELS_OBJ = \
     module_fr_sfire_phys.o \
     module_fr_sfire_util.o  \
     wrf_fakes.o
+
+FIRE_ROS_OBJ = \
+    module_fr_sfire_phys.o \
+    module_fr_sfire_util.o  \
+    wrf_fakes.o
     
 
-NAMELIST= \
-    namelist_statements.inc \
-    namelist_defaults.inc \
-    namelist_defines.inc \
-    namelist_defines2.inc \
-    config_assigns.inc
+NAMESLIST = $(INC)/config_assigns.inc $(INC)/namelist_defaults.inc $(INC)/namelist_defines.inc $(INC)/namelist_defines2.inc $(INC)/namelist_statements.inc
 
 FUEL_INTERP_OBJ = \
     fuel_interp_test_main.o \
@@ -87,7 +88,9 @@ MOISTURE_OBJ = \
 
 #.PHONY: all
 
-default: fire
+default: fire_ros
+
+all: fire fire_ros
 
 moisture: moisture.exe
 moisture.exe: $(MAKEFILE) libesmf_time.a $(MOISTURE_OBJ)
@@ -103,30 +106,26 @@ fuel_interp_test: fuel_interp_test.exe
 fuel_interp_test.exe: $(MAKEFILE) $(FUEL_INTERP_OBJ)
 	$(FC) $(FCFLAGS) -o fuel_interp_test.exe $(FUEL_INTERP_OBJ)
 
-all: fire init 
-
 atm: atm.exe
-	cd ../wrfv2_fire/test/em_fire; rm -f atm.exe; ln -s ../../../standalone/atm.exe atm.exe
-
-fire: fire.exe
-	cd ../wrfv2_fire/test/em_fire; rm -f fire.exe; ln -s ../../../standalone/fire.exe fire.exe
-
-init: init.exe
-	cd ../wrfv2_fire/test/em_fire; rm -f init.exe; ln -s ../../../standalone/init.exe init.exe
+	cd $(WRF)/test/em_fire; rm -f atm.exe; ln -s ../../standalone/atm.exe atm.exe
 
 atm.exe: $(MAKEFILE) atm.o $(FIRE_OBJ)
 	$(FC) $(FCFLAGS) -o atm.exe fire.o $(FIRE_OBJ) $(LDFLAGS)
 
-fire.exe: $(MAKEFILE) fire.o $(FIRE_OBJ)
-	$(FC) $(FCFLAGS) -o fire.exe fire.o $(FIRE_OBJ) $(LDFLAGS)
+fire: fire.exe
+fire.exe: $(MAKEFILE) fire_main.o $(FIRE_OBJ)
+	$(FC) $(FCFLAGS) -o fire.exe fire_main.o $(FIRE_OBJ) $(LDFLAGS)
 
 init.exe: $(MAKEFILE) init.o $(INIT_OBJ)
 	$(FC) $(FCFLAGS) -o init.exe init.o $(INIT_OBJ) $(LDFLAGS)
 
 fuels: fuels.exe
-
 fuels.exe: $(MAKEFILE) $(FUELS_OBJ)
 	$(FC) $(FCFLAGS) $(LDFLAGS) -o fuels.exe $(FUELS_OBJ) $(LDFLAGS)
+
+fire_ros: fire_ros.exe
+fire_ros.exe: $(MAKEFILE) $(FIRE_ROS_OBJ) fire_ros_main.o
+	$(FC) $(FCFLAGS) $(LDFLAGS) -o fire_ros.exe fire_ros_main.o $(FIRE_ROS_OBJ) $(LDFLAGS)
  
 # for the order of generating modules
 
@@ -187,7 +186,7 @@ module_fr_sfire_driver.o: $(MAKEFILE) \
 	sfire_id.inc \
 	module_domain.o \
 	module_configure.o \
-    module_fr_sfire_phys.o \
+        module_fr_sfire_phys.o \
 	module_fr_sfire_model.o \
 	module_fr_sfire_atm.o \
 	module_fr_sfire_util.o
@@ -237,9 +236,6 @@ ESMF_Clock.o : ESMF_BaseTime.o ESMF_Time.o ESMF_TimeInterval.o
 $(ESMF_OBJS) : %.o : $(WRF)/external/esmf_time_f90/%.F90
 	$(FC) -c $< -I$(WRF)/external/esmf_time_f90 -I. -DMAX_HISTORY=25 -o $@
 
-INCFILES = $(INC)/config_assigns.inc $(INC)/namelist_defaults.inc $(INC)/namelist_defines.inc $(INC)/namelist_defines2.inc $(INC)/namelist_statements.inc
-sync_inc: $(INCFILES)
-	cp $(INCFILES) .
 
 clean:
 	rm -f *.mod *.o *.f90 *.s *.exe *.a

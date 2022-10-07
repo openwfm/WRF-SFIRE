@@ -1,6 +1,6 @@
 module module_domain
 ! define the main datastructure passed to the model
-! follows WRFV3/frame/module_domain.F but only fields needed here are defined
+! follows WRF frame/module_domain.F but only fields needed here are defined
    integer, parameter:: max_tiles=10
 
    type domain
@@ -10,8 +10,12 @@ module module_domain
       ! changes every time step
       real, pointer, dimension(:,:)::uf => null()              ! winds on the fire mesh 
       real, pointer, dimension(:,:)::vf => null()              ! winds on the fire mesh
+      real, pointer, dimension(:,:)::cuf => null()             ! U wind at canopy top 
+      real, pointer, dimension(:,:)::cvf => null()             ! V wind at canopy top
 
       ! constant arrays - set once at initialization
+      real, pointer, dimension(:,:)::wz0 => null()             ! roughness length
+      real, pointer, dimension(:,:)::can_top => null()         ! Height of tree canopy
       real, pointer, dimension(:,:)::zsf => null()             ! terrain height
       real, pointer, dimension(:,:)::dzdxf => null()           ! terrain gradient 
       real, pointer, dimension(:,:)::dzdyf => null()           ! terrain gradient 
@@ -19,6 +23,10 @@ module module_domain
       real, pointer, dimension(:,:)::fxlat =>null()            ! fire mesh nodes coordinates
       real, pointer, dimension(:,:)::nfuel_cat => null()       ! index to fuel data table
       ! nfuel_cat is expanded to the coefficient arrays below from the table in namelist.fire
+      real, pointer, dimension(:,:)::xlong => null()
+      real, pointer, dimension(:,:)::xlat => null()
+
+      ! variable arrays
       real, pointer, dimension(:,:)::bbb => null()             ! fire spread formula coefficients
       real, pointer, dimension(:,:)::betafl => null()
       real, pointer, dimension(:,:)::phiwc => null()
@@ -33,8 +41,6 @@ module module_domain
       real, pointer, dimension(:,:)::phb => null()
       real, pointer, dimension(:,:)::z0 => null()
       real, pointer, dimension(:,:)::ht => null()
-      real, pointer, dimension(:,:)::xlong => null()
-      real, pointer, dimension(:,:)::xlat => null()
       real, pointer, dimension(:,:)::avg_fuel_frac => null()
       real, pointer, dimension(:,:)::grnhfx => null()
       real, pointer, dimension(:,:)::grnqfx => null()
@@ -64,6 +70,7 @@ module module_domain
 
       ! scalars
       ! mesh and housekeeping
+      integer :: grid_id = 1
 
       real:: sr_x, sr_y                                        ! atmosphere/fire refinement ratio
       integer::itimestep                                       ! time step number

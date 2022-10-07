@@ -291,7 +291,7 @@ ignited=0
 dmax=0
 dmin=huge(dmax)
 11      format('IGN ',6(a,g17.7,1x)) 
-12      format('IGN ',4(a,2g13.7,1x))
+12      format('IGN ',4(a,2g14.7,1x))
 ! tmperr=0.
 do j=jfts,jfte   
     do i=ifts,ifte
@@ -448,7 +448,7 @@ end subroutine check_lfn_tign_ij
 
 
 ! called from the inside of a loop, inline if possible
-!DEC$ ATTRIBUTES FORCEINLINE
+!DEC$ ATTRIBUTES FORCEINLINE :: nearest
 SUBROUTINE nearest(d,t,ax,ay,sx,sy,st,ex,ey,et,cx2,cy2)
         implicit none
 !***    arguments
@@ -483,7 +483,7 @@ SUBROUTINE nearest(d,t,ax,ay,sx,sy,st,ex,ey,et,cx2,cy2)
 !***    executable
 
 11      format('IGN ',6(a,g17.7,1x))
-12      format('IGN ',4(a,2g13.7,1x))
+12      format('IGN ',4(a,2g14.7,1x))
 
         ! midpoint m = (mx,my)
         mx = (sx + ex)*0.5
@@ -2085,7 +2085,7 @@ type(fire_params),intent(in)::fp
 !*** local 
 real:: te,diffLx,diffLy,diffRx,diffRy, & 
    diffCx,diffCy,diff2x,diff2y,grad,rr, &
-   ros_back,ros_wind,ros_slope,advx,advy,scale,nvx,nvy,speed
+   advx,advy,scale,nvx,nvy,speed
 integer::i,j,itso,iteo,jtso,jteo,ierrx,nerr
 integer::upwind_err=0
 character(len=128)msg,msg2
@@ -2135,7 +2135,7 @@ intrinsic max,min,sqrt,nint,tiny,huge
             diffCy = diffLy+diffRy
     
             !upwinding - select right or left derivative
-            select case(sfire_upwinding)
+            select case(fire_upwinding)
             case(0)  ! none
                 grad=sqrt(diffCx**2 + diffCy**2)
             case(1) ! standard
@@ -2158,22 +2158,12 @@ intrinsic max,min,sqrt,nint,tiny,huge
                 upwind_err=1
             end select
   
-            ! normal direction, from central differences
-            scale=sqrt(diffCx*diffCx+diffCy*diffCy+eps) 
-            nvx=diffCx/scale
-            nvy=diffCy/scale
-                      
-            ! wind speed in direction of spread
-            ! speed =  vx(i,j)*nvx + vy(i,j)*nvy
-        
-    
             ! get rate of spread from wind speed and slope
 
-            call fire_ros(ros_back,ros_wind,ros_slope, &
-            nvx,nvy,i,j,fp,ierrx,msg2)
+            call fire_ros(rr, &
+            diffCx,diffCy,i,j,fp,ierrx,msg2)
             nerr = nerr + ierrx
 
-            rr=ros_back + ros_wind + ros_slope
             if(fire_grows_only.gt.0)rr=max(rr,0.)
 
             ! set ros for output
@@ -2194,7 +2184,7 @@ intrinsic max,min,sqrt,nint,tiny,huge
         enddo
     enddo        
 
-    if(upwind_err>0)call crash('sfire_upwinding value not supported, 3 recommended')
+    if(upwind_err>0)call crash('fire_upwinding value not supported, 3 recommended')
 
     if(nerr>0)then
 !$OMP CRITICAL(SFIRE_CORE_CRIT)
@@ -2306,21 +2296,15 @@ type(fire_params),intent(in)::fp
 integer, intent(out)::ierrx
 character(len=*), intent(out)::msg
 !*** local
-real::scale,nvx,nvy,r
-real::ros_back , ros_wind , ros_slope
+real::scale,r
 real, parameter:: eps=epsilon(0.0)
 !*** executable
             ! normal direction, from central differences
-            scale=sqrt(diffCx*diffCx+diffCy*diffCy+eps) 
-            nvx=diffCx/scale
-            nvy=diffCy/scale
-                      
             ! get rate of spread from wind speed and slope
 
-            call fire_ros(ros_back,ros_wind,ros_slope, &
-            nvx,nvy,i,j,fp,ierrx,msg)
+            call fire_ros(r, &
+            diffCx,diffCy,i,j,fp,ierrx,msg)
 
-            r=ros_back + ros_wind + ros_slope
             if(fire_grows_only.gt.0)r=max(r,0.)
             speed_func=r
 

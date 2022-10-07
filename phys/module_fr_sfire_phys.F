@@ -1,5 +1,3 @@
-!
-
 !*** Jan Mandel August-October 2007 email: jmandel@ucar.edu or Jan.Mandel@gmail.com
 !
 ! This file contains parts copied and/or adapted from earlier codes by 
@@ -24,7 +22,18 @@ real,pointer,dimension(:,:):: ischap               ! 1 if chapparal
 real,pointer,dimension(:,:):: fuel_time            ! time to burn to 1/e (s)
 real,pointer,dimension(:,:):: fmc_g                ! fuel moisture contents, ground (1)
 real,pointer,dimension(:,:):: nfuel_cat            ! fuel category (integer values)
+real,pointer,dimension(:,:):: tempf                ! air temperature (K) (Balbi model only)
+real,pointer,dimension(:,:):: rhof                ! air pressure (Pa) (Balbi model only)
+real,pointer,dimension(:,:):: ffwidth              ! fire front width (m) (Balbi model only)
+
 end type fire_params
+
+! verbosity and diagnostic switches, can be activated when this module is USEd
+logical, public:: compare_rothermel=.false.        ! run comparison in fire_ros
+logical, public:: call_write_fuels_m=.true.        ! create file fuels_m for graphics postprocessing 
+integer, public:: balbi_msglevel=2                 ! prints in fire_ros_balbi, 0=nothing 1=errors 2=warnings 3=diagnostics 4=iterations
+integer, public:: balbi_nc_max=10                 ! max number of balbi no convergence cases
+integer, public:: balbi_nc_count=0                ! counter of balbi no convergence cases
 
 ! subroutines and functions 
 PUBLIC:: init_fuel_cats,fire_ros,heat_fluxes,set_nfuel_cat,set_fire_params, &
@@ -35,7 +44,8 @@ fire_rate_of_spread
 public:: fire_params
 
 ! variables
-PUBLIC:: fire_wind_height,fcz0,fcwh,have_fuel_cats,nfuelcats,no_fuel_cat,no_fuel_cat2,windrf,moisture_classes,itree,fueldepthm
+PUBLIC:: fire_wind_height,fcz0,fcwh,have_fuel_cats,nfuelcats, &
+  no_fuel_cat,no_fuel_cat2,windrf,moisture_classes,itree,fueldepthm,ibeh
 PUBLIC:: mfuelcats
 ! NOTE: fcwh and fcz0 are called fwh and fz0 in read/write statements
 
@@ -57,7 +67,7 @@ PUBLIC:: mfuelcats
   integer:: moisture_classes=3
   real, dimension(max_moisture_classes):: drying_lag,wetting_lag,saturation_moisture,saturation_rain, &
          rain_threshold,rec_drying_lag_sec,rec_wetting_lag_sec
-  integer, dimension(max_moisture_classes):: drying_model,wetting_model,fmc_gc_initialization
+  integer, dimension(max_moisture_classes):: drying_model,wetting_model,fmc_gc_initialization,is_dead
    ! relative weights of moisture class for each fuel category
    integer::itmp
    CHARACTER (len=80), DIMENSION(max_moisture_classes), save :: moisture_class_name
@@ -77,6 +87,7 @@ PUBLIC:: mfuelcats
   data drying_model               /1,   1,   1,    zm*1 /
   data wetting_model              /1,   1,   1,    zm*1 /
   data fmc_gc_initialization      /2,   2,   2,    zm*2 /  ! initialization 0=input, 1=from fuelmc_g, 2=from equilibrium
+  data is_dead                    /1,   1,   1,    zm*0 /  ! identify moisture classes representing dead fuel
   real, dimension(7)::eq_p
   data eq_p/  1.035e-09, &   !(3.893e-10, 1.681e-09) ! coefficients of the equilibrium fuel moisture polynomial
               -2.62e-07, &   !(-4.593e-07, -6.473e-08) ! fitted from the graph in Schroeder and Buck (1970)
@@ -86,7 +97,7 @@ PUBLIC:: mfuelcats
                -0.05901, &   !(-0.3721, 0.254)
                   3.043/   !(2.17, 3.915)
    
-   ! =========================================================================
+! =========================================================================
 
 ! Following table copied from module_fr_cawfe_fuel by Ned Patton with minor changes. 
 ! Based on:           Clark, T. L., J. L. Coen and D. Latham: 2004, 
@@ -138,7 +149,7 @@ PUBLIC:: mfuelcats
 !
 
 ! scalar fuel coefficients
-   REAL, SAVE:: cmbcnst,hfgl,fuelmc_g,fuelmc_c, fire_wind_height
+   REAL, SAVE:: cmbcnst,hfgl,fuelmc_g,fuelmc_c, fire_wind_height,ffwidth_thresh
 ! computed values
    REAL, SAVE:: fuelheat
 
@@ -148,6 +159,7 @@ PUBLIC:: mfuelcats
    DATA fuelmc_g / 0.08  /                ! set = 0 for dry ground fuel
    DATA fuelmc_c / 1.00  /                ! set = 0 for dry canopy
    DATA fire_wind_height/6.096/           ! m, 6.096m Behave, 0 to use fwh in each category
+   DATA ffwidth_thresh /0.0/              ! Balbi ROS threshold for convective cooling (W_00)
 !  REAL, PARAMETER :: bmst     = fuelmc_g/(1+fuelmc_g)
 !  REAL, PARAMETER :: fuelheat = cmbcnst * 4.30e-04     ! convert J/kg to BTU/lb
 !  real, parameter :: xlv      = 2.5e6                  ! to make it selfcontained
@@ -160,7 +172,7 @@ PUBLIC:: mfuelcats
    INTEGER, PARAMETER :: zf = mfuelcats-nf  ! number of zero fillers in data stmt 
    INTEGER, SAVE      :: no_fuel_cat = 14   ! special no fuel category outside of 1:nfuelcats
    INTEGER, SAVE      :: no_fuel_cat2 = 99999999  ! all categories between no_fuel_cat and no_fuel_cat2 are no fuel
-   INTEGER, SAVE      :: ibeh=1             ! type of spread formula
+   INTEGER, SAVE      :: ibeh=1             ! spread formula 0 = MacArthur, 1 = Rothermel, 2 = Balbi
    CHARACTER (len=80), DIMENSION(mfuelcats ), save :: fuel_name
    INTEGER, DIMENSION( mfuelcats ), save :: ichap,itree 
    REAL   , DIMENSION( mfuelcats ), save :: windrf,weight,fgi,fci,fci_d,fct,fcbr, &
@@ -688,11 +700,12 @@ REAL   , DIMENSION( mfuelcats ) :: fwh, fz0
 !*** executable
 
 ! read 
-namelist /fuel_scalars/ cmbcnst,hfgl,fuelmc_g,fuelmc_c,nfuelcats,no_fuel_cat,no_fuel_cat2,fire_wind_height,ibeh
+namelist /fuel_scalars/ cmbcnst,hfgl,fuelmc_g,fuelmc_c,nfuelcats,no_fuel_cat,no_fuel_cat2,fire_wind_height,ibeh, &
+    ffwidth_thresh, balbi_msglevel
 namelist /fuel_categories/ fuel_name,windrf,fgi,fueldepthm,savr, &
     fuelmce,fueldens,st,se,weight,fci_d,fct,ichap,itree,fwh,fz0,ffw, &
     fmc_gl_ndwi_0,fmc_gl_ndwi_rate,fmc_gl_ndwi_stdev, fmc_gl_stdev, &
-    adjr0,adjrw,adjrs,fmc_gw01,fmc_gw02,fmc_gw03,fmc_gw04,fmc_gw05
+    adjr0,adjrw,adjrs,fmc_gw01,fmc_gw02,fmc_gw03,fmc_gw04,fmc_gw05,is_dead
 
 namelist /moisture/ moisture_classes,drying_lag,wetting_lag,saturation_moisture,saturation_rain,rain_threshold, &
     drying_model,wetting_model, moisture_class_name,fmc_gc_initialization
@@ -758,6 +771,7 @@ call wrf_dm_bcast_real(hfgl,1)
 call wrf_dm_bcast_real(fuelmc_g,1)
 call wrf_dm_bcast_real(fuelmc_c,1)
 call wrf_dm_bcast_real(fire_wind_height,1)
+call wrf_dm_bcast_real(ffwidth_thresh,1)
 call wrf_dm_bcast_integer(nfuelcats,1)
 call wrf_dm_bcast_integer(no_fuel_cat,1)
 call wrf_dm_bcast_integer(no_fuel_cat2,1)
@@ -795,6 +809,7 @@ call wrf_dm_bcast_real(rain_threshold,     max_moisture_classes)
 call wrf_dm_bcast_integer(drying_model,     max_moisture_classes)
 call wrf_dm_bcast_integer(wetting_model,     max_moisture_classes)
 call wrf_dm_bcast_integer(fmc_gc_initialization,     max_moisture_classes)
+call wrf_dm_bcast_integer(is_dead,     max_moisture_classes)
 call wrf_dm_bcast_real(fmc_gw,     mfuelcats*max_moisture_classes)
 
 ! moisture model derived scalars
@@ -943,6 +958,8 @@ if(init_fuel_moisture)then
         call message(msg)    
         write(msg,8)'rain_threshold (mm/h)  ',(rain_threshold(ii),ii=i,k)
         call message(msg)    
+        write(msg,7)'is_dead                ',(is_dead(ii),ii=i,k)
+        call message(msg)
     enddo
     call message(' ')
     call message('**********************************************************')
@@ -951,7 +968,7 @@ endif
 have_fuel_cats=.true.
 
 ! and print to file
-IF ( wrf_dm_on_monitor() ) THEN
+IF ( wrf_dm_on_monitor() .and. call_write_fuels_m) THEN
   call write_fuels_m(61,30.,1.)
 ENDIF
 
@@ -962,13 +979,13 @@ end subroutine init_fuel_cats
 subroutine write_fuels_m(nsteps,maxwind,maxslope)
 implicit none
 integer, intent(in):: nsteps   ! number of steps for speed computation
-real, intent(in):: maxwind,maxslope ! computer from zero to these
+real, intent(in):: maxwind,maxslope ! from zero to these
 
 integer:: iounit,k,j,i,isave
 type(fire_params)::fp
-real, dimension(1:3,1:nsteps), target::vx,vy,zsf,dzdxf,dzdyf,bbb,phisc,phiwc,r_0,fgip,ischap,fmc_g,wind,nfuel_cat
+real, dimension(1:3,1:nsteps), target::vx,vy,zsf,dzdxf,dzdyf,bbb,phisc,phiwc,r_0,fgip,ischap,fmc_g,wind,nfuel_cat,rhof,tempf,ffwidth
 real, dimension(1:3,1:nsteps)::fuel_time,ros,fwh,fz0
-real::ros_back,ros_wind,ros_slope,propx,propy,r
+real::ros_back,ros_wind,ros_slope,propx,propy,r,speed,tanphi
 integer::ierrx
 character(len=128)::msg
 
@@ -986,12 +1003,21 @@ fp%fgip=>fgip
 fp%ischap=>ischap
 fp%fmc_g=>fmc_g
 fp%nfuel_cat=>nfuel_cat
+fp%rhof=>rhof
+fp%tempf=>tempf
+fp%ffwidth=>ffwidth
+
+rhof = 1.
+tempf = 300.
+ffwidth = 100.
 
 iounit = open_text_file('fuels.m','write')
+
 
 10 format('fuel(',i3,').',a,'=',"'",a,"'",';% ',a)
 do k=1,nfuelcats
     write(iounit,10)k,'fuel_name',trim(fuel_name(k)),'FUEL MODEL NAME'
+    call write_var(k,'ibeh',1.*ibeh,'Model: 0 = MacArthur, 1 = Rothermel, 2 = Balbi' )
     call write_var(k,'windrf',windrf(k),'WIND REDUCTION FACTOR FROM FCWH TO MIDFLAME HEIGHT' )
     call write_var(k,'fwh',fcwh(k),'WIND HEIGHT TO INTERPOLATE VERTICALLY TO (M)' )
     call write_var(k,'fz0',fcz0(k),'ROUGHNESS LENGTH FOR VERTICAL WIND LOG INTERPOLATION (M)' )
@@ -1065,9 +1091,8 @@ do k=1,nfuelcats
     enddo
     do j=1,nsteps
        do i=1,3
-          call fire_ros(ros_back,ros_wind,ros_slope, &
-             propx,propy,i,j,fp,ierrx,msg)
-          ros(i,j)=ros_back+ros_wind+ros_slope
+          call fire_ros(ros(i,j), &
+                 propx,propy,i,j,fp,ierrx,msg)
        enddo
        write(iounit,13)k,'wind',j,wind(1,j),'wind speed at 6.1m'
        write(iounit,13)k,'ros_wind',j,ros(1,j),'rate of spread for the wind speed at 6.1m'
@@ -1410,7 +1435,8 @@ end subroutine set_nfuel_cat
 !            
 
 real function fire_rate_of_spread(propx, propy, i,j,fp)
-! compute rate of spread at grid node (i,j) in the direction (dx,dy)
+! compute rate of spread at grid node (i,j) in the direction (propx,propy)
+! winds and everything else on the fire grid is passed in type fp
 implicit none
 !***arguments
 real, intent(in)::propx, propy! direction, need not be normalized
@@ -1421,68 +1447,439 @@ type(fire_params),intent(in)::fp
 real:: ros_back,ros_wind,ros_slope,nvx,nvy,scale,rr
 integer::ierrx     ! number of errors
 character(len=128)::msg ! error message
+real:: speed, tanphi, ros
+
 !*** executable
-scale=sqrt(propx*propx+propy*propy)
-if (.not. scale > 0.) scale =1.
-nvx=propx/scale
-nvy=propy/scale
-call fire_ros(ros_back,ros_wind,ros_slope, nvx,nvy,i,j,fp,ierrx,msg)
-rr = ros_back+ros_wind+ros_slope
-if(fire_grows_only.gt.0)rr=max(rr,0.)
+call fire_ros(rr,propx,propy,i,j,fp,ierrx,msg)
 fire_rate_of_spread = rr
 
 end function fire_rate_of_spread
 
 
 
-subroutine fire_ros(ros_back,ros_wind,ros_slope, &
+subroutine fire_ros(ros, &
 propx,propy,i,j,fp,ierrx,msg)
 
 implicit none
 
-! compute the wind speed and slope normal to the fireline and call fire_ros_cawfe
+! compute the wind speed and slope normal to the fireline and call fire_ros_cawfe or fire_ros_balbi
 
 !*** arguments
-real, intent(out)::ros_back,ros_wind,ros_slope ! rate of spread: backing, due to wind, due to slope
-real, intent(in)::propx,propy
+real, intent(out)::ros ! rate of spread: backing, due to wind, due to slope
+real, intent(in)::propx,propy  ! direction, not normalized
 integer, intent(in)::i,j         ! node mesh coordinates
-type(fire_params),intent(in)::fp
+type(fire_params),intent(in)::fp ! everything else on the fire grid, indexed by i,j
 integer, intent(out)::ierrx
 character(len=*), intent(out)::msg
 
 !*** local
+real::ros_back,ros_wind,ros_slope, rr ! rate of spread: backing, due to wind, due to slope
 real:: speed, tanphi ! windspeed and slope in the directino normal to the fireline
 real::cor_wind,cor_slope,nvx,nvy,scale
+integer::isave
 
 !*** executable
 
-! make sure normal direction is size 1
-!scale=sqrt(propx*propx+propy*propy)+tiny(scale)
-scale=1.
+! make normal direction length 1 unless 0
+! scale=sqrt(propx*propx+propy*propy)
+! if(scale > 0.)then
+!      nvx = propx/scale
+!      nvx = propx/scale
+! else
+!     nvx = 0.
+!     nvy = 0.
+! endif
+
+! normalize direction 
+scale=sqrt(propx*propx+propy*propy + epsilon(0.))
 nvx=propx/scale
 nvy=propy/scale
-if (fire_advection.ne.0) then ! from flags in module_fr_sfire_util
-    ! wind speed is total speed 
-    speed =  sqrt(fp%vx(i,j)*fp%vx(i,j)+ fp%vy(i,j)*fp%vy(i,j))+tiny(speed)
-    ! slope is total slope
-    tanphi = sqrt(fp%dzdxf(i,j)*fp%dzdxf(i,j) + fp%dzdyf(i,j)*fp%dzdyf(i,j))+tiny(tanphi)
-    ! cos of wind and spread, if >0
-    cor_wind =  max(0.,(fp%vx(i,j)*nvx + fp%vy(i,j)*nvy)/speed)
-    ! cos of slope and spread, if >0
-    cor_slope = max(0., (fp%dzdxf(i,j)*nvx + fp%dzdyf(i,j)*nvy)/tanphi)
-else
-    ! wind speed in spread direction
-    speed =  fp%vx(i,j)*nvx + fp%vy(i,j)*nvy
-    ! slope in spread direction
-    tanphi = fp%dzdxf(i,j)*nvx + fp%dzdyf(i,j)*nvy
-    cor_wind=1.
-    cor_slope=1.
-endif
 
-call fire_ros_cawfe(ros_back,ros_wind,ros_slope, &
-speed,tanphi,cor_wind,cor_slope,i,j,fp,ierrx,msg)
+
+ierrx=0
+if (ibeh .eq. 2) then
+    call fire_ros_balbi(ros,nvx,nvy,i,j,fp,ierrx,msg)
+    if (ierrx.ne.0)then
+        balbi_nc_count = balbi_nc_count + 1
+        if(balbi_nc_count > balbi_nc_max) call crash('fire_ros_balbi failed limit exceeded')
+        if ( balbi_msglevel < 4)then
+            call message('running fire_ros_balbi again with more detailed messages')
+            isave = balbi_msglevel
+            balbi_msglevel=4
+            call fire_ros_balbi(ros,nvx,nvy,i,j,fp,ierrx,msg)
+            balbi_msglevel=isave
+        endif
+        call warning(msg)
+    endif
+else
+    if (fire_advection.ne.0) then ! from flags in module_fr_sfire_util
+        ! wind speed is total speed 
+        speed =  sqrt(fp%vx(i,j)*fp%vx(i,j)+ fp%vy(i,j)*fp%vy(i,j))+tiny(speed)
+        ! slope is total slope
+        tanphi = sqrt(fp%dzdxf(i,j)*fp%dzdxf(i,j) + fp%dzdyf(i,j)*fp%dzdyf(i,j))+tiny(tanphi)
+        ! cos of wind and spread, if >0
+        cor_wind =  max(0.,(fp%vx(i,j)*nvx + fp%vy(i,j)*nvy)/speed)
+        ! cos of slope and spread, if >0
+        cor_slope = max(0., (fp%dzdxf(i,j)*nvx + fp%dzdyf(i,j)*nvy)/tanphi)
+    else
+        ! wind speed in spread direction
+        speed =  fp%vx(i,j)*nvx + fp%vy(i,j)*nvy
+        ! slope in spread direction
+        tanphi = fp%dzdxf(i,j)*nvx + fp%dzdyf(i,j)*nvy
+        cor_wind=1.
+        cor_slope=1.
+    endif
+    call fire_ros_cawfe(ros_back,ros_wind,ros_slope, &
+    speed,tanphi,cor_wind,cor_slope,i,j,fp,ierrx,msg)
+    if (ierrx.ne.0)then
+        call warning(msg)
+    endif
+    ros = ros_back+ros_wind+ros_slope
+    if(compare_rothermel)then
+        call fire_ros_rothermel(rr,fp%nfuel_cat(i,j),speed,tanphi,fp%fmc_g(i,j))
+        if (abs(ros-rr)>1e-4)then
+            write(msg,'(2(a,i6),2(a,f10.6),a,g15.4)')'i=',i,' j=',j,  &
+                ' fire_ros_cawfe:',ros,' rothermel:',rr,' diff:',ros-rr
+            call warning(msg)
+        endif
+    endif
+endif
+if(fire_grows_only.gt.0)ros=max(ros,0.)
 
 end subroutine fire_ros
+
+!
+!***
+!
+subroutine fire_ros_rothermel(ros,nfuel,speed,tanphi,fmc_g)
+! in
+!       nfuel   number of fuel description
+!       speed   wind speed
+!       tanphi  slope
+!       fmc_g   fuel moisture content (0 to 1)
+! out
+!       ros     rate of spread
+
+implicit none
+!*** arguments
+
+real, intent(in):: nfuel, speed,tanphi,fmc_g
+real, intent(out):: ros
+
+!*** local
+real:: bmst, fuelheat, fuelloadm, fuelload, fueldepth, betafl, betaop, qig, epsilon, &
+rhob, c, bbb, e, phiwc, rtemp2, gammax, a, ratio, gamma, wn, rtemp1, etam, etas, &
+ir, irm, xifr, r_0,  spdms, umidm, umid, phiw, phis
+integer::k
+
+!*** executable
+
+k = nfuel                        ! fuel index
+
+
+bmst     = fmc_g/(1+fmc_g)          ! jm: 1 
+fuelheat = cmbcnst * 4.30e-04             ! convert J/kg to BTU/lb
+fuelloadm= (1.-bmst) * fgi(k)                ! fuelload without moisture
+                                           ! jm: 1.-bmst = 1/(1+fuelmc_g) so fgi includes moisture? 
+fuelload = fuelloadm * (.3048)**2 * 2.205  ! to lb/ft**2
+fueldepth= fueldepthm(k)/0.3048              ! to ft
+betafl   = fuelload/(fueldepth * fueldens(k))! packing ratio  jm: lb/ft**2/(ft * lb*ft**3) = 1
+betaop   = 3.348 * savr(k)**(-0.8189)         ! optimum packing ratio jm: units??  
+qig      = 250. + 1116.*fmc_g          ! heat of preignition, btu/lb
+epsilon  = exp(-138./savr(k) )               ! effective heating number
+rhob     = fuelload/fueldepth             ! ovendry bulk density, lb/ft**3
+c        = 7.47 * exp(-0.133 * savr(k)**0.55) ! const in wind coef
+bbb      = 0.02526 * savr(k)**0.54            ! const in wind coef
+!c        = c * windrf**bbb                 ! jm: wind reduction from 20ft per Baughman&Albini(1980)
+e        = 0.715 * exp( -3.59e-4 * savr(k))  ! const in wind coef
+phiwc    = c * (betafl/betaop)**(-e) 
+rtemp2   = savr(k)**1.5
+gammax   = rtemp2/(495. + 0.0594*rtemp2)  ! maximum rxn vel, 1/min
+a        = 1./(4.774 * savr(k)**0.1 - 7.27)   ! coef for optimum rxn vel
+ratio    = betafl/betaop   
+gamma    = gammax*(ratio**a)*exp(a*(1.-ratio)) ! optimum rxn vel, 1/min
+wn       = fuelload/(1 + st(k))              ! net fuel loading, lb/ft**2
+rtemp1   = fmc_g/fuelmce(k)
+etam     = 1.-2.59*rtemp1 +5.11*rtemp1**2 -3.52*rtemp1**3  ! moist damp coef
+etas     = 0.174* se(k)**(-0.19)              ! mineral damping coef
+ir       = gamma * wn * fuelheat * etam * etas ! rxn intensity,btu/ft**2 min
+irm      = ir * 1055./( 0.3048**2 * 60.) * 1.e-6! for mw/m**2 (set but not used)
+xifr     = exp( (0.792 + 0.681*savr(k)**0.5) &
+            * (betafl+0.1)) /(192. + 0.2595*savr(k)) ! propagating flux ratio
+!        ... r_0 is the spread rate for a fire on flat ground with no wind.
+r_0      = ir*xifr/(rhob * epsilon *qig)  ! default spread rate in ft/min
+
+if (.not.ichap(k)>0.)then
+    !       ... if wind is 0 or into fireline, phiw = 0, &this reduces to backing ros.
+    spdms = max(speed,0.)
+    umidm = min(spdms,30.)                    ! max input wind spd is 30 m/s   !param!
+    umid = umidm * 196.850                    ! m/s to ft/min
+    !  eqn.: phiw = c * umid**bbb * (betafl/betaop)**(-e) ! wind coef
+    phiw = umid**bbb * phiwc                   ! wind coef
+    phis = 5.275 * betafl**(-0.3) *max(0.,tanphi)**2   ! slope factor
+    ros = r_0*(1. + phiw + phis)  * .00508 ! spread rate, m/s
+else  ! chapparal
+    !        .... spread rate has no dependency on fuel character, only windspeed.
+    spdms = max(speed,0.)
+    ros = max(.03333,1.2974 * spdms**1.41)       ! spread rate, m/s
+endif
+
+ros=min(ros,6.);
+
+end subroutine fire_ros_rothermel
+
+!
+!***
+!
+
+
+subroutine fire_ros_balbi(ros,nvx,nvy,i,j,fp,ierrx,msg)
+! in
+!       nvx,nvy direction of propagation, normalized 
+!       i,j     indices in the fire grid
+!       fp      fire grid arrays 
+! out
+!       ros     rate of spread
+!       ierrx   error code
+!       msg     error message
+! global
+!       balbi_msglevel 0=nothing 1=errors 2=warnings 3=diagnostics 4=iterations
+!       fuel categories from namelist.fire
+
+!*** arguments
+
+implicit none
+real, intent(in):: nvx,nvy
+integer, intent(in):: i,j
+type(fire_params):: fp
+real, intent(out):: ros
+integer, intent(out)::ierrx 
+character(len=*), intent(out)::msg
+
+! Constants
+real, parameter:: tol_R = 1e-5          ! tolerance to compute R
+integer, parameter:: maxit_R = 20       ! max iterations to compute R
+real, parameter:: pi=3.141592653589793
+
+!*** local
+real:: vx, vy, dzdxf, dzdyf, speed, tanphi, fmc_g, nfuel_cat, tempf, rhof, ffwidth, fgip
+real:: dead_fract
+real:: B_, chi_0, r_00, delta_h, tau_0, rho_a, s_t, T_i, g, C_pa, U, alpha, W_0
+real:: m, sigma, sigma_t, h, s, rho_v, delta_H_, C_p
+real:: beta, beta_t, S_, S_t_, nu, T_a, delta_T, q, T_f, u_0
+real:: R_b, A, gamma, H_f, l_f
+real:: W_00, a_up, a_lat, K_, b
+real:: R_old, R_r, R_c, R, change
+integer:: k, mc, it
+! nfuel_cat is real only because real array was easier than integer in WPS long ago
+
+!*** executable
+
+! initialize error flag
+ierrx = 0
+
+! retrieve balbi inputs
+vx = fp%vx(i,j)
+vy = fp%vy(i,j)
+dzdxf = fp%dzdxf(i,j)
+dzdyf = fp%dzdyf(i,j)
+speed  = vx*nvx + vy*nvy            ! wind speed in the spread direction
+tanphi = dzdxf*nvx + dzdyf*nvy      ! slope in spread the direction
+fmc_g  = fp%fmc_g(i,j)              ! fuel moisture content (water / dry)
+nfuel_cat = fp%nfuel_cat(i,j)       ! fuel categories
+tempf = fp%tempf(i,j)               ! temperature interpolated to the fire grid
+rhof  = fp%rhof(i,j)                ! air density interpolated to the fire grid
+ffwidth = fp%ffwidth(i,j)           ! fire front width = 1/fireline curvature (?)
+fgip = fp%fgip(i,j)                 ! fuel load
+
+! retrieve static values by indexing from fuel categories, as fgip = fp%fgi(i,j) instead of above
+! do not delete any fields from fp they are used by Rothermel model
+
+if(balbi_msglevel.ge.3)then  ! print the inputs
+!$OMP CRITICAL(SFIRE_PHYS_CRIT)
+    write(msg,*)'fire_ros_balbi called with balbi_msglevel=',balbi_msglevel
+    call message(msg)
+    call message('0=nothing 1=errors 2=warnings 3=diagnostics 4=iterations')
+    call message('inputs:')
+    write(msg,*)'wind speed projected on propagation direction speed=',speed
+    call message(msg)
+    write(msg,*)'slope projected on propagation direction tanphi=',tanphi
+    call message(msg)
+    write(msg,*)'fuel moisture content (water / dry) fmc_g=',fmc_g
+    call message(msg)
+    write(msg,*)'nfuel_cat=',nfuel_cat
+    call message(msg)
+    write(msg,*)'temperature tempf=',tempf
+    call message(msg)
+    write(msg,*)'surface air density rhof=',rhof
+    call message(msg)
+    write(msg,*)'fire front width=',ffwidth
+    call message(msg)
+    write(msg,*)'total fuel load fgip=',fgip
+    call message(msg)
+!$OMP END CRITICAL(SFIRE_PHYS_CRIT)
+endif
+if (.not.ffwidth > 0.) call crash('fire_ros_balbi: ffwidth must be >0')
+
+!*** continue here
+
+k = nfuel_cat           ! converting fuel index to integer
+
+! Determine the dead fuel fraction from the moisture tables.
+dead_fract = 0.0
+do mc=1,max_moisture_classes
+    if (is_dead(mc).ne.0)then
+        dead_fract = dead_fract + fmc_gw(k,mc)
+    endif
+enddo
+
+! --- Constants and model parameters (Balbi 20220622 slide 9) ---
+B_ = 5.6e-8                     ! Stefan-Boltzman constant              [W/m^2/K^4]
+chi_0 = 0.3                     ! Radiative factor
+r_00 = 2.5e-5                   ! Model parameter
+delta_h = 2.3e6                 ! Heat of latent evaporation            [J/kg]
+tau_0 = 75591                   ! Anderson's residence time coefficient
+rho_a = rhof                    ! Air density                           [kg/m3]
+s_t = 16                        ! Stoichiometric coefficient
+T_i = 600                       ! Ignition temperature                  [K]
+g = 9.81                        ! Gravitational acceleration            [m/s^2]
+C_pa = 1150                     ! Specific heat of air                  [J/kg/K]
+
+U = speed                       ! Normal component of wind speed        [m/s]
+alpha = atan(tanphi)            ! Local terrain slope angle             [rad]
+W_0 = ffwidth                   ! Length of the ignition line           [m]
+
+
+! --- Input fuel data (Balbi 20220622 slide 2) ---
+m = fmc_g                       ! Dead fuel moisture content
+sigma = fgip * dead_fract       ! Dead fine fuel load                   [kg/m^2]
+sigma_t = fgip                  ! Total fine fuel load                  [kg/m^2]
+h = fueldepthm(k)               ! Fuel height                           [m]
+s = savr(k)/0.3048              ! Surface area to volume ratio          [1/m]
+rho_v = fueldens(k)*16.018462   ! Fuel density                          [kg/m^3]
+delta_H_ = cmbcnst              ! Heat of combustion of pyrolysis gases [J/kg]
+C_p = 2e3                       ! Specific heat                         [J/kg/K]
+
+
+! --- Preliminary computations (Balbi 20220622 slide 3) ---
+! Packing ratios - dead, total
+beta = sigma / (h * rho_v)
+beta_t = sigma_t / (h * rho_v)
+
+! Leaf areas - dead, total
+S_ = s * h * beta
+S_t_ = s * h * beta_t
+
+! Absorbtion coefficient
+nu = S_t_
+
+! Temperature difference
+T_a = tempf
+delta_T = T_i - T_a
+
+! Activation energy
+q = C_p * delta_T + m * delta_h
+
+! Flame temperature
+T_f = T_a + (delta_H_ * (1 - chi_0)) / ((s_t + 1) * C_pa)
+
+! Upward gas velocity
+u_0 = 2 * nu * ((s_t + 1) / tau_0) * (rho_v / rho_a) * (T_f / T_a)
+
+
+! --- Radiative contributions (slide 4) ---
+! Flame base radiation contribution to ROS
+R_b = min(S_t_ / (2 * pi), 1.) * (beta / beta_t)**2 * (B_ * T_f**4) / (beta * rho_v * q)
+
+! Radiative coefficient
+A = min(S_t_ / (2 * pi), beta / beta_t) * chi_0 * delta_H_ / (4 * q)
+
+! Flame tilt angle
+gamma = atan(tan(alpha) + U / u_0)
+
+! Flame height
+H_f = (u_0**2) / (g * (T_f / T_a - 1) * (cos(alpha))**2)
+
+! Flame length
+l_f = H_f / (cos(gamma - alpha))
+
+
+! --- Convective contribution (slide 5) ---
+! Heat loss coefficients
+! For most fires, the fire front width (W_0) and corresponding threshold for
+! convective cooling (W_00) can be ignored; typical values for W_00 are in the
+! 33-100 m range, depending on the fuel.
+W_00 = ffwidth_thresh
+if (W_00 == 0.) then    ! force min(W_0 / W_00, 1.) to 1 => no convective cooling
+    W_0 = 1.
+    W_00 = 1.
+endif
+a_up = 0.025 * s * beta_t * sqrt(h)
+a_lat = min(W_0 / W_00, 1.)
+
+! Drag force coefficient
+! NOTE: denominator is identical to a_lat above; perhaps slide meant to
+! specified a_lat instead?
+K_ = (beta_t / min(W_0 / W_00, 1.))
+
+! Convective coefficient
+b = (a_up * a_lat * rho_a * delta_H_ * T_a) / (2 * q * (s_t + 1) * rho_v * beta_t * T_f)
+
+
+! --- Algorithm (slide 7) ---
+! Iteratively solve for the total ROS.  Seed the search using the flame
+! base radiation contribution, which is invariant.
+R_old = R_b
+do it=1,maxit_R
+    ! Update the iterative ROS contributions, then recompute the total ROS.
+    R_r = A * R_old * ((1. + sin(gamma) - cos(gamma)) / (1. + ((R_old * cos(gamma)) / (s * r_00))))
+    R_c = b * (u_0 * (tan(alpha) / 2) + (U * exp(-K_ * R_old)))
+    R = R_b + R_r + R_c
+    change = R - R_old
+
+    ! TODO: Review if this non-negative check is still needed
+    if (R<0.)then
+        if (balbi_msglevel .ge. 3)then
+!$OMP CRITICAL(SFIRE_PHYS_CRIT)
+            write(msg,1)it,i,j,R,change
+            call message(msg)
+            write(msg,'(3(a,f8.3,1x))') 'R_b=',R_b,'R_r=',R_r,'R_c=',R_c
+            call message(msg)
+            call message('fire_ros_balbi R<0 resetting to R=0')
+!$OMP END CRITICAL(SFIRE_PHYS_CRIT)
+        endif
+        R=0.
+    endif
+
+    if (R .ne. R)call crash('fire_ros_balbi: R is NaN')
+
+    if (balbi_msglevel .ge. 4)then 
+!$OMP CRITICAL(SFIRE_PHYS_CRIT)
+        write(msg,1)it,i,j,R,change
+        call message(msg)
+!$OMP END CRITICAL(SFIRE_PHYS_CRIT)
+    endif
+
+    if (abs(change) < tol_R)then
+        if (balbi_msglevel .ge. 3)then
+!$OMP CRITICAL(SFIRE_PHYS_CRIT)
+            write(msg,1)it,i,j,R,change,' converged'
+            call message(msg)
+!$OMP END CRITICAL(SFIRE_PHYS_CRIT)
+        endif
+        ros = R
+        return 
+    endif
+    R_old = R
+enddo
+
+1 format('fire_ros_balbi: iteration',i3,' at ij=',2i5,' R=',f6.3,' diff=',g12.3,a)
+!$OMP CRITICAL(SFIRE_PHYS_CRIT)
+write(msg,1)it,i,j,R,change,' did not converge'
+!$OMP END CRITICAL(SFIRE_PHYS_CRIT)
+ierrx=1
+ros=R
+end subroutine fire_ros_balbi
 
 !
 !***
@@ -1533,6 +1930,10 @@ integer::k
 
 ierrx = 0
 
+if(ibeh.eq.2)then
+        call crash('fire_ros_cawfe: ibeh=2 Balbi not supported here')
+endif
+
 if (.not. fp%ischap(i,j) > 0.) then            ! if not chaparral, do not test for .eq. 0 for speed
     if (ibeh .eq. 1) then                ! use Rothermel formula
 !       ... if wind is 0 or into fireline, phiw = 0, &this reduces to backing ros.
@@ -1547,11 +1948,11 @@ if (.not. fp%ischap(i,j) > 0.) then            ! if not chaparral, do not test f
         ros_slope = fp%phisc(i,j) *tanphim**2   ! slope factor
         ! rosm = fp%r_0(i,j)*(1. + phiw + phis)  * .00508 ! spread rate, m/s
         ros_back = fp%r_0(i,j)
-    elseif(ibeh.eq.2)then ! for testing only, spread rate = wind but not < 0
+    elseif(ibeh.eq.98)then ! for testing only, spread rate = wind but not < 0
         ros_back = 0.
         ros_wind = max(speed,0.)
         ros_slope= 0.
-    elseif(ibeh.eq.3)then ! for testing only, spread rate = wind but not < 0
+    elseif(ibeh.eq.99)then ! for testing only, spread rate = wind speed, no mask <0
         ros_back = 0.
         ros_wind = speed
         ros_slope= 0.
@@ -1644,9 +2045,12 @@ real, intent(out), dimension(ifms:ifme,jfms:jfme) :: &
 
 !*** local
 integer:: i,j,k, ierrx
-real:: cor_wind=1.,cor_slope=1.,dt_fake=1.
-real:: ros_back,ros_wind,ros_slope,speed,tanphi,front_speed,ros_x,ros_y
+real::r
 character(len=128)::msg
+real,parameter::s=1.0/1.41421356237,o=1.,z=0.
+integer,parameter::nv=8
+real, dimension(nv)::nvx=(/o,s,z,-s,-o,-s,z,s/),  &
+                     nvy=(/z,s,o,s,z,-s,-o,-s/)
 
 !*** executable
 
@@ -1654,24 +2058,15 @@ do j=jfts,jfte
   do i=ifts,ifte
 !   compute the fire spread rate and vector
 
-    ! wind speed is total speed 
-    speed =  sqrt(fp%vx(i,j)*fp%vx(i,j)+ fp%vy(i,j)*fp%vy(i,j))+tiny(speed)
-    ! slope is total slope
-    tanphi = sqrt(fp%dzdxf(i,j)*fp%dzdxf(i,j) + fp%dzdyf(i,j)*fp%dzdyf(i,j))+tiny(tanphi)
+    f_ros0(i,j) = 0.      ! direction-less spread rate component
 
-    call fire_ros_cawfe(ros_back,ros_wind,ros_slope, &
-      speed,tanphi,cor_wind,cor_slope,i,j,fp, ierrx, msg)
-
-    ros_x = ros_wind * fp%vx(i,j)/speed + ros_slope * fp%dzdxf(i,j)/tanphi ! x direction component
-    ros_y = ros_wind * fp%vy(i,j)/speed + ros_slope * fp%dzdyf(i,j)/tanphi ! y direction component
-   
-!   store to out
-    f_ros0(i,j) = ros_back      ! direction-less spread rate component
-    f_rosx(i,j) = ros_x
-    f_rosy(i,j) = ros_y
-
+    r = 0.
+    do k=1,nv 
+       r = max(r,fire_rate_of_spread(nvx(k),nvy(k),i,j,fp))
+    enddo
+    
     ! max fire front speed in this location (m/s)
-    f_ros(i,j) = ros_back + sqrt(ros_x*ros_x + ros_y*ros_y)
+    f_ros(i,j) = r 
 
   enddo
 enddo
