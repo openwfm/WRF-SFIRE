@@ -1,0 +1,27 @@
+&fuel_scalars               ! scalar fuel constants
+cmbcnst  = 17.4e+06,        ! J/kg combustion heat dry fuel
+nfuelcats = 6,              ! one fuel category for each Balbi test case
+no_fuel_cat = 7,
+ibeh = 2,                   ! use Balbi ROS
+ffwidth_thresh = 50.0
+/
+
+&fuel_categories                 
+fuel_name = 
+'Balbi ROS test case 1',
+'Balbi ROS test case 2',
+'Balbi ROS test case 3',
+'Balbi ROS test case 4',
+'Balbi ROS test case 5',
+'Balbi ROS test case 6'
+fgi         = 0.969,     1.312,     1.656,     1.870,     1.239,     1.082
+fueldens    = 31.213983, 31.213983, 31.213983, 31.213983, 31.213983, 31.213983
+fueldepthm  = 1.8,       1.8,       1.8,       1.8,       1.8,       1.8
+savr        = 1752.6,    1752.6,    1752.6,    1752.6,    1752.6,    1752.6
+fmc_gw01    = 0.386997,  0.294970,  0.228865,  0.265241,  0.240517,  0.230129
+fmc_gw02    = 0.0,       0.0,       0.0,       0.0,       0.0,       0.0
+fmc_gw03    = 0.0,       0.0,       0.0,       0.0,       0.0,       0.0
+fmc_gw04    = 0.0,       0.0,       0.0,       0.0,       0.0,       0.0
+fmc_gw05    = 0.613003,  0.705030,  0.771135,  0.734759,  0.759483,  0.769871
+is_dead     = 1, 0, 0, 0, 0
+/
