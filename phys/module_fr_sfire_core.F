@@ -2085,8 +2085,9 @@ type(fire_params),intent(in)::fp
 !*** local 
 real:: te,diffLx,diffLy,diffRx,diffRy, & 
    diffCx,diffCy,diff2x,diff2y,grad,rr, &
-   advx,advy,scale,nvx,nvy,speed
+   advx,advy,scale,nvx,nvy,speed,viscs
 integer::i,j,itso,iteo,jtso,jteo,ierrx,nerr
+real, dimension(:,:),allocatable::visc,tea
 integer::upwind_err=0
 character(len=128)msg,msg2
 
@@ -2121,6 +2122,8 @@ intrinsic max,min,sqrt,nint,tiny,huge
 #ifdef DEBUG_OUT
     call write_array_m(ints-1,inte+1,jnts-1,jnte+1,lims,lime,ljms,ljme,lfn,'tend_lfn_in',id)
 #endif
+
+    allocate(visc(ints:inte,jnts:jnte),tea(ints:inte,jnts:jnte))
     
     nerr=0
     tbound=0    
@@ -2178,7 +2181,12 @@ intrinsic max,min,sqrt,nint,tiny,huge
             endif
 
             ! add numerical viscosity
-            te=te + fire_viscosity*abs(rr)*((diffRx-diffLx)+(diffRy-diffLy))
+            viscs=fire_viscosity*abs(rr)*((diffRx-diffLx)+(diffRy-diffLy))
+
+            visc(i,j)=viscs
+            tea(i,j)=te
+
+            te=te + viscs 
 
             tend(i,j)=te
         enddo
@@ -2195,11 +2203,15 @@ intrinsic max,min,sqrt,nint,tiny,huge
     endif
 
     call print_2d_stats(its,ite,jts,jte,ims,ime,jms,jme, ros,'tend_ls: ros')
+    call print_2d_stats(its,ite,jts,jte,ints,inte,jnts,jnte, visc,'tend_ls: visc')
+    call print_2d_stats(its,ite,jts,jte,ints,inte,jnts,jnte, tea,'tend_ls: tend w/o visc')
     call print_2d_stats(ints,inte,jnts,jnte,tims,time,tjms,tjme, &
-                   tend,'tend_ls: tend out')
+                   tend,'tend_ls: tend w/visc out')
 
     ! the final CFL bound
     tbound = 1/(tbound+tol)
+
+    deallocate(visc,tea)
 
 end subroutine tend_ls
 
