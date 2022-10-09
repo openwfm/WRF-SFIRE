@@ -173,6 +173,7 @@ PUBLIC:: mfuelcats
    INTEGER, SAVE      :: no_fuel_cat = 14   ! special no fuel category outside of 1:nfuelcats
    INTEGER, SAVE      :: no_fuel_cat2 = 99999999  ! all categories between no_fuel_cat and no_fuel_cat2 are no fuel
    INTEGER, SAVE      :: ibeh=1             ! spread formula 0 = MacArthur, 1 = Rothermel, 2 = Balbi
+   REAL, SAVE         :: ros_max = 6.       ! max ROS in Rothermel model
    CHARACTER (len=80), DIMENSION(mfuelcats ), save :: fuel_name
    INTEGER, DIMENSION( mfuelcats ), save :: ichap,itree 
    REAL   , DIMENSION( mfuelcats ), save :: windrf,weight,fgi,fci,fci_d,fct,fcbr, &
@@ -701,7 +702,7 @@ REAL   , DIMENSION( mfuelcats ) :: fwh, fz0
 
 ! read 
 namelist /fuel_scalars/ cmbcnst,hfgl,fuelmc_g,fuelmc_c,nfuelcats,no_fuel_cat,no_fuel_cat2,fire_wind_height,ibeh, &
-    ffwidth_thresh, balbi_msglevel
+    ffwidth_thresh, balbi_msglevel, ros_max
 namelist /fuel_categories/ fuel_name,windrf,fgi,fueldepthm,savr, &
     fuelmce,fueldens,st,se,weight,fci_d,fct,ichap,itree,fwh,fz0,ffw, &
     fmc_gl_ndwi_0,fmc_gl_ndwi_rate,fmc_gl_ndwi_stdev, fmc_gl_stdev, &
@@ -1923,7 +1924,6 @@ character(len=*), intent(out)::msg
 
 !*** local
 real:: umid, phis, phiw, spdms, umidm, excess, tanphim,ros
-real, parameter::ros_max=6.
 integer::k
 
 !*** executable
