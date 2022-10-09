@@ -487,6 +487,7 @@ call print_2d_stats(ifps,min(ifpe,ifde-ir),jfps,min(jfpe,jfde-jr),ifms,ifme,jfms
             grid%ht,                        &                         ! terrain height
             grid%xlong,grid%xlat,                         & ! coordinates of atm grid centers, for ignition location           
             grid%tign_in,                                 &
+            grid%lfn_start,                               & ! at the entry, diagnostics
             grid%lfn,grid%tign_g,grid%fuel_frac,          & ! state arrays, fire grid
             grid%fire_area,                               & ! redundant, for display, fire grid
             grid%fuel_frac_burnt,                         &
@@ -600,6 +601,7 @@ subroutine sfire_driver_phys (ifun,    &
     z0,zs,                                        & 
     xlong,xlat,                                   &
     tign_in,                                      &
+    lfn_start,                                    &
     lfn,tign,fuel_frac,                           & ! state arrays, fire grid
     fire_area,                                    & ! redundant state, fire grid
     fuel_frac_burnt,                              & 
@@ -697,6 +699,7 @@ real, intent(inout), dimension(ifms:ifme, jfms:jfme)::     &
     lfn_out                                    ! fire wind velocities
 
 real, intent(out), dimension(ifms:ifme, jfms:jfme)::  &
+    lfn_start, &                                 ! diagnostics
     fire_area, &                                 ! fraction of area of each cell burning
     fuel_frac_burnt,                           & ! fraction of mass of fuel burnt
     tempf,rhof,ffwidth                           ! variables for Balbi ROS model
@@ -977,7 +980,12 @@ do ij=1,num_tiles
  
      endif !restart
 
-    elseif(ifun.eq.3)then  ! interpolate atmosphere variables to the fire grid
+    elseif(ifun.eq.3)then  
+
+      ! save starting lfn for diagnostics
+      lfn_start(ifts:ifte,jfts:jfte) = lfn(ifts:ifte,jfts:jfte)
+
+      ! interpolate atmosphere variables to the fire grid
   
       for_balbi: if(ibeh.eq.2)then
 
@@ -1857,6 +1865,7 @@ subroutine check_grid_alloc(grid,config_flags)
     call check_size(size(grid%fuel_frac),'fuel_frac')
     call check_size(size(grid%fuel_frac_burnt),'fuel_frac_burnt')
     call check_size(size(grid%lfn_out),'lfn_out')
+    call check_size(size(grid%lfn_start),'lfn_start')
     call check_size(size(grid%avg_fuel_frac),'avg_fuel_frac')
     call check_size(size(grid%grnhfx),'grnhfx')
     call check_size(size(grid%grnqfx),'grnqfx')
