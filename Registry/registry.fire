@@ -85,7 +85,7 @@ state    real     fire_area *i*j      fire        1         z    hr    "FIRE_ARE
 # (also using inputs: zs,z_at_w,dz8w,nfuel_cat,zsf)
 #
 state    real     tign_in   *i*j      fire        1         z  i102hr   "TIGN_IN"    "minimal ignition time on ground" "s"
-state    real     lfn_start *i*j      fire        1         z    r "LFN_START"       "level function at time step start, diagnostics" "1"
+state    real     lfn_start *i*j      fire        1         z    hr "LFN_START"       "level function at time step start, diagnostics" "1"
 state    real     lfn_out   *i*j      fire        1         z    r "LFN_OUT"       "level function at time step end, for halo" "1"
 state    real     fuel_frac_burnt *i*j fire       1         z    hr    "FUEL_FRAC_BURNT" "fraction of fuel burnt in timestep" "1"
 state    real     uf        *i*j      fire        1         z    hr    "UF"        "fire wind" "m/s"
