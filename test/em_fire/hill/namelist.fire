@@ -1,4 +1,5 @@
 &fuel_scalars                      ! scalar fuel constants
+ros_max = 99.,                     ! cap ROS
 fire_wind_height = 6.096,          ! height to take wind from (m), 6.096 Behave, 0 to use fwh
 cmbcnst  = 17.433e+06,             ! J/kg combustion heat dry fuel
 hfgl     = 17.e4 ,                 ! W/m^2 heat flux to ignite canopy
