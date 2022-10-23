@@ -248,6 +248,10 @@ subroutine sfire_driver_em ( grid , config_flags                    &
         call message(msg,0)
         write(msg,91)time_step_start,'Maximal rho         ',max_rho,'kg/m^3'
         call message(msg,0)
+
+ !       write(msg,*)'max diff rho and grid%rho ', &
+ !           maxval(abs(rho(ips:ipe,kps:kpe1,jps:jpe)-grid%rho(ips:ipe,kps:kpe1,jps:jpe)))
+ !       call message(msg,0)
  
       endif
 
