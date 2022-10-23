@@ -2806,13 +2806,13 @@ call check_mesh_2dim(ibs,ibe,jbs,jbe,ims,ime,jms,jme) ! check if tile with halo 
 ! compute rho halo beyond the tile but not beyond the domain boundary
     do j=jbs,jbe
         do i=ibs,ibe
-            if(.not.t2(i,j)>0.0 .or. .not. psfc(i,j)>0.0)goto 9
+            if(.not.t2(i,j)>0.0 .or. .not. psfc(i,j)>0.0 .or. .not. q2(i,j)>0.0)goto 9
             rho(i,j)=psfc(i,j)/(287.0*(1.0 + 0.61*q2(i,j))*t2(i,j))
             if(.not.rho(i,j) > 0.0)goto 9
         enddo
     enddo
 
-    call print_2d_stats(ibs,ibe,jbs,jbe,ils,ile,jts,jte,rho,'rho2fire: rho')
+    call print_2d_stats(ibs,ibe,jbs,jbe,ils,ile,jls,jle,rho,'rho2fire: rho')
 
     ! to the fire mesh
     call interpolate_z2fire(id,          & ! for debug output, <= 0 no output
@@ -2835,7 +2835,8 @@ return
 
 9   continue
 !$OMP CRITICAL(SFIRE_ATM_CRIT)
-    write(msg,*)'rho2fire: at i,j=',i,j,' t2=',t2(i,j),' psfc=',psfc(i,j),' rho=',rho(i,j),' must be all > 0'
+    write(msg,*)'rho2fire: at i,j=',i,j,' t2=',t2(i,j),' psfc=',psfc(i,j),' rho=',rho(i,j), &
+      ' q2=',q2(i,j),' must be all > 0'
 !$OMP END CRITICAL(SFIRE_ATM_CRIT)
     call crash(msg)
 
