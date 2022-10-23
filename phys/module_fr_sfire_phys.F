@@ -1721,7 +1721,11 @@ if(balbi_msglevel.ge.3)then  ! print the inputs
 endif
 if (.not.ffwidth > 0.) call crash('fire_ros_balbi: ffwidth must be >0')
 
+! not allowing negative for now
+
 !*** continue here
+speed=max(speed,0.)
+tanphi=max(tanphi,0.)
 
 k = nfuel_cat           ! converting fuel index to integer
 
