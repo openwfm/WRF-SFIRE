@@ -1511,6 +1511,8 @@ if (ibeh .eq. 2) then
         endif
         call warning(msg)
     endif
+elseif (ibeh .eq. 3) then
+    call fire_ros_wirc(ros,nvx,nvy,i,j,fp,ierrx,msg)
 else
     if (fire_advection.ne.0) then ! from flags in module_fr_sfire_util
         ! wind speed is total speed 
@@ -1884,6 +1886,37 @@ write(msg,1)it,i,j,R,change,' did not converge'
 ierrx=1
 ros=R
 end subroutine fire_ros_balbi
+
+!
+!***
+!
+
+subroutine fire_ros_wirc(ros,nvx,nvy,i,j,fp,ierrx,msg)
+! in
+!       nvx,nvy direction of propagation, normalized 
+!       i,j     indices in the fire grid
+!       fp      fire grid arrays 
+! out
+!       ros     rate of spread
+!       ierrx   error code
+!       msg     error message
+! global
+!       balbi_msglevel 0=nothing 1=errors 2=warnings 3=diagnostics 4=iterations
+!       fuel categories from namelist.fire
+
+!*** arguments
+
+implicit none
+real, intent(in):: nvx,nvy
+integer, intent(in):: i,j
+type(fire_params):: fp
+real, intent(out):: ros
+integer, intent(out)::ierrx 
+character(len=*), intent(out)::msg
+
+!ADD CODE HERE
+
+end subroutine fire_ros_wirc
 
 !
 !***
