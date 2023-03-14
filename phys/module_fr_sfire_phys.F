@@ -179,7 +179,7 @@ PUBLIC:: mfuelcats
                                             fueldepthm,fueldens,fuelmce,   &
                                             fcwh,fcz0, ffw, &
                                             savr,st,se,adjr0,adjrw,adjrs, &
-                                            fmc_gl_stdev,fmc_gl_ndwi_0,fmc_gl_ndwi_rate,fmc_gl_ndwi_stdev
+                                            fmc_gl_stdev,fmc_gl_ndwi_0,fmc_gl_ndwi_rate,fmc_gl_ndwi_stdev, k_tc
    REAL   , DIMENSION( mfuelcats , max_moisture_classes), save :: fmc_gw
 ! =============================================================================
 ! Standard 13 fire behavior fuel models (for surface fires), along with some
@@ -244,6 +244,8 @@ PUBLIC:: mfuelcats
    DATA adjr0 /mfuelcats*1./
    DATA adjrw /mfuelcats*1./
    DATA adjrs /mfuelcats*1./
+   DATA k_tc / 4.025e-02, 1.621e-02, 3.752e-02, 3.000e-02, 1.812e-02, 3.621e-02, 3.778e-02, &
+    8.770e-04, 1.781e-03, 8.216e-03, 7.405e-03, 1.772e-02, 2.169e-02, 3.000e-02, zf*0 / ! fuel thermal conductivity
    
    ! =========================================================================
 
@@ -705,7 +707,7 @@ namelist /fuel_scalars/ cmbcnst,hfgl,fuelmc_g,fuelmc_c,nfuelcats,no_fuel_cat,no_
 namelist /fuel_categories/ fuel_name,windrf,fgi,fueldepthm,savr, &
     fuelmce,fueldens,st,se,weight,fci_d,fct,ichap,itree,fwh,fz0,ffw, &
     fmc_gl_ndwi_0,fmc_gl_ndwi_rate,fmc_gl_ndwi_stdev, fmc_gl_stdev, &
-    adjr0,adjrw,adjrs,fmc_gw01,fmc_gw02,fmc_gw03,fmc_gw04,fmc_gw05,is_dead
+    adjr0,adjrw,adjrs,fmc_gw01,fmc_gw02,fmc_gw03,fmc_gw04,fmc_gw05,is_dead, k_tc
 
 namelist /moisture/ moisture_classes,drying_lag,wetting_lag,saturation_moisture,saturation_rain,rain_threshold, &
     drying_model,wetting_model, moisture_class_name,fmc_gc_initialization
@@ -799,6 +801,7 @@ call wrf_dm_bcast_real(fmc_gl_ndwi_0,    nfuelcats)
 call wrf_dm_bcast_real(fmc_gl_ndwi_rate, nfuelcats)
 call wrf_dm_bcast_real(fmc_gl_ndwi_stdev,nfuelcats)
 call wrf_dm_bcast_real(fmc_gl_stdev,     nfuelcats)
+call wrf_dm_bcast_real(k_tc,   nfuelcats)
 ! broadcast moisture tables
 call wrf_dm_bcast_integer(moisture_classes,1)
 call wrf_dm_bcast_real(drying_lag,     max_moisture_classes)
@@ -929,6 +932,8 @@ do i=1,nfuelcats,j
         write(msg,8)'fmc_gl_ndwi_stdev',(fmc_gl_ndwi_stdev(ii),ii=i,k)
         call message(msg)
     endif
+    write(msg,8)'k_tc   ',(k_tc(ii),ii=i,k)
+    call message(msg)
 enddo
 call message(' ')
 call message('**********************************************************')
@@ -1043,6 +1048,7 @@ do k=1,nfuelcats
     call write_var(k,'fuelheat',fuelheat,'FUEL PARTICLE LOW HEAT CONTENT, BTU/LB')
     call write_var(k,'fuelmc_g',fuelmc_g,'FUEL PARTICLE (SURFACE) MOISTURE CONTENT')
     call write_var(k,'fuelmc_c',fuelmc_c,'FUEL PARTICLE (CANOPY) MOISTURE CONTENT')
+    call write_var(k,'k_tc',k_tc(k),'FUEL THERMAL CONDUCTIVITY (W /m /K)')
     ! set up fuel arrays 
     !subroutine set_fire_params( &
     !                       ifds,ifde,jfds,jfde, &
