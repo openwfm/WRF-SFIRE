@@ -1680,6 +1680,7 @@ real:: beta, beta_t, S_, S_t_, nu, T_a, delta_T, q, T_f, u_0
 real:: R_b, A, gamma, H_f, l_f
 real:: W_00, a_up, a_lat, K_, b
 real:: R_old, R_r, R_c, R, change
+real:: C_pw, T_vap
 integer:: k, mc, it
 ! nfuel_cat is real only because real array was easier than integer in WPS long ago
 
@@ -1739,40 +1740,43 @@ tanphi=max(tanphi,0.)
 
 k = nfuel_cat           ! converting fuel index to integer
 
-! Determine the dead fuel fraction from the moisture tables.
-dead_fract = 0.0
-do mc=1,max_moisture_classes
-    if (is_dead(mc).ne.0)then
-        dead_fract = dead_fract + fmc_gw(k,mc)
-    endif
-enddo
+! ! Determine the dead fuel fraction from the moisture tables.
+! dead_fract = 0.0
+! do mc=1,max_moisture_classes
+!     if (is_dead(mc).ne.0)then
+!         dead_fract = dead_fract + fmc_gw(k,mc)
+!     endif
+! enddo
 
 ! --- Constants and model parameters (Balbi 20220622 slide 9) ---
-B_ = 5.6e-8                     ! Stefan-Boltzman constant              [W/m^2/K^4]
+B_ = 5.670373e-8                ! Stefan-Boltzman constant              [W/m^2/K^4]
 chi_0 = 0.3                     ! Radiative factor
 r_00 = 2.5e-5                   ! Model parameter
 delta_h = 2.3e6                 ! Heat of latent evaporation            [J/kg]
-tau_0 = 75591                   ! Anderson's residence time coefficient
+tau_0 = 75591.                  ! Anderson's residence time coefficient
 rho_a = rhof                    ! Air density                           [kg/m3]
-s_t = 16                        ! Stoichiometric coefficient
-T_i = 600                       ! Ignition temperature                  [K]
+s_t = 17.                       ! Stoichiometric coefficient
+T_i = 600.                      ! Ignition temperature                  [K]
 g = 9.81                        ! Gravitational acceleration            [m/s^2]
 C_pa = 1150                     ! Specific heat of air                  [J/kg/K]
 
 U = speed                       ! Normal component of wind speed        [m/s]
 alpha = atan(tanphi)            ! Local terrain slope angle             [rad]
-W_0 = ffwidth                   ! Length of the ignition line           [m]
+W_0 = 50.                       ! Length of the ignition line           [m]
 
 
 ! --- Input fuel data (Balbi 20220622 slide 2) ---
 m = fmc_g                       ! Dead fuel moisture content
-sigma = fgip * dead_fract       ! Dead fine fuel load                   [kg/m^2]
+! sigma = fgip * dead_fract       ! Dead fine fuel load                   [kg/m^2]
+sigma = fgip                    ! Dead fine fuel load                   [kg/m^2]
 sigma_t = fgip                  ! Total fine fuel load                  [kg/m^2]
 h = fueldepthm(k)               ! Fuel height                           [m]
-s = savr(k)/0.3048              ! Surface area to volume ratio          [1/m]
-rho_v = fueldens(k)*16.018462   ! Fuel density                          [kg/m^3]
+s = savr(k)/0.3048              ! Surface area to volume ratio  (conversion from 1/ft to 1/m) [1/m]
+rho_v = fueldens(k)*16.015721869155822   ! Fuel density (conversion from lb/ft^3 to kg/m^3) [kg/m^3]
 delta_H_ = cmbcnst              ! Heat of combustion of pyrolysis gases [J/kg]
-C_p = 2e3                       ! Specific heat                         [J/kg/K]
+C_p = 1200.                     ! Specific heat of fuel                         [J/kg/K]
+T_vap = 373.15                  ! Water evaporation temperature [K]
+C_pw = 4180.                    ! Specific heat of liquid water                         [J/kg/K]
 
 
 ! --- Preliminary computations (Balbi 20220622 slide 3) ---
@@ -1792,24 +1796,23 @@ T_a = tempf
 delta_T = T_i - T_a
 
 ! Activation energy
-q = C_p * delta_T + m * delta_h
+q = C_p * delta_T + m * (delta_h + C_pw * (T_vap - T_a))
 
 ! Flame temperature
 T_f = T_a + (delta_H_ * (1 - chi_0)) / ((s_t + 1) * C_pa)
 
 ! Upward gas velocity
-u_0 = 2 * nu * ((s_t + 1) / tau_0) * (rho_v / rho_a) * (T_f / T_a)
-
+u_0 = 2. * (s_t + 1.0) * rho_v * T_f * min(S_, 2 * pi * S_ / S_t_) / (tau_0 * rho_a * T_a)
 
 ! --- Radiative contributions (slide 4) ---
 ! Flame base radiation contribution to ROS
-R_b = min(S_t_ / (2 * pi), 1.) * (beta / beta_t)**2 * (B_ * T_f**4) / (beta * rho_v * q)
+R_b = min(S_t_ / (2. * pi), 1.) * (beta / beta_t)**2 * (B_ * T_f**4) / (beta * rho_v * q)
 
 ! Radiative coefficient
-A = min(S_t_ / (2 * pi), beta / beta_t) * chi_0 * delta_H_ / (4 * q)
+A = min(S_t_ / (2. * pi), S_ / S_t_) * chi_0 * delta_H_ / (4. * q)
 
 ! Flame tilt angle
-gamma = atan(tan(alpha) + U / u_0)
+gamma = max(0., atan(tanphi + U / u_0))
 
 ! Flame height
 H_f = (u_0**2) / (g * (T_f / T_a - 1) * (cos(alpha))**2)
@@ -1823,18 +1826,20 @@ l_f = H_f / (cos(gamma - alpha))
 ! For most fires, the fire front width (W_0) and corresponding threshold for
 ! convective cooling (W_00) can be ignored; typical values for W_00 are in the
 ! 33-100 m range, depending on the fuel.
-W_00 = ffwidth_thresh
-if (W_00 == 0.) then    ! force min(W_0 / W_00, 1.) to 1 => no convective cooling
-    W_0 = 1.
-    W_00 = 1.
-endif
+! W_00 = ffwidth_thresh
+! if (W_00 == 0.) then    ! force min(W_0 / W_00, 1.) to 1 => no convective cooling
+!     W_0 = 1.
+!     W_00 = 1.
+! endif
 a_up = 0.025 * s * beta_t * sqrt(h)
-a_lat = min(W_0 / W_00, 1.)
+! a_lat = min(W_0 / W_00, 1.)
+a_lat = 1.
 
 ! Drag force coefficient
 ! NOTE: denominator is identical to a_lat above; perhaps slide meant to
 ! specified a_lat instead?
-K_ = (beta_t / min(W_0 / W_00, 1.))
+! K_ = (beta_t / min(W_0 / W_00, 1.))
+K_ = beta_t
 
 ! Convective coefficient
 b = (a_up * a_lat * rho_a * delta_H_ * T_a) / (2 * q * (s_t + 1) * rho_v * beta_t * T_f)
@@ -1847,39 +1852,39 @@ R_old = R_b
 do it=1,maxit_R
     ! Update the iterative ROS contributions, then recompute the total ROS.
     R_r = A * R_old * ((1. + sin(gamma) - cos(gamma)) / (1. + ((R_old * cos(gamma)) / (s * r_00))))
-    R_c = b * (u_0 * (tan(alpha) / 2) + (U * exp(-K_ * R_old)))
+    R_c = b * (min(2. * pi * S_ / S_t_, S_) * tanphi * (1 + s_t) * rho_v * T_f / (rho_a * T_a * tau_0)  + (U * exp(-K_ * R_old)))
     R = R_b + R_r + R_c
     change = R - R_old
 
     ! TODO: Review if this non-negative check is still needed
     if (R<0.)then
-        if (balbi_msglevel .ge. 3)then
-!$OMP CRITICAL(SFIRE_PHYS_CRIT)
-            write(msg,1)it,i,j,R,change
-            call message(msg)
-            write(msg,'(3(a,f8.3,1x))') 'R_b=',R_b,'R_r=',R_r,'R_c=',R_c
-            call message(msg)
-            call message('fire_ros_balbi R<0 resetting to R=0')
-!$OMP END CRITICAL(SFIRE_PHYS_CRIT)
-        endif
+        ! if (balbi_msglevel .ge. 3)then
+! !$OMP CRITICAL(SFIRE_PHYS_CRIT)
+!             write(msg,1)it,i,j,R,change
+!             call message(msg)
+!             write(msg,'(3(a,f8.3,1x))') 'R_b=',R_b,'R_r=',R_r,'R_c=',R_c
+!             call message(msg)
+!             call message('fire_ros_balbi R<0 resetting to R=0')
+! !$OMP END CRITICAL(SFIRE_PHYS_CRIT)
+        ! endif
         R=0.
     endif
 
     if (R .ne. R)call crash('fire_ros_balbi: R is NaN')
 
     if (balbi_msglevel .ge. 4)then 
-!$OMP CRITICAL(SFIRE_PHYS_CRIT)
-        write(msg,1)it,i,j,R,change
-        call message(msg)
-!$OMP END CRITICAL(SFIRE_PHYS_CRIT)
+! !$OMP CRITICAL(SFIRE_PHYS_CRIT)
+!         write(msg,1)it,i,j,R,change
+!         call message(msg)
+! !$OMP END CRITICAL(SFIRE_PHYS_CRIT)
     endif
 
     if (abs(change) < tol_R)then
         if (balbi_msglevel .ge. 3)then
-!$OMP CRITICAL(SFIRE_PHYS_CRIT)
-            write(msg,1)it,i,j,R,change,' converged'
-            call message(msg)
-!$OMP END CRITICAL(SFIRE_PHYS_CRIT)
+! !$OMP CRITICAL(SFIRE_PHYS_CRIT)
+!             write(msg,1)it,i,j,R,change,' converged'
+!             call message(msg)
+! !$OMP END CRITICAL(SFIRE_PHYS_CRIT)
         endif
         ros = R
         return 
@@ -1887,10 +1892,10 @@ do it=1,maxit_R
     R_old = R
 enddo
 
-1 format('fire_ros_balbi: iteration',i3,' at ij=',2i5,' R=',f6.3,' diff=',g12.3,a)
-!$OMP CRITICAL(SFIRE_PHYS_CRIT)
-write(msg,1)it,i,j,R,change,' did not converge'
-!$OMP END CRITICAL(SFIRE_PHYS_CRIT)
+! 1 format('fire_ros_balbi: iteration',i3,' at ij=',2i5,' R=',f6.3,' diff=',g12.3,a)
+! !$OMP CRITICAL(SFIRE_PHYS_CRIT)
+! write(msg,1)it,i,j,R,change,' did not converge'
+! !$OMP END CRITICAL(SFIRE_PHYS_CRIT)
 ierrx=1
 ros=R
 end subroutine fire_ros_balbi
