@@ -30,11 +30,12 @@ real,pointer,dimension(:,:,:):: fmc_gc_f           ! fuel moisture contents, gro
 end type fire_params
 
 ! verbosity and diagnostic switches, can be activated when this module is USEd
-logical, public:: compare_rothermel=.false.        ! run comparison in fire_ros
-logical, public:: call_write_fuels_m=.false.        ! create file fuels_m for graphics postprocessing 
-integer, public:: balbi_msglevel=2                 ! prints in fire_ros_balbi, 0=nothing 1=errors 2=warnings 3=diagnostics 4=iterations
+logical, public:: compare_rothermel=.false.       ! run comparison in fire_ros
+logical, public:: call_write_fuels_m=.true.       ! create file fuels_m for graphics postprocessing 
+integer, public:: balbi_msglevel=2                ! prints in fire_ros_balbi, 0=nothing 1=errors 2=warnings 3=diagnostics
 integer, public:: balbi_nc_max=10                 ! max number of balbi no convergence cases
 integer, public:: balbi_nc_count=0                ! counter of balbi no convergence cases
+integer, public:: behave_msglevel=2               ! prints in fire_ros_behave, 0=nothing 1=errors 2=warnings 3=diagnostics
 
 ! subroutines and functions 
 PUBLIC:: init_fuel_cats,fire_ros,heat_fluxes,set_nfuel_cat,set_fire_params, &
@@ -1039,9 +1040,10 @@ implicit none
 integer, intent(in):: nsteps   ! number of steps for speed computation
 real, intent(in):: maxwind,maxslope ! from zero to these
 
-integer:: iounit,k,j,i,isave
+integer:: iounit,k,j,i,m,isave
 type(fire_params)::fp
 real, dimension(1:3,1:nsteps), target::vx,vy,zsf,dzdxf,dzdyf,bbb,phisc,phiwc,r_0,fgip,ischap,fmc_g,wind,nfuel_cat,rhof,tempf,ffwidth
+real, dimension(1:3,max_moisture_classes,1:nsteps), target::fmc_gc_f
 real, dimension(1:3,1:nsteps)::fuel_time,ros,fwh,fz0
 real::ros_back,ros_wind,ros_slope,propx,propy,r,speed,tanphi
 integer::ierrx
@@ -1064,6 +1066,7 @@ fp%nfuel_cat=>nfuel_cat
 fp%rhof=>rhof
 fp%tempf=>tempf
 fp%ffwidth=>ffwidth
+fp%fmc_gc_f=>fmc_gc_f
 
 rhof = 1.
 tempf = 300.
@@ -1115,6 +1118,11 @@ do k=1,nfuelcats
        fmc_g(1,j)=fuelmc_g
        fmc_g(2,j)=fuelmc_g
        fmc_g(3,j)=(fuelmce(k)*(j-1))/(nsteps-2)
+       do m=1,max_moisture_classes
+           fmc_gc_f(1,m,j)=fuelmc_g
+           fmc_gc_f(2,m,j)=fuelmc_g
+           fmc_gc_f(3,m,j)=(fuelmce(k)*(j-1))/(nsteps-2)
+       enddo
     enddo
     isave=fire_fmc_read
     fire_fmc_read=0
@@ -2040,6 +2048,33 @@ fmc_1000       = fp%fmc_gc_f(i,4,j)
 fmc_herba      = fp%fmc_gc_f(i,5,j)
 fmc_woody      = fp%fmc_gc_f(i,6,j)
 fmc_herba_dead = fmc_1
+! print the inputs
+if(behave_msglevel.ge.3)then
+!$OMP CRITICAL(SFIRE_PHYS_CRIT)
+    write(msg,*)'fire_ros_behave called with behave_msglevel=',behave_msglevel
+    call message(msg)
+    call message('0=nothing 1=errors 2=warnings 3=diagnostics')
+    call message('inputs:')
+    write(msg,*)'wind speed projected on propagation direction speed=',speed
+    call message(msg)
+    write(msg,*)'slope projected on propagation direction tanphi=',tanphi
+    call message(msg)
+    write(msg,*)'fuel moisture content (water / dry) fmc_1=',fmc_1
+    call message(msg)
+    write(msg,*)'fuel moisture content (water / dry) fmc_10=',fmc_10
+    call message(msg)
+    write(msg,*)'fuel moisture content (water / dry) fmc_100=',fmc_100
+    call message(msg)
+    write(msg,*)'fuel moisture content (water / dry) fmc_1000=',fmc_1000
+    call message(msg)
+    write(msg,*)'fuel moisture content (water / dry) fmc_herba=',fmc_herba
+    call message(msg)
+    write(msg,*)'fuel moisture content (water / dry) fmc_woody=',fmc_woody
+    call message(msg)
+    write(msg,*)'nfuel_cat=',nfuel_cat
+    call message(msg)
+!$OMP END CRITICAL(SFIRE_PHYS_CRIT)
+endif
 ! fuel load (lb/ft^2) classes
 fuelload_1          = fuelload_gc(k,1) !fp%fuelload(i,k,1,j)
 fuelload_10         = fuelload_gc(k,2) !fp%fuelload(i,k,2,j)
@@ -2263,6 +2298,41 @@ phiw = umid**bbb * phiwc
 phis = 5.275 * betafl**(-0.3) *max(0.,tanphi)**2  
 ! spread rate, m/s
 ros = r_0*(1. + phiw + phis)  * .00508
+! print the outputs
+if(behave_msglevel.ge.3)then
+!$OMP CRITICAL(SFIRE_PHYS_CRIT)
+    write(msg,*)'fuelheat_dead=',fuelheat_dead
+    call message(msg)
+    write(msg,*)'fuelheat_live=',fuelheat_live
+    call message(msg)
+    write(msg,*)'etas_dead=',etas_dead
+    call message(msg)
+    write(msg,*)'etas_live=',etas_live
+    call message(msg)
+    write(msg,*)'etam_dead=',etam_dead
+    call message(msg)
+    write(msg,*)'etam_live=',etam_live
+    call message(msg)
+    write(msg,*)'wn_dead=',wn_dead
+    call message(msg)
+    write(msg,*)'wn_live=',wn_live
+    call message(msg)
+    write(msg,*)'gamma=',gamma
+    call message(msg)
+    write(msg,*)'ir=',ir
+    call message(msg)
+    write(msg,*)'xifr=',xifr
+    call message(msg)
+    write(msg,*)'heat_sink=',heat_sink
+    call message(msg)
+    write(msg,*)'phiw=',phiw
+    call message(msg)
+    write(msg,*)'phis=',phis
+    call message(msg)
+    write(msg,*)'ros=',ros
+    call message(msg)
+!$OMP END CRITICAL(SFIRE_PHYS_CRIT)
+endif
 
 end subroutine fire_ros_behave
 

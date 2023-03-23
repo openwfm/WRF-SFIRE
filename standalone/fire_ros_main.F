@@ -16,23 +16,33 @@ real,pointer,dimension(:,:):: nfuel_cat            ! fuel category (integer valu
 real,pointer,dimension(:,:):: tempf                ! temperature at 2m (K) (Balbi model only)
 real,pointer,dimension(:,:):: rhof                 ! surface air density (kg/m^3) (Balbi model only)
 real,pointer,dimension(:,:):: ffwidth              ! fire front width (m) (Balbi model only)
+real,pointer,dimension(:,:):: fmc_gc01             ! fuel moisture contents, ground by class (1)
+real,pointer,dimension(:,:):: fmc_gc02             ! fuel moisture contents, ground by class (1)
+real,pointer,dimension(:,:):: fmc_gc03             ! fuel moisture contents, ground by class (1)
+real,pointer,dimension(:,:):: fmc_gc04             ! fuel moisture contents, ground by class (1)
+real,pointer,dimension(:,:):: fmc_gc05             ! fuel moisture contents, ground by class (1)
+real,pointer,dimension(:,:):: fmc_gc06             ! fuel moisture contents, ground by class (1)
 real,pointer,dimension(:,:,:):: fmc_gc_f           ! fuel moisture contents, ground by class (1)
 real,pointer,dimension(:,:):: ros                  ! fire rate of spread (m/s) 
 
-integer:: n=10, iounit=9, ierr, i, j
+integer:: n=10, iounit=9, ierr, i, j, nfmc
 logical:: have_data=.true.
 character(len=50)::file_in="namelist_standalone.input",file_out="namelist_standalone.output"
 character(len=128)::msg
 character(len=9), dimension(4)::model=(/'Rothermel','Balbi    ','WIRC     ','Behave   '/)
 
-namelist /control/n,fire_print_msg,balbi_msglevel,call_write_fuels_m,compare_rothermel
-namelist /data/propx,propy,vx,vy,dzdxf,dzdyf,fmc_g,nfuel_cat,tempf,rhof,ffwidth,ros
+! namelist_standalone.input options
+namelist /control/n,fire_print_msg,balbi_msglevel,behave_msglevel,call_write_fuels_m,compare_rothermel,nfmc
+namelist /data/propx,propy,vx,vy,dzdxf,dzdyf,fmc_g,nfuel_cat,tempf,rhof,ffwidth,ros, & 
+      fmc_gc01,fmc_gc02,fmc_gc03,fmc_gc04,fmc_gc05,fmc_gc06
+
 
 !*** executable
 
 ! defaults, can set in &control
 fire_print_msg = -1  ! suppress messages and warnings from WRF-SFIRE
 balbi_msglevel = 1           ! prints in fire_ros_balbi
+behave_msglevel = 1          ! prints in fire_ros_balbi
 call_write_fuels_m = .false. ! create fuels.m for graphics 
 fire_fmc_read = 0            ! prevent overwing of fmc_f in init_fuels_cat
 
@@ -63,6 +73,7 @@ print *,'WRF-SFIRE print level               fire_print_msg=',fire_print_msg
 print *,'print level in fire_ros_balbi       balbi_msglevel=',balbi_msglevel
 print *,'write file fuels.m for graphics call_write_fuels_m=',call_write_fuels_m
 print *,'compare codes (ibeh=1 only)      compare_rothermel=',compare_rothermel
+print *,'number of fuel moisture classes               nfmc=',nfmc
 write(*,control)
 
 print *,'Initializing fuel categories from file namelist.fire'
@@ -70,11 +81,13 @@ if(call_write_fuels_m)then
      print *,'and writing file fuels.m. For a guide how to use fuels.m, see' 
      print *,'https://wiki.openwfm.org/wiki/How_to_diagnose_fuel_properties_in_WRF-SFIRE'
 endif
-call init_fuel_cats(init_fuel_moisture=.false.) 
+call init_fuel_cats(init_fuel_moisture=.true.) 
 print *,'Fire ROS model from file namelist.fire is ibeh=',ibeh,' ',model(ibeh)
  
 ! allocate our arrays used in namelist
 allocate(propx(1,n),propy(1,n),vx(1,n),vy(1,n),dzdxf(1,n),dzdyf(1,n),fmc_g(1,n),nfuel_cat(1,n),tempf(1,n),rhof(1,n),ffwidth(1,n),ros(1,n))
+allocate(fmc_gc01(1,n),fmc_gc02(1,n),fmc_gc03(1,n),fmc_gc04(1,n),fmc_gc05(1,n),fmc_gc06(1,n))
+allocate(fmc_gc_f(1,nfmc,n))
 
 ! allocate the rest of the arrays in fp 
 allocate(fp%fgip(1,n),fp%ischap(1,n),fp%phisc(1,n),fp%bbb(1,n),fp%fuel_time(1,n),fp%phiwc(1,n),fp%r_0(1,n))
@@ -87,11 +100,17 @@ vy = 0.
 dzdxf = 0.
 dzdyf = 0.
 fmc_g = 0.
+fmc_gc01 = 0.
+fmc_gc02 = 0.
+fmc_gc03 = 0.
+fmc_gc04 = 0.
+fmc_gc05 = 0.
+fmc_gc06 = 0.
+fmc_gc_f = 0.
 nfuel_cat=1   ! some fuel
 tempf = 273.    ! temp K 
 rhof = 1.2    ! air density (kg/m^3)
 ffwidth = 10. ! fire front width m
-fmc_gc_f = 0.
 ros = 0.
 
 if(have_data)then
@@ -104,6 +123,15 @@ endif
 
 close(iounit,iostat=ierr)
 
+do j=1,n
+    fmc_gc_f(1,1,j)=fmc_gc01(1,j)
+    fmc_gc_f(1,2,j)=fmc_gc02(1,j)
+    fmc_gc_f(1,3,j)=fmc_gc03(1,j)
+    fmc_gc_f(1,4,j)=fmc_gc04(1,j)
+    fmc_gc_f(1,5,j)=fmc_gc05(1,j)
+    fmc_gc_f(1,6,j)=fmc_gc06(1,j)
+enddo
+
 print *,'propx=',propx
 print *,'propy=',propy
 print *,'vx=',vx
@@ -115,7 +143,7 @@ print *,'nfuel_cat=',nfuel_cat
 print *,'tempf=',tempf
 print *,'rhof=',rhof
 print *,'ffwidth=',ffwidth
-print *,'fmc_g=',fmc_gc_f
+print *,'fmc_gc_f=',fmc_gc_f
 fp%vx => vx
 fp%vy => vy
 fp%dzdxf => dzdxf
@@ -126,7 +154,6 @@ fp%rhof => rhof
 fp%ffwidth => ffwidth
 fp%fmc_gc_f => fmc_gc_f
 fp%nfuel_cat => nfuel_cat
-
 
 ! set up fuel arrays in fp
 !subroutine set_fire_params( &
