@@ -16,13 +16,14 @@ real,pointer,dimension(:,:):: nfuel_cat            ! fuel category (integer valu
 real,pointer,dimension(:,:):: tempf                ! temperature at 2m (K) (Balbi model only)
 real,pointer,dimension(:,:):: rhof                 ! surface air density (kg/m^3) (Balbi model only)
 real,pointer,dimension(:,:):: ffwidth              ! fire front width (m) (Balbi model only)
+real,pointer,dimension(:,:,:):: fmc_gc_f           ! fuel moisture contents, ground by class (1)
 real,pointer,dimension(:,:):: ros                  ! fire rate of spread (m/s) 
 
 integer:: n=10, iounit=9, ierr, i, j
 logical:: have_data=.true.
 character(len=50)::file_in="namelist_standalone.input",file_out="namelist_standalone.output"
 character(len=128)::msg
-character(len=9), dimension(2)::model=(/'Rothermel','Balbi    '/)
+character(len=9), dimension(4)::model=(/'Rothermel','Balbi    ','WIRC     ','Behave   '/)
 
 namelist /control/n,fire_print_msg,balbi_msglevel,call_write_fuels_m,compare_rothermel
 namelist /data/propx,propy,vx,vy,dzdxf,dzdyf,fmc_g,nfuel_cat,tempf,rhof,ffwidth,ros
@@ -90,6 +91,7 @@ nfuel_cat=1   ! some fuel
 tempf = 273.    ! temp K 
 rhof = 1.2    ! air density (kg/m^3)
 ffwidth = 10. ! fire front width m
+fmc_gc_f = 0.
 ros = 0.
 
 if(have_data)then
@@ -113,6 +115,7 @@ print *,'nfuel_cat=',nfuel_cat
 print *,'tempf=',tempf
 print *,'rhof=',rhof
 print *,'ffwidth=',ffwidth
+print *,'fmc_g=',fmc_gc_f
 fp%vx => vx
 fp%vy => vy
 fp%dzdxf => dzdxf
@@ -121,6 +124,7 @@ fp%fmc_g => fmc_g
 fp%tempf => tempf
 fp%rhof => rhof
 fp%ffwidth => ffwidth
+fp%fmc_gc_f => fmc_gc_f
 fp%nfuel_cat => nfuel_cat
 
 

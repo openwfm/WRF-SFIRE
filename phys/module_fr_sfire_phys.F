@@ -16,22 +16,22 @@ type fire_params
 real,pointer,dimension(:,:):: vx,vy                ! wind velocity (m/s)
 real,pointer,dimension(:,:):: zsf                  ! terrain height (m)
 real,pointer,dimension(:,:):: dzdxf,dzdyf          ! terrain grad (1)
-real,pointer,dimension(:,:):: bbb,phisc,phiwc,r_0 ! spread formula coefficients
+real,pointer,dimension(:,:):: bbb,phisc,phiwc,r_0  ! spread formula coefficients
 real,pointer,dimension(:,:):: fgip                 ! init mass of surface fuel (kg/m^2)
 real,pointer,dimension(:,:):: ischap               ! 1 if chapparal
 real,pointer,dimension(:,:):: fuel_time            ! time to burn to 1/e (s)
 real,pointer,dimension(:,:):: fmc_g                ! fuel moisture contents, ground (1)
 real,pointer,dimension(:,:):: nfuel_cat            ! fuel category (integer values)
 real,pointer,dimension(:,:):: tempf                ! air temperature (K) (Balbi model only)
-real,pointer,dimension(:,:):: rhof                ! air pressure (Pa) (Balbi model only)
+real,pointer,dimension(:,:):: rhof                 ! air pressure (Pa) (Balbi model only)
 real,pointer,dimension(:,:):: ffwidth              ! fire front width (m) (Balbi model only)
-real,pointer,dimension(:,:):: fmc_gc_f             ! fuel moisture contents, ground by class (1)
+real,pointer,dimension(:,:,:):: fmc_gc_f           ! fuel moisture contents, ground by class (1)
 
 end type fire_params
 
 ! verbosity and diagnostic switches, can be activated when this module is USEd
 logical, public:: compare_rothermel=.false.        ! run comparison in fire_ros
-logical, public:: call_write_fuels_m=.true.        ! create file fuels_m for graphics postprocessing 
+logical, public:: call_write_fuels_m=.false.        ! create file fuels_m for graphics postprocessing 
 integer, public:: balbi_msglevel=2                 ! prints in fire_ros_balbi, 0=nothing 1=errors 2=warnings 3=diagnostics 4=iterations
 integer, public:: balbi_nc_max=10                 ! max number of balbi no convergence cases
 integer, public:: balbi_nc_count=0                ! counter of balbi no convergence cases
@@ -78,7 +78,7 @@ PUBLIC:: mfuelcats
      fmc_gw03=(/ (0.0, itmp=1,mfuelcats) /), & 
      fmc_gw04=(/ (0.0, itmp=1,mfuelcats) /), & 
      fmc_gw05=(/ (0.0, itmp=1,mfuelcats) /), &
-     fmc_gw06=(/ (0.0, itmp=1,mfuelcats) /)  &
+     fmc_gw06=(/ (0.0, itmp=1,mfuelcats) /) 
    real, dimension(mfuelcats):: savr_gc01, savr_gc02, savr_gc03, savr_gc04, savr_gc05, savr_gc06
    real, dimension(mfuelcats):: fuelload_gc01, fuelload_gc02, fuelload_gc03, fuelload_gc04, fuelload_gc05, fuelload_gc06
     
@@ -214,23 +214,23 @@ PUBLIC:: mfuelcats
                     0.0610, 0.0610, 0.305, 0.305, 0.701, 0.914, 0.305,zf*0. /
    DATA savr / 3500., 2784., 1500., 1739., 1683., 1564., 1562.,  &
                1889., 2484., 1764., 1182., 1145., 1159., 3500., zf*0. /
-   DATA savr_01 / 3500., 3000., 1500., 2000., 2000., 1750., 1750.,  &
+   DATA savr_gc01 / 3500., 3000., 1500., 2000., 2000., 1750., 1750.,  &
                2000., 2500., 2000., 1500., 1500., 1500., 2000., zf*0. /
-   DATA savr_02 / nf * 109., zf*0. /
-   DATA savr_03 / nf * 30., zf*0. /
-   DATA savr_04 / nf * 9999., zf*0. / ! 1000h not use yet
-   DATA savr_05 / nf * 9999., zf*0. /
-   DATA savr_06 / 9999., 1500., 9999., 1500., 1500., 9999., 1500.,  &
+   DATA savr_gc02 / nf * 109., zf*0. /
+   DATA savr_gc03 / nf * 30., zf*0. /
+   DATA savr_gc04 / nf * 9999., zf*0. / ! 1000h not use yet
+   DATA savr_gc05 / nf * 9999., zf*0. /
+   DATA savr_gc06 / 9999., 1500., 9999., 1500., 1500., 9999., 1500.,  &
                9999., 9999., 1500., 9999., 9999., 9999., 9999., zf*0. /
-   DATA fuelload_01 / 0.034, 0.092, 0.138, 0.23, 0.046, 0.069, 0.052, &
+   DATA fuelload_gc01 / 0.034, 0.092, 0.138, 0.23, 0.046, 0.069, 0.052, &
                0.069, 0.134, 0.138, 0.069, 0.184, 0.322, 0.001, zf*0. /
-   DATA fuelload_02 / 0., 0.046, 0., 0.184, 0.023, 0.115, 0.086, &
+   DATA fuelload_gc02 / 0., 0.046, 0., 0.184, 0.023, 0.115, 0.086, &
                0.046, 0.019, 0.092, 0.207, 0.644, 1.058, 0., zf*0. /
-   DATA fuelload_03 / 0., 0.023, 0., 0.092, 0., 0.092, 0.069, &
+   DATA fuelload_gc03 / 0., 0.023, 0., 0.092, 0., 0.092, 0.069, &
                0.115, 0.007, 0.23, 0.253, 0.759, 1.288, 0., zf*0. /
-   DATA fuelload_04 / nf * 0., zf*0. /
-   DATA fuelload_05 / nf * 0., zf*0. /
-   DATA fuelload_06 / 0., 0.023, 0., 0.23, 0.092, 0., 0.017, &
+   DATA fuelload_gc04 / nf * 0., zf*0. /
+   DATA fuelload_gc05 / nf * 0., zf*0. /
+   DATA fuelload_gc06 / 0., 0.023, 0., 0.23, 0.092, 0., 0.017, &
                0., 0., 0.092, 0., 0., 0., 0., zf*0. /
    DATA fuelmce / 0.12, 0.15, 0.25, 0.20, 0.20, 0.25, 0.40,  &
                   0.30, 0.25, 0.25, 0.15, 0.20, 0.25, 0.12 , zf*0. / 
@@ -289,8 +289,8 @@ subroutine fuel_moisture(                &
     nfuel_cat,                           & ! fuel data
     fndwi,                                & ! satellite sensing on fire grid
     fmc_gc,                              & ! moisture contents by class on atmospheric grid
-    fmc_g                                & ! weighted fuel moisture contents on fire grid
-    fmc_gc_f,                              & ! moisture contents by class on fire grid
+    fmc_g,                               & ! weighted fuel moisture contents on fire grid
+    fmc_gc_f                              & ! moisture contents by class on fire grid
     )
 
 implicit none
@@ -369,7 +369,7 @@ do k=1,moisture_classes
     
     do j=jfts,jfte
         do i=ifts,ifte
-            fmc_gc_f(i,k,j)=fmc_f(i,k,j)
+            fmc_gc_f(i,k,j)=fmc_f(i,j)
         enddo
     enddo
 
@@ -405,8 +405,7 @@ do k=1,moisture_classes
 enddo
 
 call print_2d_stats(ifts,ifte,jfts,jfte,ifms,ifme,jfms,jfme,fmc_g,'fuel_moisture: fmc_g')
-call print_3d_stats(ifts,ifte,jfts,jfte,ifms,ifme,jfms,jfme,fmc_gc_f,'fuel_moisture: fmc_gc_f')
-
+call print_3d_stats_by_slice(ifts,ifte,1,moisture_classes,jfts,jfte,ifms,ifme,1,nfmc,jfms,jfme,fmc_gc_f,'fmc_gc_f')
 
 end subroutine fuel_moisture
 
@@ -2006,19 +2005,21 @@ integer, intent(out)::ierrx
 character(len=*), intent(out)::msg
 
 !*** local
-real::fmc_1, fmc_10, fmc_100, fmc_herba, fmc_woody, fmc_dead, fmc_live
-real::fuelload_1, fuelload_10, fuelload_100, fuelload_herba, fuelload_woody
+real::fmc_1, fmc_10, fmc_100, fmc_1000, fmc_herba_dead, fmc_herba, fmc_woody, fmc_dead, fmc_live
+real::fuelload_1, fuelload_10, fuelload_100, fuelload_1000, fuelload_herba_dead, fuelload_herba, fuelload_woody
+real::savr_1, savr_10, savr_100, savr_1000, savr_herba_dead, savr_herba, savr_woody, savr_dead, savr_live
 real::A_1, A_10, A_100, A_herba_dead, A_herba, A_woody, A_dead, A_live
 real::f_1, f_10, f_100, f_herba_dead, f_herba, f_woody, f_dead, f_live
 real::wn_1, wn_10, wn_100, wn_herba_dead, wn_herba, wn_woody, wn_dead, wn_live
 real::exp_1, exp_10, exp_100, exp_herba_dead, exp_herba, exp_woody, exp_dead, exp_live
 real::qig_1, qig_10, qig_100, qig_herba_dead, qig_herba, qig_woody
-real::fuelheat_dead, fuelheat_live, se_dead, se_live, rtemp1_dead, rtem1_live
+real::fuelheat_dead, fuelheat_live, se_dead, se_live, rtemp1_dead, rtemp1_live
 real::etam_dead, etam_live, etas_dead, etas_live, heat_sink_dead, heat_sink_live
 real::epsilon_1, epsilon_10, epsilon_100, epsilon_herba_dead, epsilon_herba, epsilon_woody
-real::fueldepth, fuelload, savr, A, W_prima, M_prima_f
-real::a, rhob, betafl, betaop, rtemp2, gammax, ratio, gamma, &
+real::fueldepth, fuelload, savr, AT, W_prima, M_prima_f, heat_sink, fuelmce_live
+real::a, rhob, betafl, betaop, rtemp2, gammax, ratio, gamma
 real::xifr, ir, r_0, umid, c, bbb, e, phiwc, phiw, phis
+real::dzdxf, dzdyf, vx, vy, speed, tanphi, nfuel_cat
 integer::k
 
 !*** executable
@@ -2032,12 +2033,13 @@ tanphi = dzdxf*nvx + dzdyf*nvy      ! slope in spread the direction
 nfuel_cat = fp%nfuel_cat(i,j)       ! fuel categories
 k = int(nfuel_cat)                  ! fuel index
 ! fuel moisture content (water / dry) classes
-fmc_1     = fp%fmc_gc_f(i,1,j)
-fmc_10    = fp%fmc_gc_f(i,2,j)
-fmc_100   = fp%fmc_gc_f(i,3,j)
-fmc_1000  = fp%fmc_gc_f(i,4,j)
-fmc_herba = fp%fmc_gc_f(i,5,j)
-fmc_woody = fp%fmc_gc_f(i,6,j)
+fmc_1          = fp%fmc_gc_f(i,1,j)
+fmc_10         = fp%fmc_gc_f(i,2,j)
+fmc_100        = fp%fmc_gc_f(i,3,j)
+fmc_1000       = fp%fmc_gc_f(i,4,j)
+fmc_herba      = fp%fmc_gc_f(i,5,j)
+fmc_woody      = fp%fmc_gc_f(i,6,j)
+fmc_herba_dead = fmc_1
 ! fuel load (lb/ft^2) classes
 fuelload_1          = fuelload_gc(k,1) !fp%fuelload(i,k,1,j)
 fuelload_10         = fuelload_gc(k,2) !fp%fuelload(i,k,2,j)
@@ -2045,6 +2047,7 @@ fuelload_100        = fuelload_gc(k,3) !fp%fuelload(i,k,3,j)
 fuelload_1000       = fuelload_gc(k,4) !fp%fuelload(i,k,4,j)
 fuelload_herba      = fuelload_gc(k,5) !fp%fuelload(i,k,5,j)
 fuelload_woody      = fuelload_gc(k,6) !fp%fuelload(i,k,6,j)
+fuelload_herba_dead = 0
 ! savr classes
 savr_1          = savr_gc(k,1)
 savr_10         = savr_gc(k,2)
@@ -2052,28 +2055,28 @@ savr_100        = savr_gc(k,3)
 savr_1000       = savr_gc(k,4)
 savr_herba      = savr_gc(k,5)
 savr_woody      = savr_gc(k,6)
+savr_herba_dead = savr_herba
 ! translating units
 fueldepth= fueldepthm(k)/0.3048     ! from m to ft
 ! dynamic load transfer from live to dead
-fuelload_herba_dead = 0
 if (idynamic(k)>0.) then
-    if (fmc_1<0.3) then
+    if (fmc_herba<0.3) then
         fuelload_herba_dead = fuelload_herba_dead + fuelload_herba
         fuelload_herba = 0
-    else if fmc_herba < 1.2
+    else if (fmc_herba < 1.2) then
         fuelload_herba_dead = fuelload_herba_dead * (1.333 - 1.11 * fmc_herba)
         fuelload_herba = fuelload_herba - fuelload_herba_dead
     end if
 end if
 ! total fuel load
-fuelload     = sum(fp%fuelload(i,k,:,j))
+fuelload     = sum(fuelload_gc(k,:)) ! sum(fp%fuelload(i,k,:,j))
 ! mean total surface area per unit fuel cell of each size class within each category
 A_1          = savr_1 * fuelload_1 / fueldens(k)
 A_10         = savr_10 * fuelload_10 / fueldens(k)
 A_100        = savr_100 * fuelload_100 / fueldens(k)
-A_herba_dead = savr_herba * fuelload_1000 / fueldens(k)
 A_herba      = savr_herba * fuelload_herba / fueldens(k)
 A_woody      = savr_woody * fuelload_woody / fueldens(k)
+A_herba_dead = savr_herba_dead * fuelload_herba_dead / fueldens(k)
 ! mean total surface area per unit fuel cell of the dead and live categories
 A_dead       = A_1 + A_10 + A_100 + A_herba_dead
 A_live       = A_herba + A_woody
@@ -2109,9 +2112,9 @@ savr          = f_dead * savr_dead + f_live * savr_live
 wn_1          = fuelload_1 * (1 - st(k))
 wn_10         = fuelload_10 * (1 - st(k))
 wn_100        = fuelload_100 * (1 - st(k))
-wn_herba_dead = fuelload_herba_dead * (1 - st(k))
 wn_herba      = fuelload_herba * (1 - st(k))
 wn_woody      = fuelload_woody * (1 - st(k))
+wn_herba_dead = fuelload_herba_dead * (1 - st(k))
 ! net fuel loading of the dead and live categories
 wn_dead       = (f_1 + f_herba_dead) * (wn_1 + wn_herba_dead) + f_10 * wn_10 + f_100 * wn_100
 wn_live       = f_herba * wn_herba + f_woody * wn_woody
@@ -2119,9 +2122,9 @@ wn_live       = f_herba * wn_herba + f_woody * wn_woody
 exp_1          = fuelload_1 * exp(-138.0 / savr_1)
 exp_10         = fuelload_10 * exp(-138.0 / savr_10)
 exp_100        = fuelload_100 * exp(-138.0 / savr_100)
-exp_herba_dead = fuelload_herba_dead * exp(-138.0 / savr_herba_dead)
 exp_herba      = fuelload_herba * exp(-500 / savr_herba)
 exp_woody      = fuelload_woody * exp(-500 / savr_woody)
+exp_herba_dead = fuelload_herba_dead * exp(-138.0 / savr_herba_dead)
 exp_dead       = exp_1 + exp_10 + exp_100 + exp_herba_dead
 exp_live       = exp_herba + exp_woody
 if (exp_live.eq.0.) then
@@ -2129,9 +2132,7 @@ if (exp_live.eq.0.) then
 else
     W_prima    = exp_dead / exp_live
 end if
-if (exp_dead.eq.0.) then
-    M_prima_f  = 0.
-M_prima_f      = (fmc_1 * exp_1 + fmc_10 * exp01 + fmc_100 * exp02 + fmc_herba_dead * exp03) / (exp00 + exp01 + exp02 + exp03);
+M_prima_f      = (fmc_1 * exp_1 + fmc_10 * exp_10 + fmc_100 * exp_100 + fmc_herba_dead * exp_herba_dead) / exp_dead
 fuelmce_live   = 2.9 * W_prima * (1 - M_prima_f / fuelmce(k)) - 0.226;
 if (fuelmce_live < fuelmce(k)) then
     fuelmce_live = fuelmce(k)
@@ -2146,15 +2147,15 @@ se_live       = (f_herba + f_woody) * se(k)
 fmc_dead      = f_1 * fmc_1 + f_10 * fmc_10 + f_100 * fmc_100 + f_herba_dead * fmc_herba_dead
 fmc_live      = f_herba * fmc_herba + f_woody * fmc_woody
 ! moisture damping coefficient of the dead and live categories
-rtemp1_dead   = min(1,fmc_dead/fuelmce);
-rtemp1_live   = min(1,fmc_live/fuelmce_live);
+rtemp1_dead   = min(1.,fmc_dead/fuelmce(k));
+rtemp1_live   = min(1.,fmc_live/fuelmce_live);
 etam_dead     = 1. - 2.59*rtemp1_dead + 5.11*rtemp1_dead**2 - 3.52*rtemp1_dead**3;
 etam_live     = 1. - 2.59*rtemp1_live + 5.11*rtemp1_live**2 - 3.52*rtemp1_live**3;
 ! mineral damping coefficient of the dead and live categories
 if (se_dead.eq.0.) then
-    s_dead = 0.
+    etas_dead = 0.
 else
-    s_dead = 0.174 * se_dead**(-0.19)
+    etas_dead = 0.174 * se_dead**(-0.19)
 end if
 if (se_live.eq.0.) then
     etas_live = 0.
@@ -2204,7 +2205,7 @@ else
     epsilon_woody = exp(-138. / savr_woody)
 end if
 ! ovendry bulk density, lb/ft**3
-rhob     = fuelload/fueldepth(k)
+rhob     = fuelload/fueldepth
 if (savr.eq.0.) then
     a      = 0.
     rtemp2 = 0.
@@ -2217,9 +2218,9 @@ else
     bbb    = 0.02526 * savr**0.54
 end if
 !c        = c * windrf**bbb                 ! jm: wind reduction from 20ft per Baughman&Albini(1980)
-e        = 0.715 * exp( -3.59e-4 * savr(k))  ! const in wind coef
+e        = 0.715 * exp(-3.59e-4 * savr)  ! const in wind coef
 phiwc    = c * (betafl/betaop)**(-e) 
-% maximum rxn vel, 1/min
+! maximum rxn vel, 1/min
 gammax   = rtemp2/(495. + 0.0594*rtemp2)
 ratio    = betafl/betaop   
 ! optimum rxn vel, 1/min
@@ -2235,8 +2236,8 @@ ir    = gamma * (wn_dead * fuelheat_dead * etam_dead * etas_dead + &
 if (savr.eq.0.) then
     xifr = exp(0.792 * (betafl + 0.1)) / 192.;
 else
-    xifr = exp( (0.792 + 0.681*savr**0.5)) &
-               * (betafl+0.1)) /(192. + 0.2595*savr);
+    xifr = exp( (0.792 + 0.681*savr**0.5) &
+               * (betafl+0.1) ) /(192. + 0.2595*savr);
 end if
 ! heat sink of the dead and live categories
 heat_sink_dead = rhob * f_dead * ( &
@@ -2255,7 +2256,7 @@ else
     r_0 = ir*xifr / heat_sink
 end if
 ! if wind is 0 or into fireline, phiw = 0, this reduces to backing ros
-umid = min(max(0, speed * 196.850), 0.9 * ir)
+umid = min(max(0., speed * 196.850), 0.9 * ir)
 ! wind coef
 phiw = umid**bbb * phiwc                   
 ! slope factor

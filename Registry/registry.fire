@@ -112,7 +112,7 @@ state    real     fndwi     *i*j      fire        1         z   i012hr    "FNDWI
 dimspec  num_fmc    -   namelist=nfmc              z      fuel_moisture_classes 
 dimspec  num_fmep    -   constant=2                z      fuel_moisture_extended_parameters
 #
-rconfig  integer  nfmc  namelist,fire  1    5  -   "nfmc" "number of fuel moisture classes"
+rconfig  integer  nfmc  namelist,fire  1    6  -   "nfmc" "number of fuel moisture classes"
 state    real     fmc_gc  i{num_fmc}j fire      1           z   i012hr   "FMC_GC"  "fuel moisture contents by class" "1"
 state    real     fmc_gc_f   *i{num_fmc}*j    fire        1         z   i012hr "FMC_GC_F"     "ground fuel moisture contents by class" "1"
 state    real     fmep    i{num_fmep}j fire      1         z    i012hr   "FMEP"  "fuel moisture extended model parameters" "1"

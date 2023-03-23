@@ -1163,7 +1163,6 @@ do ij=1,num_tiles
       endif
 
       call print_2d_stats(ifts,ifte,jfts,jfte,ifms,ifme,jfms,jfme,fmc_g,'driver_phys:fmc_g')        
-      call print_3d_stats(ifts,ifte,jfts,jfte,ifms,ifme,jfms,jfme,fmc_gc_f,'driver_phys:fmc_gc_f')        
     endif
 
       
