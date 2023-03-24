@@ -217,10 +217,10 @@ PUBLIC:: mfuelcats
                1889., 2484., 1764., 1182., 1145., 1159., 3500., zf*0. /
    DATA savr_gc01 / 3500., 3000., 1500., 2000., 2000., 1750., 1750.,  &
                2000., 2500., 2000., 1500., 1500., 1500., 2000., zf*0. /
-   DATA savr_gc02 / nf * 109., zf*0. /
-   DATA savr_gc03 / nf * 30., zf*0. /
-   DATA savr_gc04 / nf * 9999., zf*0. / ! 1000h not use yet
-   DATA savr_gc05 / nf * 9999., zf*0. /
+   DATA savr_gc02 / nf * 109., zf*9999. /
+   DATA savr_gc03 / nf * 30., zf*9999. /
+   DATA savr_gc04 / nf * 9999., zf*9999. / ! 1000h not use yet
+   DATA savr_gc05 / nf * 9999., zf*9999. /
    DATA savr_gc06 / 9999., 1500., 9999., 1500., 1500., 9999., 1500.,  &
                9999., 9999., 1500., 9999., 9999., 9999., 9999., zf*0. /
    DATA fuelload_gc01 / 0.034, 0.092, 0.138, 0.23, 0.046, 0.069, 0.052, &
@@ -2001,6 +2001,10 @@ subroutine fire_ros_behave(ros,nvx,nvy,i,j,fp,ierrx,msg)
 !       msg     error message
 ! global
 !       fuel categories from namelist.fire
+!
+! Implementation of fire spread model in pages 16-38 of paper:
+! Andrews, Patricia L.. “The Rothermel surface fire spread model and associated
+! developments: A comprehensive explanation.” (2018).
 
 !*** arguments
 
