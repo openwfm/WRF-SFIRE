@@ -1105,6 +1105,18 @@ do k=1,nfuelcats
     call write_var(k,'fuelheat',fuelheat,'FUEL PARTICLE LOW HEAT CONTENT, BTU/LB')
     call write_var(k,'fuelmc_g',fuelmc_g,'FUEL PARTICLE (SURFACE) MOISTURE CONTENT')
     call write_var(k,'fuelmc_c',fuelmc_c,'FUEL PARTICLE (CANOPY) MOISTURE CONTENT')
+    call write_var(k,'savr_1',savr_gc01(k),'FUEL PARTICLE SURFACE-AREA-TO-VOLUME RATIO FROM DEAD 1H FUEL (1/FT)')
+    call write_var(k,'savr_10',savr_gc02(k),'FUEL PARTICLE SURFACE-AREA-TO-VOLUME RATIO FROM DEAD 10H FUEL (1/FT)')
+    call write_var(k,'savr_100',savr_gc03(k),'FUEL PARTICLE SURFACE-AREA-TO-VOLUME RATIO FROM DEAD 100H FUEL (1/FT)')
+    call write_var(k,'savr_1000',savr_gc04(k),'FUEL PARTICLE SURFACE-AREA-TO-VOLUME RATIO FROM DEAD 1000H FUEL (1/FT)')
+    call write_var(k,'savr_herba',savr_gc05(k),'FUEL PARTICLE SURFACE-AREA-TO-VOLUME RATIO FROM LIVE HERBACEOUS FUEL (1/FT)')
+    call write_var(k,'savr_woody',savr_gc06(k),'FUEL PARTICLE SURFACE-AREA-TO-VOLUME RATIO FROM LIVE WOODY FUEL (1/FT)')
+    call write_var(k,'fuelload_1',fuelload_gc01(k),'OVEN-DRY FUEL LOAD FROM DEAD 1H FUEL (LB/FT^2)')
+    call write_var(k,'fuelload_10',fuelload_gc02(k),'OVEN-DRY FUEL LOAD FROM DEAD 10H FUEL (LB/FT^2)')
+    call write_var(k,'fuelload_100',fuelload_gc03(k),'OVEN-DRY FUEL LOAD FROM DEAD 100H FUEL (LB/FT^2)')
+    call write_var(k,'fuelload_1000',fuelload_gc04(k),'OVEN-DRY FUEL LOAD FROM DEAD 1000H FUEL (LB/FT^2)')
+    call write_var(k,'fuelload_herba',fuelload_gc05(k),'OVEN-DRY FUEL LOAD FROM LIVE HERBACEOUS FUEL (LB/FT^2)')
+    call write_var(k,'fuelload_woody',fuelload_gc06(k),'OVEN-DRY FUEL LOAD FROM LIVE WOODY FUEL (LB/FT^2)')
     ! set up fuel arrays 
     !subroutine set_fire_params( &
     !                       ifds,ifde,jfds,jfde, &
