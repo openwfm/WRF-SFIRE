@@ -738,12 +738,12 @@ namelist /fuel_scalars/ cmbcnst,hfgl,fuelmc_g,fuelmc_c,nfuelcats,no_fuel_cat,no_
 namelist /fuel_categories/ fuel_name,windrf,fgi,fueldepthm,savr, &
     fuelmce,fueldens,st,se,weight,fci_d,fct,ichap,itree,idynamic,fwh,fz0,ffw, &
     fmc_gl_ndwi_0,fmc_gl_ndwi_rate,fmc_gl_ndwi_stdev, fmc_gl_stdev, &
-    adjr0,adjrw,adjrs,fmc_gw01,fmc_gw02,fmc_gw03,fmc_gw04,fmc_gw05,fmc_gw06,is_dead, &
+    adjr0,adjrw,adjrs,fmc_gw01,fmc_gw02,fmc_gw03,fmc_gw04,fmc_gw05,fmc_gw06, &
     savr_gc01,savr_gc02,savr_gc03,savr_gc04,savr_gc05,savr_gc06, &
     fuelload_gc01,fuelload_gc02,fuelload_gc03,fuelload_gc04,fuelload_gc05,fuelload_gc06
 
 namelist /moisture/ moisture_classes,drying_lag,wetting_lag,saturation_moisture,saturation_rain,rain_threshold, &
-    drying_model,wetting_model, moisture_class_name,fmc_gc_initialization
+    drying_model,wetting_model,moisture_class_name,fmc_gc_initialization,is_dead
 
 !$  if (OMP_GET_THREAD_NUM() .ne. 0)then
 !$     call crash('init_fuel_cats: must be called from master thread')
