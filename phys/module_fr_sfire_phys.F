@@ -1767,9 +1767,10 @@ W_0 = 50.                       ! Length of the ignition line           [m]
 
 ! --- Input fuel data (Balbi 20220622 slide 2) ---
 m = fmc_g                       ! Dead fuel moisture content
-! sigma = fgip * dead_fract       ! Dead fine fuel load                   [kg/m^2]
-sigma = fgip                    ! Dead fine fuel load                   [kg/m^2]
-sigma_t = fgip                  ! Total fine fuel load                  [kg/m^2]
+! sigma = fgip * dead_fract     ! Dead fine fuel load                   [kg/m^2]
+! fgip is the total oven dry fuel load. The total fuel load should take liquid water content into account.
+sigma = fgip * (1 + m)          ! Dead fine fuel load                   [kg/m^2]
+sigma_t = fgip * (1 + m)        ! Total fine fuel load                  [kg/m^2]
 h = fueldepthm(k)               ! Fuel height                           [m]
 s = savr(k)/0.3048              ! Surface area to volume ratio  (conversion from 1/ft to 1/m) [1/m]
 rho_v = fueldens(k)*16.015721869155822   ! Fuel density (conversion from lb/ft^3 to kg/m^3) [kg/m^3]
@@ -1858,33 +1859,33 @@ do it=1,maxit_R
 
     ! TODO: Review if this non-negative check is still needed
     if (R<0.)then
-        ! if (balbi_msglevel .ge. 3)then
-! !$OMP CRITICAL(SFIRE_PHYS_CRIT)
-!             write(msg,1)it,i,j,R,change
-!             call message(msg)
-!             write(msg,'(3(a,f8.3,1x))') 'R_b=',R_b,'R_r=',R_r,'R_c=',R_c
-!             call message(msg)
-!             call message('fire_ros_balbi R<0 resetting to R=0')
-! !$OMP END CRITICAL(SFIRE_PHYS_CRIT)
-        ! endif
+        if (balbi_msglevel .ge. 3)then
+!$OMP CRITICAL(SFIRE_PHYS_CRIT)
+            write(msg,1)it,i,j,R,change
+            call message(msg)
+            write(msg,'(3(a,f8.3,1x))') 'R_b=',R_b,'R_r=',R_r,'R_c=',R_c
+            call message(msg)
+            call message('fire_ros_balbi R<0 resetting to R=0')
+!$OMP END CRITICAL(SFIRE_PHYS_CRIT)
+        endif
         R=0.
     endif
 
     if (R .ne. R)call crash('fire_ros_balbi: R is NaN')
 
     if (balbi_msglevel .ge. 4)then 
-! !$OMP CRITICAL(SFIRE_PHYS_CRIT)
-!         write(msg,1)it,i,j,R,change
-!         call message(msg)
-! !$OMP END CRITICAL(SFIRE_PHYS_CRIT)
+!$OMP CRITICAL(SFIRE_PHYS_CRIT)
+        write(msg,1)it,i,j,R,change
+        call message(msg)
+!$OMP END CRITICAL(SFIRE_PHYS_CRIT)
     endif
 
     if (abs(change) < tol_R)then
         if (balbi_msglevel .ge. 3)then
-! !$OMP CRITICAL(SFIRE_PHYS_CRIT)
-!             write(msg,1)it,i,j,R,change,' converged'
-!             call message(msg)
-! !$OMP END CRITICAL(SFIRE_PHYS_CRIT)
+!$OMP CRITICAL(SFIRE_PHYS_CRIT)
+            write(msg,1)it,i,j,R,change,' converged'
+            call message(msg)
+!$OMP END CRITICAL(SFIRE_PHYS_CRIT)
         endif
         ros = R
         return 
@@ -1892,10 +1893,10 @@ do it=1,maxit_R
     R_old = R
 enddo
 
-! 1 format('fire_ros_balbi: iteration',i3,' at ij=',2i5,' R=',f6.3,' diff=',g12.3,a)
-! !$OMP CRITICAL(SFIRE_PHYS_CRIT)
-! write(msg,1)it,i,j,R,change,' did not converge'
-! !$OMP END CRITICAL(SFIRE_PHYS_CRIT)
+1 format('fire_ros_balbi: iteration',i3,' at ij=',2i5,' R=',f6.3,' diff=',g12.3,a)
+!$OMP CRITICAL(SFIRE_PHYS_CRIT)
+write(msg,1)it,i,j,R,change,' did not converge'
+!$OMP END CRITICAL(SFIRE_PHYS_CRIT)
 ierrx=1
 ros=R
 end subroutine fire_ros_balbi
