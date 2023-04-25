@@ -1483,79 +1483,88 @@ real::ros_back,ros_wind,ros_slope, rr ! rate of spread: backing, due to wind, du
 real:: speed, tanphi ! windspeed and slope in the directino normal to the fireline
 real::cor_wind,cor_slope,nvx,nvy,scale
 integer::isave
+integer::k
 
 !*** executable
+! Here we are checking which fuel category is being used
+! If the fuel category is greater than or equal to the unburnable fuel, we set
+! the ROS to 0
+k=int(fp%nfuel_cat(i,j))
+if (k >= no_fuel_cat .and. k <= no_fuel_cat2) then   ! no fuel 
+    ros = 0.
+else     
+        ! make normal direction length 1 unless 0
+        ! scale=sqrt(propx*propx+propy*propy)
+        ! if(scale > 0.)then
+        !      nvx = propx/scale
+        !      nvx = propx/scale
+        ! else
+        !     nvx = 0.
+        !     nvy = 0.
+        ! endif
 
-! make normal direction length 1 unless 0
-! scale=sqrt(propx*propx+propy*propy)
-! if(scale > 0.)then
-!      nvx = propx/scale
-!      nvx = propx/scale
-! else
-!     nvx = 0.
-!     nvy = 0.
-! endif
-
-! normalize direction 
-scale=sqrt(propx*propx+propy*propy + epsilon(0.))
-nvx=propx/scale
-nvy=propy/scale
+        ! normalize direction 
+        scale=sqrt(propx*propx+propy*propy + epsilon(0.))
+        nvx=propx/scale
+        nvy=propy/scale
 
 
-ierrx=0
-if (ibeh .eq. 2) then
-    call fire_ros_balbi(ros,nvx,nvy,i,j,fp,ierrx,msg)
-    if (ierrx.ne.0)then
-        balbi_nc_count = balbi_nc_count + 1
-        if(balbi_nc_count > balbi_nc_max) call crash('fire_ros_balbi failed limit exceeded')
-        if ( balbi_msglevel < 4)then
-            call message('running fire_ros_balbi again with more detailed messages')
-            isave = balbi_msglevel
-            balbi_msglevel=4
+        ierrx=0
+        if (ibeh .eq. 2) then
             call fire_ros_balbi(ros,nvx,nvy,i,j,fp,ierrx,msg)
-            balbi_msglevel=isave
+            if (ierrx.ne.0)then
+                balbi_nc_count = balbi_nc_count + 1
+                if(balbi_nc_count > balbi_nc_max) call crash('fire_ros_balbi failed limit exceeded')
+                if ( balbi_msglevel < 4)then
+                    call message('running fire_ros_balbi again with more detailed messages')
+                    isave = balbi_msglevel
+                    balbi_msglevel=4
+                    call fire_ros_balbi(ros,nvx,nvy,i,j,fp,ierrx,msg)
+                    balbi_msglevel=isave
+                endif
+                call warning(msg)
+            endif
+        else if (ibeh .eq. 3) then
+            call fire_ros_wirc(ros,nvx,nvy,i,j,fp,ierrx,msg)
+        else if (ibeh .eq. 4) then
+            call fire_ros_behave(ros,nvx,nvy,i,j,fp,ierrx,msg)
+        else
+            if (fire_advection.ne.0) then ! from flags in module_fr_sfire_util
+                ! wind speed is total speed 
+                speed =  sqrt(fp%vx(i,j)*fp%vx(i,j)+ fp%vy(i,j)*fp%vy(i,j))+tiny(speed)
+                ! slope is total slope
+                tanphi = sqrt(fp%dzdxf(i,j)*fp%dzdxf(i,j) + fp%dzdyf(i,j)*fp%dzdyf(i,j))+tiny(tanphi)
+                ! cos of wind and spread, if >0
+                cor_wind =  max(0.,(fp%vx(i,j)*nvx + fp%vy(i,j)*nvy)/speed)
+                ! cos of slope and spread, if >0
+                cor_slope = max(0., (fp%dzdxf(i,j)*nvx + fp%dzdyf(i,j)*nvy)/tanphi)
+            else
+                ! wind speed in spread direction
+                speed =  fp%vx(i,j)*nvx + fp%vy(i,j)*nvy
+                ! slope in spread direction
+                tanphi = fp%dzdxf(i,j)*nvx + fp%dzdyf(i,j)*nvy
+                cor_wind=1.
+                cor_slope=1.
+            endif
+            call fire_ros_cawfe(ros_back,ros_wind,ros_slope, &
+            speed,tanphi,cor_wind,cor_slope,i,j,fp,ierrx,msg)
+            if (ierrx.ne.0)then
+                call warning(msg)
+            endif
+            ros = ros_back+ros_wind+ros_slope
+            if(compare_rothermel)then
+                call fire_ros_rothermel(rr,fp%nfuel_cat(i,j),speed,tanphi,fp%fmc_g(i,j))
+                if (abs(ros-rr)>1e-4)then
+                    write(msg,'(2(a,i6),2(a,f10.6),a,g15.4)')'i=',i,' j=',j,  &
+                        ' fire_ros_cawfe:',ros,' rothermel:',rr,' diff:',ros-rr
+                    call warning(msg)
+                endif
+            endif
         endif
-        call warning(msg)
-    endif
-else if (ibeh .eq. 3) then
-    call fire_ros_wirc(ros,nvx,nvy,i,j,fp,ierrx,msg)
-else if (ibeh .eq. 4) then
-    call fire_ros_behave(ros,nvx,nvy,i,j,fp,ierrx,msg)
-else
-    if (fire_advection.ne.0) then ! from flags in module_fr_sfire_util
-        ! wind speed is total speed 
-        speed =  sqrt(fp%vx(i,j)*fp%vx(i,j)+ fp%vy(i,j)*fp%vy(i,j))+tiny(speed)
-        ! slope is total slope
-        tanphi = sqrt(fp%dzdxf(i,j)*fp%dzdxf(i,j) + fp%dzdyf(i,j)*fp%dzdyf(i,j))+tiny(tanphi)
-        ! cos of wind and spread, if >0
-        cor_wind =  max(0.,(fp%vx(i,j)*nvx + fp%vy(i,j)*nvy)/speed)
-        ! cos of slope and spread, if >0
-        cor_slope = max(0., (fp%dzdxf(i,j)*nvx + fp%dzdyf(i,j)*nvy)/tanphi)
-    else
-        ! wind speed in spread direction
-        speed =  fp%vx(i,j)*nvx + fp%vy(i,j)*nvy
-        ! slope in spread direction
-        tanphi = fp%dzdxf(i,j)*nvx + fp%dzdyf(i,j)*nvy
-        cor_wind=1.
-        cor_slope=1.
-    endif
-    call fire_ros_cawfe(ros_back,ros_wind,ros_slope, &
-    speed,tanphi,cor_wind,cor_slope,i,j,fp,ierrx,msg)
-    if (ierrx.ne.0)then
-        call warning(msg)
-    endif
-    ros = ros_back+ros_wind+ros_slope
-    if(compare_rothermel)then
-        call fire_ros_rothermel(rr,fp%nfuel_cat(i,j),speed,tanphi,fp%fmc_g(i,j))
-        if (abs(ros-rr)>1e-4)then
-            write(msg,'(2(a,i6),2(a,f10.6),a,g15.4)')'i=',i,' j=',j,  &
-                ' fire_ros_cawfe:',ros,' rothermel:',rr,' diff:',ros-rr
-            call warning(msg)
-        endif
-    endif
 endif
-if(fire_grows_only.gt.0)ros=max(ros,0.)
-
+if(fire_grows_only.gt.0)then
+ros=max(ros,0.)
+endif
 end subroutine fire_ros
 
 !
