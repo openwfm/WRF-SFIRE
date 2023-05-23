@@ -1586,7 +1586,7 @@ real, intent(in):: nfuel, speed,tanphi,fmc_g
 real, intent(out):: ros
 
 !*** local
-real:: bmst, fuelheat, fuelloadm, fuelload, fueldepth, betafl, betaop, qig, epsilon, &
+real:: fuelheat, fuelloadm, fuelload, fueldepth, betafl, betaop, qig, epsilon, &
 rhob, c, bbb, e, phiwc, rtemp2, gammax, a, ratio, gamma, wn, rtemp1, etam, etas, &
 ir, irm, xifr, r_0,  spdms, umidm, umid, phiw, phis
 integer::k
@@ -1596,10 +1596,8 @@ integer::k
 k = nfuel                        ! fuel index
 
 
-bmst     = fmc_g/(1+fmc_g)          ! jm: 1 
 fuelheat = cmbcnst * 4.30e-04             ! convert J/kg to BTU/lb
-fuelloadm= (1.-bmst) * fgi(k)                ! fuelload without moisture
-                                           ! jm: 1.-bmst = 1/(1+fuelmc_g) so fgi includes moisture? 
+fuelloadm= fgi(k)                ! fuelload without moisture (fgi is oven-dry fuel load)
 fuelload = fuelloadm * (.3048)**2 * 2.205  ! to lb/ft**2
 fueldepth= fueldepthm(k)/0.3048              ! to ft
 betafl   = fuelload/(fueldepth * fueldens(k))! packing ratio  jm: lb/ft**2/(ft * lb*ft**3) = 1
