@@ -1491,7 +1491,7 @@ integer::k
 ! the ROS to 0
 k=int(fp%nfuel_cat(i,j))
 if (k >= no_fuel_cat .and. k <= no_fuel_cat2) then   ! no fuel 
-    ros = 0.
+    call crash("fire_ros: fuel categories not available")
 else     
         ! make normal direction length 1 unless 0
         ! scale=sqrt(propx*propx+propy*propy)
