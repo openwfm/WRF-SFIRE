@@ -8,7 +8,7 @@
 
 module module_fr_sfire_core
 
-use module_fr_sfire_phys, only: fire_params , fire_ros
+use module_fr_sfire_phys, only: fire_params , fire_ros, fire_rate_of_spread
 use module_fr_sfire_util
 
 implicit none
@@ -2160,8 +2160,8 @@ intrinsic max,min,sqrt,nint,tiny,huge
   
             ! get rate of spread from wind speed and slope
 
-            call fire_ros(rr, &
-            diffCx,diffCy,i,j,fp,ierrx,msg2)
+            rr = fire_rate_of_spread(diffCx, diffCy, i, j, fp)
+
             nerr = nerr + ierrx
 
             if(fire_grows_only.gt.0)rr=max(rr,0.)
@@ -2302,8 +2302,7 @@ real, parameter:: eps=epsilon(0.0)
             ! normal direction, from central differences
             ! get rate of spread from wind speed and slope
 
-            call fire_ros(r, &
-            diffCx,diffCy,i,j,fp,ierrx,msg)
+            r = fire_rate_of_spread(diffCx, diffCy, i, j, fp)
 
             if(fire_grows_only.gt.0)r=max(r,0.)
             speed_func=r

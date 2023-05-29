@@ -176,11 +176,15 @@ PUBLIC:: mfuelcats
    CHARACTER (len=80), DIMENSION(mfuelcats ), save :: fuel_name
    INTEGER, DIMENSION( mfuelcats ), save :: ichap,itree 
    REAL   , DIMENSION( mfuelcats ), save :: windrf,weight,fgi,fci,fci_d,fct,fcbr, &
-                                            fueldepthm,fueldens,fuelmce,   &
-                                            fcwh,fcz0, ffw, &
-                                            savr,st,se,adjr0,adjrw,adjrs, &
-                                            fmc_gl_stdev,fmc_gl_ndwi_0,fmc_gl_ndwi_rate,fmc_gl_ndwi_stdev, k_tc
+   fueldepthm,fueldens,fuelmce,   &
+   fcwh,fcz0, ffw, &
+   savr,st,se,adjr0,adjrw,adjrs, &
+   fmc_gl_stdev,fmc_gl_ndwi_0,fmc_gl_ndwi_rate,fmc_gl_ndwi_stdev, k_tc
    REAL   , DIMENSION( mfuelcats , max_moisture_classes), save :: fmc_gw
+
+   PUBLIC :: n_tree_type
+   INTEGER, PARAMETER                       :: n_tree_type = 8          !< number of tree type categories
+   REAL   , DIMENSION(n_tree_type), SAVE    :: tree_z_max, tree_z_min   !< canopy top and bottom height (AGL) as function of tree type. The tree type is given by itree flag for each fuel
 ! =============================================================================
 ! Standard 13 fire behavior fuel models (for surface fires), along with some
 !          estimated canopy properties (for crown fire).
@@ -246,6 +250,9 @@ PUBLIC:: mfuelcats
    DATA adjrs /mfuelcats*1./
    DATA k_tc / 4.025e-02, 1.621e-02, 3.752e-02, 3.000e-02, 1.812e-02, 3.621e-02, 3.778e-02, &
     8.770e-04, 1.781e-03, 8.216e-03, 7.405e-03, 1.772e-02, 2.169e-02, 3.000e-02, zf*0 / ! fuel thermal conductivity
+
+   DATA tree_z_max / 10., 20., 15., 24., 22.5, 10., 2.2, 0.73 /
+   DATA tree_z_min / 3. , 6. , 5. , 12., 10. , 5. , 1.,  0.73 /
    
    ! =========================================================================
 
@@ -707,7 +714,7 @@ namelist /fuel_scalars/ cmbcnst,hfgl,fuelmc_g,fuelmc_c,nfuelcats,no_fuel_cat,no_
 namelist /fuel_categories_anderson_13/ fuel_name,windrf,fgi,fueldepthm,savr, &
     fuelmce,fueldens,st,se,weight,fci_d,fct,ichap,itree,fwh,fz0,ffw, &
     fmc_gl_ndwi_0,fmc_gl_ndwi_rate,fmc_gl_ndwi_stdev, fmc_gl_stdev, &
-    adjr0,adjrw,adjrs,fmc_gw01,fmc_gw02,fmc_gw03,fmc_gw04,fmc_gw05,is_dead, k_tc
+    adjr0,adjrw,adjrs,fmc_gw01,fmc_gw02,fmc_gw03,fmc_gw04,fmc_gw05,is_dead, k_tc, tree_z_min, tree_z_max
 
 namelist /moisture/ moisture_classes,drying_lag,wetting_lag,saturation_moisture,saturation_rain,rain_threshold, &
     drying_model,wetting_model, moisture_class_name,fmc_gc_initialization
@@ -802,6 +809,8 @@ call wrf_dm_bcast_real(fmc_gl_ndwi_rate, nfuelcats)
 call wrf_dm_bcast_real(fmc_gl_ndwi_stdev,nfuelcats)
 call wrf_dm_bcast_real(fmc_gl_stdev,     nfuelcats)
 call wrf_dm_bcast_real(k_tc,   nfuelcats)
+CALL wrf_dm_bcast_real(tree_z_min,   n_tree_type)
+CALL wrf_dm_bcast_real(tree_z_min,   n_tree_type)
 ! broadcast moisture tables
 call wrf_dm_bcast_integer(moisture_classes,1)
 call wrf_dm_bcast_real(drying_lag,     max_moisture_classes)
@@ -1049,6 +1058,8 @@ do k=1,nfuelcats
     call write_var(k,'fuelmc_g',fuelmc_g,'FUEL PARTICLE (SURFACE) MOISTURE CONTENT')
     call write_var(k,'fuelmc_c',fuelmc_c,'FUEL PARTICLE (CANOPY) MOISTURE CONTENT')
     call write_var(k,'k_tc',k_tc(k),'FUEL THERMAL CONDUCTIVITY (W /m /K)')
+    call write_var(k,'tree_z_min',tree_z_min(itree(k)),'CANOPY BOTTOM HEIGHT (m)')
+    call write_var(k,'tree_z_max',tree_z_max(itree(k)),'CANOPY TOP HEIGHT (m)')
     ! set up fuel arrays 
     !subroutine set_fire_params( &
     !                       ifds,ifde,jfds,jfde, &
@@ -1456,15 +1467,19 @@ character(len=128)::msg ! error message
 real:: speed, tanphi, ros
 
 !*** executable
+!! Compute surface fire ros
 call fire_ros(rr,propx,propy,i,j,fp,ierrx,msg)
+
+!! Compute crown fire ros
+call fire_crown_ros(fp, propx, propy, i, j, rr, ierrx, msg)
+
 fire_rate_of_spread = rr
 
 end function fire_rate_of_spread
 
 
 
-subroutine fire_ros(ros, &
-propx,propy,i,j,fp,ierrx,msg)
+subroutine fire_ros(ros, propx, propy, i, j, fp, ierrx, msg, surf_fuel_cat, wind_speed)
 
 implicit none
 
@@ -1477,6 +1492,8 @@ integer, intent(in)::i,j         ! node mesh coordinates
 type(fire_params),intent(in)::fp ! everything else on the fire grid, indexed by i,j
 integer, intent(out)::ierrx
 character(len=*), intent(out)::msg
+integer,    intent(in), optional  ::  surf_fuel_cat !< impose fuel category for surface fuel
+real,       intent(in), optional  ::  wind_speed    !< impose wind speed
 
 !*** local
 real::ros_back,ros_wind,ros_slope, rr ! rate of spread: backing, due to wind, due to slope
@@ -1489,7 +1506,12 @@ integer::k
 ! Here we are checking which fuel category is being used
 ! If the fuel category is greater than or equal to the unburnable fuel, we set
 ! the ROS to 0
-k=int(fp%nfuel_cat(i,j))
+if (present(surf_fuel_cat)) then
+    k = surf_fuel_cat
+else
+    k = int(fp%nfuel_cat(i, j))
+endif
+
 if (k >= no_fuel_cat .and. k <= no_fuel_cat2) then   ! no fuel 
     call crash("fire_ros: fuel categories not available")
 else     
@@ -1508,30 +1530,39 @@ else
         nvx=propx/scale
         nvy=propy/scale
 
+        if (present(wind_speed)) then
+            speed = wind_speed
+        else
+            speed = fp%vx(i, j) * nvx + fp%vy(i, j) * nvy
+        endif
 
         ierrx=0
         if (ibeh .eq. 2) then
-            call fire_ros_balbi(ros,nvx,nvy,i,j,fp,ierrx,msg)
-            if (ierrx.ne.0)then
-                balbi_nc_count = balbi_nc_count + 1
-                if(balbi_nc_count > balbi_nc_max) call crash('fire_ros_balbi failed limit exceeded')
-                if ( balbi_msglevel < 4)then
-                    call message('running fire_ros_balbi again with more detailed messages')
-                    isave = balbi_msglevel
-                    balbi_msglevel=4
-                    call fire_ros_balbi(ros,nvx,nvy,i,j,fp,ierrx,msg)
-                    balbi_msglevel=isave
-                endif
-                call warning(msg)
-            endif
+            call fire_ros_balbi(ros, nvx, nvy, i, j, fp, ierrx, msg, k, speed)
+            ! if (ierrx.ne.0)then
+            !     balbi_nc_count = balbi_nc_count + 1
+            !     if(balbi_nc_count > balbi_nc_max) call crash('fire_ros_balbi failed limit exceeded')
+            !     if ( balbi_msglevel < 4)then
+            !         call message('running fire_ros_balbi again with more detailed messages')
+            !         isave = balbi_msglevel
+            !         balbi_msglevel=4
+            !         call fire_ros_balbi(ros,nvx,nvy,i,j,fp,ierrx,msg)
+            !         balbi_msglevel=isave
+            !     endif
+            !     call warning(msg)
+            ! endif
         else if (ibeh .eq. 3) then
             call fire_ros_wirc(ros,nvx,nvy,i,j,fp,ierrx,msg)
         else if (ibeh .eq. 4) then
             call fire_ros_behave(ros,nvx,nvy,i,j,fp,ierrx,msg)
         else
             if (fire_advection.ne.0) then ! from flags in module_fr_sfire_util
-                ! wind speed is total speed 
-                speed =  sqrt(fp%vx(i,j)*fp%vx(i,j)+ fp%vy(i,j)*fp%vy(i,j))+tiny(speed)
+                ! wind speed is total speed
+                if (present(wind_speed)) then
+                    speed = wind_speed
+                else
+                    speed =  sqrt(fp%vx(i,j)*fp%vx(i,j)+ fp%vy(i,j)*fp%vy(i,j))+tiny(speed)
+                endif
                 ! slope is total slope
                 tanphi = sqrt(fp%dzdxf(i,j)*fp%dzdxf(i,j) + fp%dzdyf(i,j)*fp%dzdyf(i,j))+tiny(tanphi)
                 ! cos of wind and spread, if >0
@@ -1540,7 +1571,11 @@ else
                 cor_slope = max(0., (fp%dzdxf(i,j)*nvx + fp%dzdyf(i,j)*nvy)/tanphi)
             else
                 ! wind speed in spread direction
-                speed =  fp%vx(i,j)*nvx + fp%vy(i,j)*nvy
+                if (present(wind_speed)) then
+                    speed = wind_speed
+                else
+                    speed =  fp%vx(i,j)*nvx + fp%vy(i,j)*nvy
+                endif
                 ! slope in spread direction
                 tanphi = fp%dzdxf(i,j)*nvx + fp%dzdyf(i,j)*nvy
                 cor_wind=1.
@@ -1553,7 +1588,7 @@ else
             endif
             ros = ros_back+ros_wind+ros_slope
             if(compare_rothermel)then
-                call fire_ros_rothermel(rr,fp%nfuel_cat(i,j),speed,tanphi,fp%fmc_g(i,j))
+                call fire_ros_rothermel(rr, k, speed, tanphi, fp%fmc_g(i,j))
                 if (abs(ros-rr)>1e-4)then
                     write(msg,'(2(a,i6),2(a,f10.6),a,g15.4)')'i=',i,' j=',j,  &
                         ' fire_ros_cawfe:',ros,' rothermel:',rr,' diff:',ros-rr
@@ -1566,6 +1601,203 @@ if(fire_grows_only.gt.0)then
 ros=max(ros,0.)
 endif
 end subroutine fire_ros
+
+
+subroutine fire_crown_ros(fp, propx, propy, i, j, ros, ierrx, msg)
+    !------------------------------------------------------------------------------------------------------------------
+    ! SUBROUTINE: fire_crown_ros
+    !------------------------------------------------------------------------------------------------------------------
+    !> Compute the crown fire rate of spread
+    !!
+    !! @note Method is from Scott, J. H. (2001). Assessing crown fire potential by linking models of surface and crown fire behavior. 
+    !! US Department of Agriculture, Forest Service, Rocky Mountain Research Station.
+    !!
+    !! todo:    - Use map for canopy top, canopy bottom, canopy fuel moisture, canopy fuel load
+    !!          - Use previous time step value as starting values for w_init and w_act computation
+    !!  
+    !------------------------------------------------------------------------------------------------------------------
+    
+    use module_fr_sfire_util, only: fire_use_windrf
+    
+    implicit none
+
+    !! 0. Declaration
+    !!    -----------
+
+    !! 0.1 Arguments
+    !!     ----------
+
+    type(fire_params),  intent(in)      :: fp           !< fire properties
+    real,               intent(in)      :: propx        !< x direction, not normalized
+    real,               intent(in)      :: propy        !< y direction, not normalized
+    integer,            intent(in)      :: i            !< position on the fire grid on x axis
+    integer,            intent(in)      :: j            !< position on the fire grid on y axis
+    real,               intent(inout)   :: ros          !< rate of spread with crowning
+    integer,            intent(out)     :: ierrx        !< error flag
+    character(len=*),   intent(out)     :: msg          !< error message
+
+    !! 0.2 Locals
+    !!     ------
+    
+    integer, parameter  :: max_ite = 20         !< max iteration for convergence
+    integer, parameter  :: crown_fuel_cat = 10  !< fuel category used for canopy
+    real, parameter     :: tol = 1e-5           !< tolerance for convergence
+
+    integer             :: n_ite                !< iteration counter for passive crowning bounds
+    integer             :: surf_fuel_cat        !< fuel category used for surface
+    
+    real                :: CFB                  !< Crown Fraction Burnt
+    real                :: f_n, f_n_1           !< score function for passive crowning bounds
+    real                :: inc                  !< wind increment for passive crowning bounds
+    real                :: nvx, nvy             !< normal direction
+    real                :: ros_init_prime       !< ros that ingnite canopy
+    real                :: ros_act_prime        !< active ros threshold
+    real                :: ros_active_crown     !< active crown fire ros 
+    real                :: scale                !< normal norm
+    real                :: w_n                  !< current wind value for passive crowning bounds
+    real                :: w_n_1                !< next iteration for wind value for passive crowning bounds
+    real                :: wind_act             !< wind speed for active crowning initiation
+    real                :: wind_init            !< wind speed for passive crowning initiation
+    real                :: wind_speed           !< wind speed in the spread direction
+    real                :: wind_speed_no_wrf    !< wind speed in the spread direction without wrf
+
+    !! tmp
+    real    :: canopy_bottom, canopy_top, canopy_bulk_density  !< canopy properties
+
+
+    !! 1. Initialisation
+    !!    --------------
+
+    ! get local fuel class of surface fuel
+    surf_fuel_cat = fp%nfuel_cat(i, j)
+    
+    ! get canopy top and bottom from surface fuel type
+    canopy_top = tree_z_max(itree(surf_fuel_cat))
+    canopy_bottom = tree_z_min(itree(surf_fuel_cat))
+
+    ! get normal direction and wind
+    scale = sqrt(propx ** 2 + propy ** 2 + epsilon(0.))
+    nvx = propx / scale
+    nvy = propy / scale
+    wind_speed =  fp%vx(i, j) * nvx + fp%vy(i, j) * nvy
+
+    ! remove the wind reduction factor from the projection
+    if (fire_use_windrf == 1) then
+        wind_speed_no_wrf = wind_speed / windrf(surf_fuel_cat)
+    else
+        wind_speed_no_wrf = wind_speed
+    endif
+
+    !! 2. Compute initiation ROS threshold
+    !!    --------------------------------
+
+    ! compute bulk density for canopy
+    if (canopy_top - canopy_bottom > 0.) then
+        canopy_bulk_density = fci_d(surf_fuel_cat) / (canopy_top - canopy_bottom)
+    else
+        canopy_bulk_density = 0.
+    endif
+
+    ! R_init_prime = 60 * ((canopy_base_height * (460 + 25.9 * canopy_foliar_moisture_content))) ** 1.5 / (delta_H * sigma_d)
+    ros_init_prime = 60. * ((canopy_bottom * (460. + 25.9 * fuelmc_c))) ** 1.5 / (cmbcnst * fgi(surf_fuel_cat))
+
+    ! surface ros is below initiation threshold, no passive of active crowning -> do not change ros and return
+    if (ros <= ros_init_prime .or. canopy_bulk_density == 0.) return
+
+    !! 3. Compute active ROS threshold
+    !!    ----------------------------
+
+    ! active ros threshold
+    ros_act_prime = 0.05 / canopy_bulk_density
+
+    ! compute active ros
+    ! R_active = 3.34 * surface_ros(fuel=10, wind= 0.4 * 10m wind)
+    call fire_ros(ros_active_crown, propx, propy, i, j, fp, ierrx, msg, surf_fuel_cat=crown_fuel_cat, wind_speed=0.4 * wind_speed_no_wrf)
+    ros_active_crown = 3.34 * ros_active_crown
+
+    ! active ros is above active threshold, return active crowning
+    if (ros_active_crown >= ros_act_prime) then
+        ros = ros_active_crown
+        return
+    endif
+
+    !! 4. Compute passive ROS
+    !!    -------------------
+
+    !! 4.1 get the wind that leads to surface_ros == R_init_prime
+
+    ! Init values for wind and ros
+    w_n = 0.
+    w_n_1 = wind_speed
+    ! f_n = ros(surface_fuel, w_n) - ros_init_prime
+    call fire_ros(f_n, propx, propy, i, j, fp, ierrx, msg,surf_fuel_cat=surf_fuel_cat, wind_speed=w_n)
+    f_n = f_n - ros_init_prime
+    ! f_n_1 = ros - ros_init_prime (as surface ros with input wind has already been computed previously)
+    f_n_1 = ros - ros_init_prime
+    
+    ! secante method to cenverge
+    n_ite = 1
+    do while (abs(f_n) > tol .AND. n_ite <= max_ite)
+        ! update increment
+        inc = (w_n - w_n_1) / (f_n - f_n_1)
+        
+        ! update n-1 values
+        w_n_1 = w_n
+        f_n_1 = f_n
+        
+        ! update n values
+        w_n = min(30., max(0., w_n - inc * f_n))
+        call fire_ros(f_n, propx, propy, i, j, fp, ierrx, msg,surf_fuel_cat=surf_fuel_cat, wind_speed=w_n)
+        f_n = f_n - ros_init_prime
+        
+        ! update counter
+        n_ite = n_ite + 1
+    enddo
+    
+    ! save value of wind
+    wind_init = w_n
+    
+    !! 4.2 get the wind that leads to active_ros == R_act_prime
+    
+    ! Init values for wind and ros
+    w_n = 30.
+    w_n_1 = wind_speed
+    ! f_n = 3.34 * ros(crown_fuel, 0.4 * w_n) - ros_init_prime
+    call fire_ros(f_n, propx, propy, i, j, fp, ierrx, msg, surf_fuel_cat=crown_fuel_cat, wind_speed=0.4 * w_n)
+    f_n = 3.34 * f_n - ros_act_prime
+    f_n_1 = ros_active_crown - ros_act_prime
+
+    ! secante method to cenverge
+    n_ite = 1
+    do while (abs(f_n) > tol .AND. n_ite <= max_ite)
+        ! update increment
+        inc = (w_n - w_n_1) / (f_n - f_n_1)
+        
+        ! update n-1 values
+        w_n_1 = w_n
+        f_n_1 = f_n
+        
+        ! update n values
+        w_n = min(30., max(0., w_n - inc * f_n))
+        call fire_ros(f_n, propx, propy, i, j, fp, ierrx, msg,surf_fuel_cat=crown_fuel_cat, wind_speed=0.4 * w_n)
+        f_n = 3.34 * f_n - ros_act_prime
+        
+        ! update counter
+        n_ite = n_ite + 1
+
+    enddo
+    
+    ! save value of wind
+    wind_act = w_n
+    
+    !! 4.3 Compute crown fraction burnt
+
+    CFB = min(max(0., (wind_speed - wind_init) / (wind_act - wind_init)), 1.)
+
+    !! 4.4 Combine surface and active ros to get passive ros
+    ros = min(6., ros + CFB * (ros_active_crown - ros))
+
+end subroutine fire_crown_ros
 
 !
 !***
@@ -1582,7 +1814,8 @@ subroutine fire_ros_rothermel(ros,nfuel,speed,tanphi,fmc_g)
 implicit none
 !*** arguments
 
-real, intent(in):: nfuel, speed,tanphi,fmc_g
+integer, intent(in) :: nfuel
+real, intent(in):: speed,tanphi,fmc_g
 real, intent(out):: ros
 
 !*** local
@@ -1650,7 +1883,7 @@ end subroutine fire_ros_rothermel
 !
 
 
-subroutine fire_ros_balbi(ros,nvx,nvy,i,j,fp,ierrx,msg)
+subroutine fire_ros_balbi(ros, nvx, nvy, i, j, fp, ierrx, msg, surf_fuel_cat, wind_speed)
 ! in
 !       nvx,nvy direction of propagation, normalized 
 !       i,j     indices in the fire grid
@@ -1672,6 +1905,8 @@ type(fire_params):: fp
 real, intent(out):: ros
 integer, intent(out)::ierrx 
 character(len=*), intent(out)::msg
+integer,    intent(in)  ::  surf_fuel_cat !< impose fuel category for surface fuel
+real,       intent(in)  ::  wind_speed    !< impose wind speed
 
 ! Constants
 real, parameter:: tol_R = 1e-5          ! tolerance to compute R
@@ -1701,10 +1936,10 @@ vx = fp%vx(i,j)
 vy = fp%vy(i,j)
 dzdxf = fp%dzdxf(i,j)
 dzdyf = fp%dzdyf(i,j)
-speed  = vx*nvx + vy*nvy            ! wind speed in the spread direction
+speed = wind_speed
 tanphi = dzdxf*nvx + dzdyf*nvy      ! slope in spread the direction
 fmc_g  = fp%fmc_g(i,j)              ! fuel moisture content (water / dry)
-nfuel_cat = fp%nfuel_cat(i,j)       ! fuel categories
+nfuel_cat = surf_fuel_cat           ! surface fuel categories
 tempf = fp%tempf(i,j)               ! temperature interpolated to the fire grid
 rhof  = fp%rhof(i,j)                ! air density interpolated to the fire grid
 ffwidth = fp%ffwidth(i,j)           ! fire front width = 1/fireline curvature (?)
@@ -1942,7 +2177,7 @@ end subroutine fire_ros_wirc
 !***
 !
 
-subroutine fire_ros_behave(ros,nvx,nvy,i,j,fp,ierrx,msg)
+subroutine fire_ros_behave(ros, nvx, nvy, i, j, fp, ierrx, msg, surf_fuel_cat, wind_speed)
 ! in
 !       nvx,nvy direction of propagation, normalized 
 !       i,j     indices in the fire grid
@@ -1960,6 +2195,8 @@ implicit none
 real, intent(in):: nvx,nvy
 integer, intent(in):: i,j
 type(fire_params):: fp
+integer,    intent(in), optional  ::  surf_fuel_cat !< impose fuel category for surface fuel
+real,       intent(in), optional  ::  wind_speed    !< impose wind speed
 real, intent(out):: ros
 integer, intent(out)::ierrx 
 character(len=*), intent(out)::msg
