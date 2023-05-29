@@ -25,6 +25,7 @@ real,pointer,dimension(:,:):: nfuel_cat            ! fuel category (integer valu
 real,pointer,dimension(:,:):: tempf                ! air temperature (K) (Balbi model only)
 real,pointer,dimension(:,:):: rhof                ! air pressure (Pa) (Balbi model only)
 real,pointer,dimension(:,:):: ffwidth              ! fire front width (m) (Balbi model only)
+real,pointer,dimension(:,:):: cfb                  ! Crown Fraction Burnt
 
 end type fire_params
 
@@ -997,7 +998,7 @@ real, intent(in):: maxwind,maxslope ! from zero to these
 
 integer:: iounit,k,j,i,isave
 type(fire_params)::fp
-real, dimension(1:3,1:nsteps), target::vx,vy,zsf,dzdxf,dzdyf,bbb,phisc,phiwc,r_0,fgip,ischap,fmc_g,wind,nfuel_cat,rhof,tempf,ffwidth
+real, dimension(1:3,1:nsteps), target::vx,vy,zsf,dzdxf,dzdyf,bbb,phisc,phiwc,r_0,fgip,ischap,fmc_g,wind,nfuel_cat,rhof,tempf,ffwidth, cfb
 real, dimension(1:3,1:nsteps)::fuel_time,ros,fwh,fz0
 real::ros_back,ros_wind,ros_slope,propx,propy,r,speed,tanphi
 integer::ierrx
@@ -1020,10 +1021,12 @@ fp%nfuel_cat=>nfuel_cat
 fp%rhof=>rhof
 fp%tempf=>tempf
 fp%ffwidth=>ffwidth
+fp%cfb=>cfb
 
 rhof = 1.
 tempf = 300.
 ffwidth = 100.
+cfb = 0.
 
 iounit = open_text_file('fuels.m','write')
 
@@ -1348,7 +1351,8 @@ latent = present(grnqft)
 do j=jfts,jfte
     do i=ifts,ifte
          dmass =                     &     ! ground fuel dry mass burnt this call (kg/m^2)
-             fgip(i,j)               &     ! init mass from fuel model no (kg/m^2) = fgi(nfuel_cat(i,j)
+             (fgip(i,j) +             &     ! init mass from fuel model no (kg/m^2) = fgi(nfuel_cat(i,j)
+             fci_d(fp%nfuel_cat(i, j)) * fp%cfb(i, j)) &
              * fuel_frac_burnt(i,j)        ! fraction burned this call    (1)
          bmst     = fp%fmc_g(i,j)/(1.+fp%fmc_g(i,j))
          grnhft(i,j) = (dmass/dt)*(1.-bmst)*cmbcnst         ! J/m^2/sec
@@ -1793,6 +1797,7 @@ subroutine fire_crown_ros(fp, propx, propy, i, j, ros, ierrx, msg)
     !! 4.3 Compute crown fraction burnt
 
     CFB = min(max(0., (wind_speed - wind_init) / (wind_act - wind_init)), 1.)
+    fp%cfb(i, j) = CFB
 
     !! 4.4 Combine surface and active ros to get passive ros
     ros = min(6., ros + CFB * (ros_active_crown - ros))

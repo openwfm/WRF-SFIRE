@@ -484,6 +484,7 @@ call print_2d_stats(ifps,min(ifpe,ifde-ir),jfps,min(jfpe,jfde-jr),ifms,ifme,jfms
             grid%wz0,                            &          !wrf roughness length on fire mesh
             grid%fz0, grid%fwh,grid%can_top,grid%cuf,grid%cvf, &
             grid%tempf, grid%rhof,grid%ffwidth,             & ! variables for Balbi ROS model
+            grid%cfb, &                                       ! Crown fraction burnt variable
             fp,                                    & ! structure with pointers passed to spread rate calculation
             config_flags%nfmc,         & ! moisture model variables start
             run_advance_moisture,run_fuel_moisture,dt_moisture,     &    ! moisture model control
@@ -597,6 +598,7 @@ subroutine sfire_driver_phys (ifun,    &
     wz0,                                          &
     fz0,fwh,can_top,cuf,cvf,                      & ! input fuel map/vegetation variables on fire mesh
     tempf,rhof,ffwidth,                           & ! variables for Balbi ROS model
+    cfb,                                          & ! crown fire model variables
     fp,                                           & ! fire params
     nfmc,                                     & ! number of fuel moisture classes
     run_advance_moisture,run_fuel_moisture,dt_moisture,& ! moisture model control
@@ -676,7 +678,7 @@ real, intent(inout), dimension(ifms:ifme, jfms:jfme)::     &
 real, intent(out), dimension(ifms:ifme, jfms:jfme)::  &
     fire_area, &                                 ! fraction of area of each cell burning
     fuel_frac_burnt,                           & ! fraction of mass of fuel burnt
-    tempf,rhof,ffwidth                           ! variables for Balbi ROS model
+    tempf,rhof,ffwidth, cfb                      ! variables for Balbi ROS model
 
 real, intent(out), dimension(ims:ime, jms:jme):: &  ! redundant arrays, for display purposes only (atm grid)
     avg_fuel_frac,                               &  ! average fuel fraction
@@ -992,6 +994,7 @@ do ij=1,num_tiles
          !! halo on rhof,tempf after
 
          ffwidth(ifts:ifte,jfts:jfte)     = 100.     ! default for now
+         cfb(ifts:ifte,jfts:jfte)         = 0.       ! default for now
 
       end if for_balbi
  
@@ -1807,6 +1810,7 @@ subroutine set_fp_from_grid(grid,fp)
     fp%tempf => grid%tempf     ! temperature
     fp%rhof => grid%rhof     ! surface air density
     fp%ffwidth => grid%ffwidth     ! fire front width 
+    fp%cfb => grid%cfb       ! canopy fraction burnt
 
 end subroutine set_fp_from_grid
 
@@ -1917,7 +1921,8 @@ subroutine check_grid_alloc(grid,config_flags)
         call check_size(size(grid%rhof),'rhof')
         call check_size(size(grid%ffwidth),'ffwidth')
     endif
-
+    call check_size(size(grid%cfb),'cfb')
+    
 end subroutine check_grid_alloc
 
 subroutine check_size(sz,name,req)
