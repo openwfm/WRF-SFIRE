@@ -29,7 +29,8 @@ subroutine sfire_model (                    &
     tign_in,                                & ! ignition time, if given
     lfn,lfn_out,tign,fuel_frac,fire_area,   & ! state: level function, ign time, fuel left, area burning
     fuel_frac_burnt,                        & ! output: fuel fraction burnt in this timestep
-    fgrnhfx,fgrnqfx,                          & ! output: heat fluxes
+    fgrnhfx,fgrnqfx,                        & ! output: heat fluxes total heat flux (ground + canopy)
+    fcanhfx,fcanqfx,                        & ! output: canopy heat fluxes
     ros,flineint,flineint2,                 & ! diagnostic variables
     f_ros0,f_rosx,f_rosy,f_ros,             & ! fire risk spread 
     f_int,f_lineint,f_lineint2,             & ! fire risk intensities 
@@ -117,7 +118,8 @@ REAL, INTENT(out), dimension(ifms:ifme,jfms:jfme):: &
 ! output
 REAL, INTENT(out), dimension(ifms:ifme,jfms:jfme):: &
     lfn_out, &                              !                              
-    fgrnhfx,fgrnqfx, &                        ! heat fluxes J/m^2/s  (cell)             
+    fgrnhfx,fgrnqfx, &                        ! ground + canopy heat fluxes J/m^2/s  (cell)             
+    fcanhfx,fcanqfx, &                        ! canopy heat fluxes J/m^2/s  (cell)             
     ros,flineint,flineint2,                 & ! diagnostic variables
     f_ros0,f_rosx,f_rosy,f_ros,             & ! fire risk spread 
     f_int,f_lineint,f_lineint2                ! fire risk intensities 
@@ -494,7 +496,9 @@ elseif (ifun.eq.6) then ! timestep postprocessing
         ifms,ifme,jfms,jfme,                      &  ! fuel_frac_burned has standard memory dimensions
         fp%fgip,                                     &
         fuel_frac_burnt,                          & !
-        fgrnhfx,fgrnqfx)                              !out
+        fgrnhfx,fgrnqfx, &  ! out: surface + canopy heat fluxes
+        fire_area, &        ! in: fire area
+        fcanhfx, fcanqfx, fp%canopy_fuel_frac)   ! out: canopy heat fluxes
 
     case (1, 2) 
 !$OMP CRITICAL(SFIRE_MODEL_CRIT)
