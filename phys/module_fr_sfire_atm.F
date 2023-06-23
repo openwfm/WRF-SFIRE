@@ -2303,8 +2303,18 @@ real,intent(out),dimension(ifms:ifme,jfms:jfme)::&
 
   return
 
-  91 call crash('interpolate_wind2fire_height: fire wind height too large, increase kdmax or atm height')
-  92 continue
+  91 continue
+!$OMP CRITICAL(SFIRE_ATM_CRIT)
+      write(msg,*)'fire wind height',wh,'at ',point,icm,jcm
+      call message(msg,0)
+      do k=kds,kdmax         ! search for layer k such that ht(k-1)<=wh<ht(k), ht(0)=z0
+        ht=interpolate_h(its-1,ite+1,kds,kde,jts-1,jte+1,icm,k,jcm,wicm,wjcm,z)
+        write(msg,*)'layer',k,' midpoint height',ht
+        call message(msg,0)
+      enddo
+      call crash('interpolate_wind2fire_height: fire wind height too large, increase kdmax or atm height')
+!$OMP END CRITICAL(SFIRE_ATM_CRIT)
+
 !$OMP CRITICAL(SFIRE_ATM_CRIT)
   write(msg,*)'fz0(',i,j,')=',fz0(i,j),'fwh(',i,j,')=',fwh(i,j)
   call message(msg)
