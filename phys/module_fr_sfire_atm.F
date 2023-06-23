@@ -2305,7 +2305,7 @@ real,intent(out),dimension(ifms:ifme,jfms:jfme)::&
 
   91 continue
 !$OMP CRITICAL(SFIRE_ATM_CRIT)
-      write(msg,*)'fire wind height',wh,'at ',point,icm,jcm
+      write(msg,*)'fire wind height',wh,'at ',icm,jcm
       call message(msg,0)
       do k=kds,kdmax         ! search for layer k such that ht(k-1)<=wh<ht(k), ht(0)=z0
         ht=interpolate_h(its-1,ite+1,kds,kde,jts-1,jte+1,icm,k,jcm,wicm,wjcm,z)
