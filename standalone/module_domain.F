@@ -67,6 +67,9 @@ module module_domain
       real, pointer, dimension(:,:,:)::fmep => null()
       real, pointer, dimension(:,:,:,:)::chem => null()
       real, pointer, dimension(:,:,:,:)::tracer => null()
+      real, pointer, dimension(:,:)::tempf => null()
+      real, pointer, dimension(:,:)::rhof => null()
+      real, pointer, dimension(:,:)::ffwidth => null()
 
       ! scalars
       ! mesh and housekeeping

@@ -241,6 +241,7 @@ CONTAINS
          grid%e(i,j)        = 0.
          grid%f(i,j)        = 0.
          grid%t2(i,j)       = 300.
+         grid%q2(i,j)       = 1e-3
          grid%psfc(i,j)     = 1e5
       END DO
     END DO     

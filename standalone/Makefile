@@ -3,7 +3,7 @@ include make.inc
 DEFS =
 WRF = ..
 INC = $(WRF)/inc
-FPFLAGS= -I$(NETCDF)/include -I $(INC) -I. 
+FPFLAGS= -I$(NETCDF)/include -I$(NETCDF)/modules -I $(INC) -I.  
 LDFLAGS = -L$(NETCDF)/lib -lnetcdff -lnetcdf
 #LDFLAGS = `$(NETCDF)/bin/nc-config --flibs`
 FFLAGS=$(FPFLAGS) $(FCFLAGS) $(FFREE)
