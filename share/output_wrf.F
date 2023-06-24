@@ -1008,6 +1008,14 @@ endif
       CALL wrf_start_io_timestep(fid, ierr)
       DO WHILE ( ASSOCIATED( p ) )
         IF ( p%ProcOrient .NE. 'X' .AND. p%ProcOrient .NE. 'Y' ) THEN   ! no I/O for xposed variables
+          IF (wrf_at_debug_level(290))then
+              ! Jan Mandel, 3/17/2020
+              WRITE(message,*)"ouput_WRF: ",trim(p%VarName)," Ndim:",p%Ndim, &
+              " in_use_for_config:",in_use_for_config(grid%id,TRIM(p%VarName)), &
+              " for restart:", p%Restart, switch.EQ.restart_only, &
+              " on_stream:",on_stream(p%streams,newswitch)
+              CALL wrf_debug(1,TRIM(message))
+          ENDIF
           IF ( p%Ndim .EQ. 0 ) THEN
             IF ((p%Restart.AND.switch.EQ.restart_only).OR.on_stream(p%streams,newswitch)) THEN
               IF ( in_use_for_config(grid%id,TRIM(p%VarName)) ) THEN

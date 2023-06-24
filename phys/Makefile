@@ -208,6 +208,13 @@ MODULES = \
 	module_irrigation.o
 
 FIRE_MODULES = \
+	module_fr_sfire_driver.o \
+	module_fr_sfire_driver_wrf.o \
+	module_fr_sfire_atm.o \
+	module_fr_sfire_model.o \
+	module_fr_sfire_core.o \
+	module_fr_sfire_phys.o \
+	module_fr_sfire_util.o \
         module_fr_fire_driver.o \
         module_fr_fire_driver_wrf.o \
         module_fr_fire_atm.o \

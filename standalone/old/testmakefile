@@ -1,0 +1,243 @@
+#FC = ifort -fast -free
+
+#FFREE=-free
+#FFIXED=-fixed
+#FC = ifort -g -debug all -traceback -ftrapuv -inline-debug-info -check all -stand f95 -free -I$(NETCDF)/include  
+# for g95
+FFREE=-ffree-form
+FFIXED=-ffixed-form
+FC = g95 -ftrace=frame -g
+FFLAGS = -I$(NETCDF)/include 
+DEFS = \
+  -DPHYS=$(PHYS) \
+  -DSPEED_VARS_ARGS=$(SPEED_VARS_ARGS) \
+  -DSPEED_VARS_DECL=$(SPEED_VARS_DECL) 
+
+MAKEFILE=testmakefile
+
+.SUFFIXES:
+.SUFFIXES: .F .o
+
+.F.o: 
+	$(FC) $(FFLAGS) $(FFREE) $(DEFS) -E $*.F > $*.f90
+	$(FC) -c $(FFLAGS) $(FFREE) $*.f90
+
+PHYS = normal_spread
+ARGS = normal_spread_args
+DECL = normal_spread_decl
+SPEED_VARS_ARGS = \"$(ARGS).h\"
+SPEED_VARS_DECL = \"$(DECL).h\"
+INC = $(ARGS).h $(DECL).h
+
+# module dependencies
+
+default_target: model_test
+
+lapack.o: lapack.F
+	$(FC) -c $(FFLAGS) $(FFIXED) lapack.F
+
+normal_spread.o: $(INC)\
+    module_fr_sfire_util.o 
+
+module_fr_sfire_driver.o: \
+    module_fr_sfire_model.o \
+    #module_model_constants.o
+
+module_fr_sfire_model.o: \
+    $(INC) \
+    module_fr_sfire_core.o  \
+    module_fr_sfire_phys.o \
+    module_fr_sfire_util.o \
+    module_model_constants.o
+
+module_fr_sfire_core.o: \
+    $(PHYS).o \
+    module_fr_sfire_util.o 
+      
+module_fr_sfire_phys.o: \
+    $(INC) \
+    module_model_constants.o \
+    module_fr_sfire_util.o 
+
+module_fr_sfire_util.o: \
+    wrf_fakes.o
+
+module_fr_sfire_phys.o: \
+    $(INC) \
+    module_fr_sfire_util.o 
+
+# test binaries and targets
+
+module_model_constants.o: ../share/module_model_constants.F
+	cp ../share/module_model_constants.F .
+	$(FC) -c $(FFLAGS) $(FFREE) module_model_constants.F
+#
+# the propagation alone 
+#
+PROP_OBJ = \
+    prop_test_main.o \
+    module_fr_sfire_core.o \
+    $(PHYS).o \
+    module_fr_sfire_util.o \
+    wrf_fakes.o
+
+prop_test_main.o: module_fr_sfire_core.o 
+
+prop_test_prog.exe: $(PROP_OBJ)  
+	$(FC) -o prop_test_prog.exe $(PROP_OBJ)
+
+prop_test: prop_test_prog.exe
+	# run prop_test from matlab to test
+
+#
+# burn balance
+#
+FUEL_TEST_OBJ=\
+    module_fr_sfire_core.o \
+    module_fr_sfire_util.o \
+    wrf_fakes.o \
+    burn_test_main.o
+
+burn_test_main.o: module_fr_sfire_core.o
+
+burn_test_prog.exe: $(FUEL_TEST_OBJ)
+	$(FC) -o burn_test_prog.exe $(FUEL_TEST_OBJ)
+
+burn_test: burn_test_prog.exe
+	./burn_test_prog.exe
+
+#
+# utilities
+#
+UTIL_OBJ= \
+    util_test_main.o   \
+    module_fr_sfire_util.o  \
+    wrf_fakes.o
+
+util_test_main.o: module_fr_sfire_util.o
+
+util_test_prog.exe: $(UTIL_OBJ)
+	$(FC) -o util_test_prog.exe $(UTIL_OBJ)
+
+util_test: util_test_prog.exe
+	./util_test_prog.exe
+
+#
+# the core: whole math model
+#
+CORE_OBJ= \
+    core_test_main.o \
+    normal_spread.o \
+    module_fr_sfire_core.o \
+    module_fr_sfire_util.o \
+    wrf_fakes.o
+
+core_test_main.o: \
+    module_fr_sfire_core.o \
+    normal_spread.o
+    
+core_test_prog.exe: $(CORE_OBJ) 
+	$(FC) -o core_test_prog.exe $(CORE_OBJ)
+
+core_test: core_test_prog.exe
+	# run core_test in Matlab
+
+#
+# the whole fire model with netcdf interface, fire variables only
+#
+#MODEL_NETCDF_OBJ = \
+#    model_netcdf_main.o \
+#    module_fr_sfire_model.o \
+#    module_fr_sfire_core.o \
+#    module_fr_sfire_phys.o \
+#    module_fr_sfire_util.o  \
+#    wrf_fakes.o
+
+#model_netcdf_main.o: module_fr_sfire_model.o 
+
+#
+# the whole fire model, fire variables only
+#
+MODEL_OBJ = \
+    model_test_main.o \
+    module_fr_sfire_model.o \
+    module_fr_sfire_core.o \
+    module_fr_sfire_phys.o \
+    module_fr_sfire_util.o  \
+    wrf_fakes.o
+
+model_test_main.o: module_fr_sfire_model.o 
+ 
+#model_netcdf_test:
+#	make -f $(MAKEFILE) model_netcdf_prog.exe FC="$(FC)" \
+#        PHYS=module_fr_sfire_phys \
+#	ARGS=fr_sfire_params_args \
+#	DECL=fr_sfire_params_decl
+#	- rm -f fire_io.nc
+#	- cp fire_io_save.nc fire_io.nc &> /dev/null
+#	./model_netcdf_prog.exe
+
+#model_netcdf_prog.exe: $(MODEL_NETCDF_OBJ) 
+#	$(FC) -o model_netcdf_prog.exe $(MODEL_NETCDF_OBJ) -L$(NETCDF)/lib -lnetcdf 
+
+model_test:
+	make -f $(MAKEFILE) model_test_prog.exe FC="$(FC)" \
+	PHYS=module_fr_sfire_phys \
+	ARGS=fr_sfire_params_args \
+	DECL=fr_sfire_params_decl
+	./model_test_prog.exe
+	# run model_test in Matlab to visualize
+model_test_prog.exe: $(MODEL_OBJ) 
+	$(FC) -o model_test_prog.exe $(MODEL_OBJ) 
+
+#fuel_burnt_test
+burnt_test_OBJ=\
+	module_fr_sfire_core.o \
+	module_fr_sfire_util.o \
+	module_fr_sfire_phys.o \
+	wrf_fakes.o \
+	fuel_burnt_test.o 
+
+fuel_burnt_test.o: module_fr_sfire_core.o
+
+fuel_burnt_test.exe: $(burnt_test_OBJ)
+	$(FC) -o fuel_burnt_test.exe $(burnt_test_OBJ)
+
+fuel_burnt_test:
+	make -f $(MAKEFILE) fuel_burnt_test.exe FC="$(FC)" \
+	PHYS=module_fr_sfire_phys \
+	ARGS=fr_sfire_params_args \
+	DECL=fr_sfire_params_decl
+	./fuel_burnt_test.exe
+#fuel_burnt_test:
+#	make -f $(MAKEFILE) fuel_burnt_test.exe FC="$(FC)"
+#	./fuel_burnt_test.exe
+
+#
+# the whole fire model through atmosphere coupling 
+#
+DRIVER_OBJ =  \
+    driver_test_main.F \
+    module_fr_sfire_driver.o \
+    module_fr_sfire_model.o \
+    module_fr_sfire_core.o \
+    module_fr_sfire_phys.o \
+    module_fr_sfire_util.o  \
+    wrf_fakes.o \
+    module_model_constants.o 
+
+driver_test:
+	make -f $(MAKEFILE) driver_test_prog.exe FC="$(FC)" \
+	PHYS=module_fr_sfire_phys \
+	ARGS=fr_sfire_params_args \
+	DECL=fr_sfire_params_decl
+	./driver_test_prog.exe
+
+driver_test_prog.exe: $(DRIVER_OBJ) 
+	$(FC) -o driver_test_prog.exe $(DRIVER_OBJ) 
+
+# end test targets
+
+clean:
+	-rm -f *.{exe,o,mod} ../*/*.{o,mod} *_test core.* *_?????.txt *.f90
+

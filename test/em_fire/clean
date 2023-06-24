@@ -1,0 +1,9 @@
+#!/bin/csh -f
+#find . -name \*.txt -exec rm -f {} \;
+#find . -name wrfrst\* -exec rm -f {} \;
+#find . -name wrfout\* -exec rm -f {} \;
+#find . -name core.\* -exec rm -f {} \;
+#find . -name rsl.\* -exec rm -f {} \;
+rm *.txt
+rm wrfrst* wrfout* core* rsl.*
+rm -f wrf.log

@@ -411,6 +411,15 @@ CONTAINS
 #    include "in_use_for_config_z.inc"
      ENDIF
 
+! Jan Mandel 3/17/2020
+     IF (wrf_at_debug_level(350))then
+         IF(in_use)then
+             CALL wrf_debug(1,"in_use_for_config: "//TRIM(vname)//" in use")
+         ELSE
+             CALL wrf_debug(1,"in_use_for_config: "//TRIM(vname)//" not used")
+         ENDIF
+     ENDIF
+
      RETURN
    END FUNCTION
 

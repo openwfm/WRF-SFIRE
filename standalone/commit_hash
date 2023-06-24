@@ -1,0 +1,8 @@
+#!/bin/csh -f
+set g=`which git >& /dev/null`
+if ($status) then
+   set v=`date`
+else
+   set v=(`git log | head -1`  `git diff --shortstat`)
+endif
+echo id="'$v'"

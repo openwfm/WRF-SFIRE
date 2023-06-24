@@ -1,0 +1,17 @@
+#!/bin/bash
+#$ -pe orte 160
+#$ -cwd
+#$ -j y
+#$ -S /bin/bash
+cat $0
+cp $PE_HOSTFILE pe_hostfile
+awk '{print $1 " slots=" $2}' < pe_hostfile | sed 's/\.local//' > hostfile
+echo hostfile:
+cat hostfile
+echo NSLOTS=$NSLOTS
+rm rsl.* wrfout*
+echo burner | matlab
+/usr/mpi/gcc/openmpi-1.7.4/bin/mpirun -np 1 -hostfile hostfile ./ideal.exe
+mv rsl.error.0000 rsl.error.ideal
+mv rsl.out.0000 rsl.out.ideal
+/usr/mpi/gcc/openmpi-1.7.4/bin/mpirun -np $NSLOTS -hostfile hostfile ./wrf.exe

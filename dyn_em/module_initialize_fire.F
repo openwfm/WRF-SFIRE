@@ -240,6 +240,9 @@ CONTAINS
          grid%cosa(i,j)     = 1.
          grid%e(i,j)        = 0.
          grid%f(i,j)        = 0.
+         grid%t2(i,j)       = 300.
+         grid%q2(i,j)       = 1e-3
+         grid%psfc(i,j)     = 1e5
       END DO
     END DO     
 
@@ -591,7 +594,12 @@ CONTAINS
           call read_array_2d_real   ('input_fmc_g',grid%fmc_g,    ifds,ifde,jfds,jfde,ifms,ifme,jfms,jfme) 
   endif
 
-  call read_namelist_fire(.false.)  ! read fuel coefficienrs
+ if(config_flags%ifire.eq.2)then
+ ! added in the fuel moisture pull request, the NCAR group wanted fmc_g set in wrfinput
+
+ !! calling module_fr_sfire_phys%read_namelist_fire version !!
+
+  call read_namelist_fire(.false.)  ! read fuel coefficients
 
   if(config_flags%fire_fmc_read.eq.0) then
           write(6,*)'Setting fuel moisture in wrfinput to constant ', fuelmc_g
@@ -606,11 +614,33 @@ CONTAINS
                          ifms,ifme,jfms,jfme, &
                          grid%fmc_g, 'fmc_g')
 
+ endif
 
   if(config_flags%fire_fuel_read.eq.2) then
       write(6,*)'Reading fuel map from file input_fc'
       call read_array_2d_real('input_fc',grid%nfuel_cat,ifds,ifde,jfds,jfde,ifms,ifme,jfms,jfme) 
   endif
+
+  if(config_flags%fire_hfx_given.eq.2) then
+      write(6,*)'Reading given heat flux from file input_hfx'
+      call read_array_2d_real('input_hfx',grid%fire_hfx,ifds,ifde,jfds,jfde,ifms,ifme,jfms,jfme) 
+      maxhfx=-huge(maxhfx)
+      minhfx=huge(minhfx)
+      totheat=0.
+      do j=jfds,jfde
+         do i=ifds,ifde
+             minhfx  = max(minhfx,grid%fire_hfx(i,j))
+             maxhfx  = max(maxhfx,grid%fire_hfx(i,j))
+             totheat = totheat + grid%fire_hfx(i,j)*fdx*fdy
+         enddo
+      enddo
+      write(6,*)'Given heat flux min ',minhfx,' max ',maxhfx,' W/m^2'
+      write(6,*)'Total heat ',totheat,' W'
+      if(minhfx<0.)call crash('Heat flux must be nonnegative number')
+  endif
+
+
+
 
   have_fire_grad=.false.
   have_atm_grad=.false.
@@ -754,6 +784,9 @@ CONTAINS
               grid%zsf)                         ! array
   
       ! compute the terrain gradient by differencing
+      print *,'shape(zsf)=',shape(grid%zsf)
+      print *,'shape(dzdxf)=',shape(grid%dzdxf)
+      print *,'shape(dzdyf)=',shape(grid%dzdyf)
       do j=jfts,jfte
          do i=ifts,ifte
             grid%dzdxf(i,j) = (grid%zsf(i+1,j)-grid%zsf(i-1,j))/(2.*fdx)
@@ -1121,6 +1154,8 @@ ENDIF
          END DO
       END DO
       ENDIF
+ 
+ write(6,*)'END SUBROUTINE init_domain_rk'
 
  END SUBROUTINE init_domain_rk
 

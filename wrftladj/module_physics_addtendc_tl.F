@@ -1533,7 +1533,7 @@ SUBROUTINE phy_fr_ten(config_flags,rk_step,n_moist,            &
                       its, ite, jts, jte, kts, kte               )
 !-----------------------------------------------------------------
    USE module_state_description, ONLY :                         &
-                   FIRE_SFIRE
+                   FIRE_SFIRE1, FIRE_SFIRE
 !-----------------------------------------------------------------
    IMPLICIT NONE
 !-----------------------------------------------------------------
@@ -1566,7 +1566,7 @@ SUBROUTINE phy_fr_ten(config_flags,rk_step,n_moist,            &
 
    SELECT CASE(config_flags%ifire)
 
-      CASE (FIRE_SFIRE)
+      CASE (FIRE_SFIRE1, FIRE_SFIRE)
 
            CALL add_a2a(rt_tendf,rthfrten,                       &
                 config_flags,                                    &

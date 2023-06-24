@@ -1,0 +1,16 @@
+#!/bin/sh
+#PBS -l nodes=2:ppn=12
+#PBS -j oe
+#PBS -o hpl.log
+#PBS -l walltime=20:00:00
+echo $PBS_NODEFILE
+cd $PBS_O_WORKDIR
+rm -f hpl.machines
+cp $PBS_NODEFILE hpl.machines
+date
+export LD_LIBRARY_PATH='/usr/mpi/gcc/mvapich-1.2.0/lib:/usr/mpi/gcc/mvapich-1.2.0/lib/shared'
+export PATH="/usr/mpi/gcc/mvapich-1.2.0/bin:${PATH}"
+echo mpirun start
+mpirun -np 24 -machinefile hpl.machines ./wrf.exe >& hpl.out
+echo mpirun end
+date

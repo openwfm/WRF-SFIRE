@@ -1,0 +1,26 @@
+#!/bin/bash
+
+# Set the number of nodes and processes per node
+# each node contains 16 processing cores
+
+# 23*16
+#$ -pe orte 368
+#$ -cwd
+#$ -j y
+#$ -S /bin/bash
+# to limit run time, you can add line like this: #$ -l h_rt=hours:minutes:seconds
+# list environment and nodes to help diagnose problems
+env
+rm -f rsl.*
+# If the binary supports openmp, we should specify the number of thread to use
+# per process using the OMP_NUM_THREADS variable.
+export OMP_NUM_THREADS=1
+# run mpi job
+cat $0
+cp $PE_HOSTFILE pe_hostfile
+awk '{print $1 " slots=" $2}' < pe_hostfile | sed 's/\.local//' > hostfile
+echo hostfile:
+cat hostfile
+echo NSLOTS=$NSLOTS
+/usr/mpi/gcc/openmpi-1.7.4/bin/mpirun -np $NSLOTS -hostfile hostfile ./wrf.exe
+

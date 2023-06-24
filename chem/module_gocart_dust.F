@@ -1,4 +1,4 @@
-MODULE GOCART_DUST
+MODULE gocart_dust
 
 ! A. Ukhov, 11 March 2021, Now "emis_dust" is accumulated dust 
 ! emission (kg/m2). Before was instantenious flux (kg/cell).
@@ -215,4 +215,4 @@ end subroutine gocart_dust_driver
 END SUBROUTINE source_du
 
 
-END MODULE GOCART_DUST
+END MODULE gocart_dust

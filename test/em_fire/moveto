@@ -1,0 +1,20 @@
+#!/bin/csh -f
+if ("$1" == "") then
+set c=`git log | head -1 | sed 's/^.* //'`
+set r=`pwd | sed 's/.*\///'`
+set d=~/tmp/$r/$c
+else
+set d=$1
+endif
+echo moving to $d
+mkdir -p $d
+mv *.txt $d
+rm $d/*000.txt
+mv wrfrst* wrf.log $d
+mv rsl.* $d
+#find . -name \*.txt -exec mv {} $d \;
+#find . -name wrfrst\* -exec rm -f {} \;
+#find . -name wrfout\* -exec rm -f {} \;
+#mv wrf.log $d
+cp -p namelist.input $d
+cp -p input_sounding $d

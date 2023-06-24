@@ -1,0 +1,8 @@
+#!/bin/csh -f
+set d=~/$1
+set cp="rsync -au"
+mkdir $d
+find . -name \*.txt -exec $cp {} $d \;
+$cp -a wrf.log $d
+$cp -a namelist.input $d
+$cp -a input_sounding $d

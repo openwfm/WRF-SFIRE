@@ -1,0 +1,28 @@
+#!/bin/bash
+
+# Set the number of nodes and processes per node
+# each node contains 12 processing cores
+#PBS -l nodes=2:ppn=12
+
+# Set the maximum amount of the time the job will run (HH:MM:SS)
+#PBS -l walltime=24:00:00
+
+# Give the job a name
+#PBS -N test
+
+# Keep all environment variables from the current session (PATH, LD_LIBRARY_PATH, etc)
+#PBS -V
+
+sleep 1
+
+# Change to the run directory (where job was submitted)
+ulimit -s unlimited
+cd $PBS_O_WORKDIR
+# rm -f rsl.*
+
+# If the binary supports openmp, we should specify the number of thread to use
+# per process using the OMP_NUM_THREADS variable.
+export OMP_NUM_THREADS=1
+
+# Execute the program through mpi with the machine file specified by PBS
+mpirun -np 24 -machinefile $PBS_NODEFILE ./wrf.exe

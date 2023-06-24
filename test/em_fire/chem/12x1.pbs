@@ -1,0 +1,57 @@
+#!/bin/bash
+# copy this script to your run directory and modify as desired
+
+# Set the number of nodes and processes per node
+# each node contains 12 processing cores
+#PBS -l nodes=1:ppn=12
+
+# Set the maximum amount of the time the job will run (HH:MM:SS)
+#PBS -l walltime=09:00:00
+
+# Give the job a name
+#PBS -N chem_12x1
+
+# Keep all environment variables from the current session (PATH, LD_LIBRARY_PATH, etc)
+#PBS -V
+
+# Merge stderr and stdout
+#PBS -j oe
+
+# Set log file
+#PBS -o 12x1.log
+
+# Change to the run directory (where job was submitted)
+cd $PBS_O_WORKDIR
+
+WD=12x1
+rm -rf $WD
+mkdir $WD
+cd $WD
+rm -f rsl.* wrfout* wrfrst* core*
+pwd
+ln -s ../ideal.exe .
+#ln -s ../input_fc .
+#ln -s ../input_ht .
+#ln -s ../input_lu .
+ln -s ../input_sounding .
+ln -s ../LANDUSE.TBL .
+ln -s ../namelist.fire .
+ln -s ../namelist.fire_emissions .
+ln -s ../namelist.input .
+ln -s ../wrf.exe .
+if [ -e ../input_tign_g ]
+then
+  ln -s ../input_tign_g .
+fi
+
+
+#cat $PBS_NODEFILE | sort -u > nodes 
+cat $PBS_NODEFILE > nodes 
+env > env.log
+which mpirun_rsh >> env.log
+mpirun -np 1 -f nodes ./ideal.exe 
+mv rsl.error.0000 ideal.error.log
+mv rsl.out.0000 ideal.out.log
+#matlab < ../make_usgs.m
+mpirun -np 12 -f nodes ./wrf.exe 
+

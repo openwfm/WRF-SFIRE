@@ -1,0 +1,16 @@
+&emissions
+! RADM2 emissions table
+! Classification:Grasslands,Grasslands,Grasslands,Open Shrublands,Open Shrublands,Open Shrublands,Open Shrublands,Mixed Forests,Mixed Forests,Mixed Forests,Evergreen Forest,Evergreen Forest,Evergreen Forest,
+compatible_chem_opt=0,
+printsums=1, ! print sums of fuel burned and total emitted into the atmosphere
+! Fuel Cat,1,2,3,4,5,6,7,8,9,10,11,12,13,
+! tracer emissions [g/kg burnt]
+tr17_1=59,59,59,68,68,68,68,102,102,102,118,118,118
+tr17_2=59,59,59,68,68,68,68,102,102,102,118,118,118
+tr17_3=59,59,59,68,68,68,68,102,102,102,118,118,118
+tr17_4=59,59,59,68,68,68,68,102,102,102,118,118,118
+tr17_5=59,59,59,68,68,68,68,102,102,102,118,118,118
+tr17_6=59,59,59,68,68,68,68,102,102,102,118,118,118
+tr17_7=59,59,59,68,68,68,68,102,102,102,118,118,118
+tr17_8=59,59,59,68,68,68,68,102,102,102,118,118,118
+/

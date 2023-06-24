@@ -1,0 +1,30 @@
+#!/bin/bash
+# copy this script to your run directory and modify as desired
+# do NOT commit a copy!
+
+# Set the number of nodes and processes per node
+# each node contains 12 processing cores
+#PBS -l nodes=4:ppn=12
+
+# Set the maximum amount of the time the job will run (HH:MM:SS)
+#PBS -l walltime=30:00:00
+
+# Give the job a name
+#PBS -N fireflux_med
+
+# Keep all environment variables from the current session (PATH, LD_LIBRARY_PATH, etc)
+#PBS -V
+
+# Merge stderr and stdout
+#PBS -j oe
+
+# Set log file
+#PBS -o wrf.log
+
+# Change to the run directory (where job was submitted)
+cd $PBS_O_WORKDIR
+
+cat $PBS_NODEFILE |sort -u > nodes 
+rm -f rsl.* *_*.txt wrfo* wrfr* 
+#mpirun_rsh -np 1 -hostfile nodes OMP_NUM_THREADS=1 ./ideal.exe 
+mpirun_rsh -np 4 -hostfile nodes OMP_NUM_THREADS=12 ./wrf.exe 

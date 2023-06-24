@@ -29,6 +29,7 @@
    USE module_sf_noahmpdrv, ONLY : groundwater_init
    USE module_lightning_driver, ONLY : lightning_init
    USE module_fr_fire_driver_wrf, ONLY : fire_driver_em_init
+   USE module_fr_sfire_driver_wrf, ONLY : sfire_driver_em_init
    USE module_firebrand_spotting, ONLY : firebrand_spotting_em_init
    USE module_stoch, ONLY : setup_rand_perturb, rand_seed, update_stoch, initialize_stoch
    USE module_trajectory, ONLY : trajectory_init
@@ -2172,7 +2173,15 @@ DEALLOCATE(z_at_q)
 
 
 !  FIRE
-if(config_flags%ifire.eq.2)then
+if(config_flags%ifire.eq.1)then
+
+   call sfire_driver_em_init ( grid , config_flags    &
+            ,ids,ide, kds,kde, jds,jde                &
+            ,ims,ime, kms,kme, jms,jme                &
+            ,ips,ipe, kps,kpe, jps,jpe )
+
+   CALL wrf_debug ( 100 , 'start_domain_em: After call to sfire_driver_em_init' )
+elseif(config_flags%ifire.eq.2)then
 
    call fire_driver_em_init ( grid , config_flags    &
             ,ids,ide, kds,kde, jds,jde                &

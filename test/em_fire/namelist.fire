@@ -6,6 +6,8 @@ fuelmc_g = 0.08,                   ! ground fuel moisture, set = 0 for dry
 fuelmc_c = 1.00,                   ! canopy fuel moisture, set = 0 for dry
 nfuelcats = 13,                    ! number of fuel categories used
 no_fuel_cat = 14                   ! extra category for no fuel
+balbi_msglevel=4                   ! show fire_ros_balbi iterations
+ibeh=2                             ! Babli ros
 /
 
 &fuel_categories                 

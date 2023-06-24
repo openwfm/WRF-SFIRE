@@ -1,0 +1,5 @@
+FFREE=
+FFIXED=
+FCFLAGS=-g
+FC=ifort
+FP=gfortran

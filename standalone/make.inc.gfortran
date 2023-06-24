@@ -1,0 +1,5 @@
+FFREE=-ffree-form -ffree-line-length-none
+FFIXED=-ffixed-form
+FCFLAGS=-g -DGFORTRAN_IARGC
+FC=gfortran
+FP=gfortran

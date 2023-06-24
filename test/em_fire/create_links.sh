@@ -21,4 +21,3 @@ RRTMG_LW_DATA SOILPARM.TBL VEGPARM.TBL
 do
    ( cd rain; ln -s ../../../run/$i .)
 done
-

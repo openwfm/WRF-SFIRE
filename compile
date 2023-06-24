@@ -2,6 +2,7 @@
 
 setenv START_OF_COMPILE "`date`"
 
+
 cont1:
 
 if ( !  -e configure.wrf  ) then
@@ -12,6 +13,8 @@ if ( !  -e configure.wrf  ) then
   exit 1
 endif
 
+echo Building on `hostname` on `date`
+
 #----------------------------------
 # identify the commit where the compiled code came from
 git log >& /dev/null
@@ -21,6 +24,8 @@ else
    set v=(git `git log | head -1`  `git diff --shortstat`) >& /dev/null
 endif
 echo "    CHARACTER (LEN=*), PARAMETER :: commit_version = '$v'" > inc/commit_decl
+# make sure to recompile with the current inc/commit_decl
+touch main/module_wrf_top.F
 
 #----------------------------------
 if ( ! $?WRF_KPP )   setenv WRF_KPP  0

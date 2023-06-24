@@ -1,0 +1,26 @@
+# for regression testing to check if the results are the same on various number of processors
+# build with configure -d and SM+DM
+NAME=hill
+cd ${NAME}
+rm -rf mach
+hostname >> mach
+hostname >> mach
+hostname >> mach
+hostname >> mach
+hostname >> mach
+hostname >> mach
+echo | mpirun_rsh -np 1 -hostfile mach OMP_NUM_THREADS=1 ideal.exe 
+#cat rsl.out.0000
+cd ..
+pwd
+# copy ${NAME} to ${NAME}-1x1 etc.
+rm -rf ${NAME}-*
+# source this
+# rm -f ${NAME}-?x?/{rsl.*,*_*.txt wrfo*,wrfr*}  # to grab for cleanup
+( cp -a ${NAME} ${NAME}-1x1; cd ${NAME}-1x1; rm -rf rsl.* wrfo* wrfr*; nohup mpirun_rsh -np 1 -hostfile mach OMP_NUM_THREADS=1 wrf.exe < /dev/null >& wrf.log ) &
+( cp -a ${NAME} ${NAME}-1x6; cd ${NAME}-1x6; rm -rf rsl.* wrfo* wrfr*; nohup mpirun_rsh -np 1 -hostfile mach OMP_NUM_THREADS=6 wrf.exe < /dev/null >& wrf.log ) &
+( cp -a ${NAME} ${NAME}-6x1; cd ${NAME}-6x1; rm -rf rsl.* wrfo* wrfr*; nohup mpirun_rsh -np 6 -hostfile mach OMP_NUM_THREADS=1 wrf.exe < /dev/null >& wrf.log ) & 
+( cp -a ${NAME} ${NAME}-3x2; cd ${NAME}-3x2; rm -rf rsl.* wrfo* wrfr*; nohup mpirun_rsh -np 3 -hostfile mach OMP_NUM_THREADS=2 wrf.exe < /dev/null >& wrf.log ) & 
+( cp -a ${NAME} ${NAME}-2x3; cd ${NAME}-2x3; rm -rf rsl.* wrfo* wrfr*; nohup mpirun_rsh -np 2 -hostfile mach OMP_NUM_THREADS=3 wrf.exe < /dev/null >& wrf.log ) & 
+( cp -a ${NAME} ${NAME}-2x1; cd ${NAME}-2x1; rm -rf rsl.* wrfo* wrfr*; nohup mpirun_rsh -np 2 -hostfile mach OMP_NUM_THREADS=1 wrf.exe < /dev/null >& wrf.log ) & 
+( cp -a ${NAME} ${NAME}-1x2; cd ${NAME}-1x2; rm -rf rsl.* wrfo* wrfr*; nohup mpirun_rsh -np 1 -hostfile mach OMP_NUM_THREADS=2 wrf.exe < /dev/null >& wrf.log ) & 

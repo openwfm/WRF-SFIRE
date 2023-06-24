@@ -1,0 +1,44 @@
+#!/bin/bash
+# copy this script to your run directory and modify as desired
+
+# Set the number of nodes and processes per node
+# each node contains 12 processing cores
+#PBS -l nodes=1:ppn=12
+
+# Set the maximum amount of the time the job will run (HH:MM:SS)
+#PBS -l walltime=03:00:00
+
+# Give the job a name
+#PBS -N small_2x6
+
+# Keep all environment variables from the current session (PATH, LD_LIBRARY_PATH, etc)
+#PBS -V
+
+# Merge stderr and stdout
+#PBS -j oe
+
+# Set log file
+#PBS -o 2x6.log
+
+# Change to the run directory (where job was submitted)
+cd $PBS_O_WORKDIR
+
+WD=2x6
+rm -rf $WD
+mkdir $WD
+cd $WD
+pwd
+ln -s ../ideal.exe .
+#ln -s ../input_fc .
+#ln -s ../input_ht .
+#ln -s ../input_lu .
+ln -s ../input_sounding .
+#ln -s ../LANDUSE.TBL .
+ln -s ../namelist.fire .
+ln -s ../namelist.input .
+ln -s ../wrf.exe .
+
+cat $PBS_NODEFILE  > nodes 
+mpirun_rsh -np 1 -hostfile nodes OMP_NUM_THREADS=1 ./ideal.exe 
+mpirun_rsh -np 2 -hostfile nodes OMP_NUM_THREADS=6 ./wrf.exe 
+

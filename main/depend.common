@@ -901,6 +901,42 @@ module_fr_fire_phys.o: \
 		../share/module_model_constants.o  \
 		module_fr_fire_util.o 
 
+module_fr_sfire_driver.o: \
+		../share/module_model_constants.o  \
+                ../frame/module_comm_dm.o \
+		../frame/module_domain.o \
+	        ../frame/module_configure.o \
+	        ../frame/module_dm.o \
+		module_fr_sfire_phys.o \
+		module_fr_sfire_model.o \
+		module_fr_sfire_util.o \
+		module_fr_sfire_core.o \
+		module_fr_sfire_atm.o 
+
+module_fr_sfire_driver_wrf.o: \
+		../share/module_model_constants.o  \
+                ../frame/module_comm_dm.o \
+		module_fr_sfire_driver.o \
+		module_fr_sfire_atm.o \
+		module_fr_sfire_util.o 
+
+module_fr_sfire_atm.o: \
+		../share/module_model_constants.o  \
+		module_fr_sfire_util.o 
+
+module_fr_sfire_model.o: \
+	        module_fr_sfire_core.o \
+                module_fr_sfire_phys.o \
+		module_fr_sfire_util.o 
+
+module_fr_sfire_core.o: \
+		module_fr_sfire_util.o \
+	        module_fr_sfire_phys.o 
+
+module_fr_sfire_phys.o: \
+		../share/module_model_constants.o  \
+		module_fr_sfire_util.o 
+
 module_fire_debug_output.o: \
 	        ../frame/module_domain.o \
 	        ../frame/module_configure.o \
@@ -1328,6 +1364,8 @@ module_wrf_top.o: ../frame/module_machine.o \
                   ../frame/module_wrf_error.o \
                   ../frame/module_state_description.o \
                   ../frame/module_cpl.o \
+                  ../inc/commit_decl \
+                  ../inc/version_decl \
                   $(ESMF_MOD_DEPENDENCE)
 
 # End of DEPENDENCIES for main
