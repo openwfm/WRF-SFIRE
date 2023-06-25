@@ -4,7 +4,7 @@ about: 'Issues are typically for demonstrable errors in the software. User probl
   with a build should be directed to the WRF Forum: forum.mmm.ucar.edu'
 title: ''
 labels: ''
-assignees: davegill
+assignees: ''
 
 ---
 
