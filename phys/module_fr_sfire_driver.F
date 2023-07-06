@@ -675,13 +675,13 @@ real, intent(inout), dimension(ifms:ifme,jfms:jfme):: & ! fuel data; can be also
 real, intent(inout), dimension(ifms:ifme, jfms:jfme)::     &
     tign_in,                                   &
     lfn,tign,fuel_frac,                        &     ! state: level function, ign time, fuel left
-    lfn_out                                    ! fire wind velocities
+    lfn_out,                                   & ! fire wind velocities
+    cfb, canopy_fuel_frac                        !< variable for crown fire model
 
 real, intent(out), dimension(ifms:ifme, jfms:jfme)::  &
     fire_area, &                                  ! fraction of area of each cell burning
     fuel_frac_burnt,                            & ! fraction of mass of fuel burnt
-    tempf,rhof,ffwidth,                         & ! variables for Balbi ROS model
-    cfb, canopy_fuel_frac                              ! variable for crown fire model
+    tempf,rhof,ffwidth                            ! variables for Balbi ROS model
 
 real, intent(out), dimension(ims:ime, jms:jme):: &  ! redundant arrays, for display purposes only (atm grid)
     avg_fuel_frac,                               &  ! average fuel fraction

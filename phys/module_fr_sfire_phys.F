@@ -1368,6 +1368,7 @@ real    :: can_fuel_cons    !< Fuel consumption for canopy [s-1]
 real    :: mlr_canopy       !< Mass Loss Rate for canopy [s-1]
 real    :: can_hflx         !< Sensible heat flux for canopy [W m-2]
 real    :: can_qflx         !< Latent heat flux for canopy [W m-2]
+real    :: loc_fire_area    !< local fire area if present
 
 !*** executable        
 latent = present(grnqft)
@@ -1377,6 +1378,13 @@ canopy_latent = present(canqft)
 
 do j=jfts,jfte
     do i=ifts,ifte
+        ! fire area
+        if (present(fire_area)) then
+            loc_fire_area = fire_area(i, j)
+        else
+            loc_fire_area = 1.
+        endif
+
         ! get tree class
         i_tree_cat = itree(fp%nfuel_cat(i, j))
         
@@ -1390,17 +1398,22 @@ do j=jfts,jfte
                 can_fuel_cons = canopy_fuel_frac(i, j) / tree_burn_time(i_tree_cat)
             endif
 
-            mlr_canopy = min(fire_area(i, j) * can_fuel_cons, canopy_fuel_frac(i, j) / dt)
+            mlr_canopy = min(loc_fire_area * can_fuel_cons, canopy_fuel_frac(i, j) / dt)
             
-            !$OMP CRITICAL(SFIRE_PHYS_CRIT)
-            print*, "toto", fire_area(i, j), i, j, can_fuel_cons, mlr_canopy, canopy_fuel_frac(i, j)
-            !$OMP END CRITICAL(SFIRE_PHYS_CRIT)
+            if ( loc_fire_area > 0.) then
+                !$OMP CRITICAL(SFIRE_PHYS_CRIT)
+                print*, "toto", loc_fire_area, i, j, can_fuel_cons, mlr_canopy, canopy_fuel_frac(i, j)
+                !$OMP END CRITICAL(SFIRE_PHYS_CRIT)
+            endif
 
             ! update canopy fuel fraction
             canopy_fuel_frac(i, j) = canopy_fuel_frac(i, j) - dt * mlr_canopy
-            !$OMP CRITICAL(SFIRE_PHYS_CRIT)
-            print*, "tata", i, j, canopy_fuel_frac(i, j)
-            !$OMP END CRITICAL(SFIRE_PHYS_CRIT)
+
+            if ( loc_fire_area > 0.) then
+                !$OMP CRITICAL(SFIRE_PHYS_CRIT)
+                print*, "tata", i, j, canopy_fuel_frac(i, j)
+                !$OMP END CRITICAL(SFIRE_PHYS_CRIT)
+            endif
         else
             mlr_canopy = 0.
         endif
@@ -1409,6 +1422,12 @@ do j=jfts,jfte
         ! compute canopy fluxes
         can_hflx = cmbcnst * fci_d(fp%nfuel_cat(i, j)) * mlr_canopy
         can_qflx = xlv * fci_d(fp%nfuel_cat(i, j)) * (.56 + fuelmc_c) * mlr_canopy
+        
+        if ( loc_fire_area > 0. .AND. canopy_sensible) then
+            !$OMP CRITICAL(SFIRE_PHYS_CRIT)
+            print*, "tutu", can_hflx
+            !$OMP END CRITICAL(SFIRE_PHYS_CRIT)
+        endif
 
         ! Surface fluxes
          dmass =                     &     ! ground fuel dry mass burnt this call (kg/m^2)
