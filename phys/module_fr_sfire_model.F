@@ -408,12 +408,12 @@ elseif (ifun.eq.6) then ! timestep postprocessing
     ! have halo on lfn now
 
     ! diagnostics
-    call fire_intensity(fp,                   &  ! fuel properties
-        ifms,ifme,jfms,jfme,                      &  ! memory dims
-        ifts,ifte,jfts,jfte,                      &  ! tile dims
-        ifms,ifme,jfms,jfme,                      &  ! ros dims
-        ros,nfuel_cat,                            & !in
-        flineint,flineint2)                       ! fireline intensities out
+    ! call fire_intensity(fp,                   &  ! fuel properties
+    !     ifms,ifme,jfms,jfme,                      &  ! memory dims
+    !     ifts,ifte,jfts,jfte,                      &  ! tile dims
+    !     ifms,ifme,jfms,jfme,                      &  ! ros dims
+    !     ros,nfuel_cat,                            & !in
+    !     flineint,flineint2)                       ! fireline intensities out
 
     if(fireline_mask < 0.) then
       do j=jfts,jfte
@@ -432,12 +432,12 @@ elseif (ifun.eq.6) then ! timestep postprocessing
       enddo
     endif
     
-  call fire_risk(fp,                              &
-        ifms,ifme,jfms,jfme,                      &  ! memory dims
-        ifts,ifte,jfts,jfte,                      &  ! tile dims
-        nfuel_cat,                                &  !
-        f_ros0,f_rosx,f_rosy,f_ros,               &  ! fire spread 
-        f_int,f_lineint,f_lineint2)                  ! fire intensities for danger rating
+!   call fire_risk(fp,                              &
+!         ifms,ifme,jfms,jfme,                      &  ! memory dims
+!         ifts,ifte,jfts,jfte,                      &  ! tile dims
+!         nfuel_cat,                                &  !
+!         f_ros0,f_rosx,f_rosy,f_ros,               &  ! fire spread 
+!         f_int,f_lineint,f_lineint2)                  ! fire intensities for danger rating
 
 
   select case(fire_hfx_given)
