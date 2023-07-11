@@ -466,6 +466,7 @@ call print_2d_stats(ifps,min(ifpe,ifde-ir),jfps,min(jfpe,jfde-jr),ifms,ifme,jfms
             grid%tign_in,                                 &
             grid%lfn,grid%tign_g,grid%fuel_frac,          & ! state arrays, fire grid
             grid%fire_area,                               & ! redundant, for display, fire grid
+            grid%can_fuel_frac,                           & ! canopy fuel fraction
             grid%fuel_frac_burnt,                         &
             grid%lfn_out,                                 & ! work - one timestep    
             grid%avg_fuel_frac,                           & ! out redundant arrays, atm grid
@@ -581,6 +582,7 @@ subroutine sfire_driver_phys (ifun,    &
     tign_in,                                      &
     lfn,tign,fuel_frac,                           & ! state arrays, fire grid
     fire_area,                                    & ! redundant state, fire grid
+    can_fuel_frac,                                & ! canopy fuel fracction
     fuel_frac_burnt,                              & 
     lfn_out,                                      & ! out level set function    
     avg_fuel_frac,                                &
@@ -674,7 +676,8 @@ real, intent(inout), dimension(ifms:ifme,jfms:jfme):: & ! fuel data; can be also
 
 real, intent(inout), dimension(ifms:ifme, jfms:jfme)::     &
     tign_in,                                   &
-    lfn,tign,fuel_frac,                        &     ! state: level function, ign time, fuel left
+    lfn,tign,fuel_frac,                        & ! state: level function, ign time, fuel left
+    can_fuel_frac,                             & ! state: canopy fuel fraction
     lfn_out,                                   & ! fire wind velocities
     cfb, canopy_fuel_frac                        !< variable for crown fire model
 
@@ -1185,6 +1188,7 @@ do ij=1,num_tiles
         tign_in,                                & ! given igntion time
         lfn,lfn_out,tign,fuel_frac,             & ! state: level function, ign time, fuel left
         fire_area,                              & ! output: fraction of cell burning
+        can_fuel_frac,                          & ! state: canopy fuel fraction
         fuel_frac_burnt,                        & ! output: fuel fraction burned in this step
         fgrnhfx,fgrnqfx,                        & ! output: surface + canopy heat fluxes
         fcanhfx, fcanqfx,                       & ! output: canopy heat fluxes
@@ -1258,6 +1262,20 @@ do ij=1,num_tiles
             ims, ime, jms, jme,   &
             its,ite,jts,jte,      &
             grnhfx)
+            call sum_2d_cells(        &
+            ifms,ifme,jfms,jfme,  &
+            ifts,ifte,jfts,jfte,  &
+            fcanhfx,              &
+            ims, ime, jms, jme,   &
+            its,ite,jts,jte,      &
+            canhfx)
+            call sum_2d_cells(        &
+            ifms,ifme,jfms,jfme,  &
+            ifts,ifte,jfts,jfte,  &
+            fcanqfx,              &
+            ims, ime, jms, jme,   &
+            its,ite,jts,jte,      &
+            canqfx)
 !comment out the next call to get results as before commit 55fd92051196b796891b60cb7ec1c4bdb8800078
           call sum_2d_cells(        &
             ifms,ifme,jfms,jfme,  &
@@ -1279,8 +1297,8 @@ do ij=1,num_tiles
                 grnhfx(i,j)=fire_atm_feedback*grnhfx(i,j)*s
                 grnqfx(i,j)=fire_atm_feedback*grnqfx(i,j)*s
                 ! we do not have canopy fluxes yet...
-                canhfx(i,j)=0
-                canqfx(i,j)=0
+                canhfx(i,j)=fire_atm_feedback*canhfx(i,j)*s
+                canqfx(i,j)=fire_atm_feedback*canqfx(i,j)*s
             enddo
           enddo
 
@@ -1369,6 +1387,7 @@ if(ifun.eq.6)then
         call write_array_m(ips,ipe,jps,jpe,ims,ime,jms,jme,grnhfx,'grnhfx',pid)
         call write_array_m(ips,ipe,jps,jpe,ims,ime,jms,jme,grnqfx,'grnqfx',pid)
         call write_array_m(ifps,ifpe,jfps,jfpe,ifms,ifme,jfms,jfme,fuel_frac,'fuel_frac',pid)
+        call write_array_m(ifps,ifpe,jfps,jfpe,ifms,ifme,jfms,jfme,can_fuel_frac,'can_fuel_frac',pid)
         call write_array_m(ifps,ifpe,jfps,jfpe,ifms,ifme,jfms,jfme,fgrnhfx,'fgrnhfx',pid)
         call write_array_m(ifps,ifpe,jfps,jfpe,ifms,ifme,jfms,jfme,fgrnqfx,'fgrnqfx',pid)
     endif
@@ -1842,6 +1861,7 @@ subroutine check_grid_alloc(grid,config_flags)
     call check_size(size(grid%tign_g),'tign_g')
     call check_size(size(grid%fire_area),'fire_area')
     call check_size(size(grid%fuel_frac),'fuel_frac')
+    call check_size(size(grid%can_fuel_frac),'can_fuel_frac')
     call check_size(size(grid%fuel_frac_burnt),'fuel_frac_burnt')
     call check_size(size(grid%lfn_out),'lfn_out')
     call check_size(size(grid%avg_fuel_frac),'avg_fuel_frac')

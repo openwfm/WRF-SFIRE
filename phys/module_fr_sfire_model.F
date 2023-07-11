@@ -28,7 +28,8 @@ subroutine sfire_model (                    &
     fire_hfx,                               & ! input: given heat flux, or set inside
     tign_in,                                & ! ignition time, if given
     lfn,lfn_out,tign,fuel_frac,fire_area,   & ! state: level function, ign time, fuel left, area burning
-    fuel_frac_burnt,                        & ! output: fuel fraction burnt in this timestep
+    can_fuel_frac,                          & ! state: canopy fuel fraction
+    fuel_frac_burnt,         & ! output: fuel fraction burnt in this timestep
     fgrnhfx,fgrnqfx,                        & ! output: heat fluxes total heat flux (ground + canopy)
     fcanhfx,fcanqfx,                        & ! output: canopy heat fluxes
     ros,flineint,flineint2,                 & ! diagnostic variables
@@ -109,7 +110,8 @@ real, dimension(ifms:ifme, jfms:jfme), intent(inout):: tign_in ! given ignition 
 REAL, INTENT(inout), dimension(ifms:ifme,jfms:jfme):: &
     lfn   , &                               ! level function: fire is where lfn<0 (node)
     tign  , &                               ! absolute time of ignition (node)
-    fuel_frac                               ! fuel fraction (node), currently redundant
+    fuel_frac, &                            ! fuel fraction (node), currently redundant
+    can_fuel_frac                           ! Canopy fuel fraction
 
 REAL, INTENT(out), dimension(ifms:ifme,jfms:jfme):: &
     fire_area, &                            ! fraction of each cell burning
@@ -224,7 +226,7 @@ elseif(ifun.eq.2)then
             ifms,ifme,jfms,jfme, &
             ifts,ifte,jfts,jfte, &
             fdx,fdy,time_start,dt,  &
-            fuel_frac,fire_area,lfn,tign_in,tign)
+            fuel_frac,can_fuel_frac,fire_area,lfn,tign_in,tign)
             
         endif
 
@@ -498,7 +500,7 @@ elseif (ifun.eq.6) then ! timestep postprocessing
         fuel_frac_burnt,                          & !
         fgrnhfx,fgrnqfx, &  ! out: surface + canopy heat fluxes
         fire_area, &        ! in: fire area
-        fcanhfx, fcanqfx, fp%canopy_fuel_frac)   ! out: canopy heat fluxes
+        fcanhfx, fcanqfx, can_fuel_frac)   ! out: canopy heat fluxes
 
     case (1, 2) 
 !$OMP CRITICAL(SFIRE_MODEL_CRIT)

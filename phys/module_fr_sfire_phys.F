@@ -1346,15 +1346,15 @@ implicit none
 !*** arguments
 type(fire_params), intent(in)::fp
 real, intent(in)::dt          ! dt  the fire time step (the fire model advances time by this)
-integer, intent(in)::ifts,ifte,jfts,jfte,ifms,ifme,jfms,jfme,iffs,iffe,jffs,jffe   ! dimensions                   
+integer, intent(in)::ifts,ifte,jfts,jfte,ifms,ifme,jfms,jfme,iffs,iffe,jffs,jffe   ! dimensions
 real, intent(in),dimension(ifms:ifme,jfms:jfme):: fgip
 real, intent(in),dimension(iffs:iffe,jffs:jffe):: fuel_frac_burnt
-real,   intent(out),    dimension(ifms:ifme, jfms:jfme)                 :: grnhft !< surface + canopy sensible heat flux [W m-2]
+real,   intent(out),    dimension(ifms:ifme, jfms:jfme)                 :: grnhft !< surface + canopy sensible heat flux [W m-2]                                 
 real,   intent(in),     dimension(ifms:ifme, jfms:jfme),    optional    :: fire_area    !< proportion of the fire cell burning [-]
 real, intent(out),dimension(ifms:ifme,jfms:jfme),optional:: grnqft
 real,   intent(out),    dimension(ifms:ifme, jfms:jfme),    optional    :: canhft       !< canopy sensible heat flux [W m-2]
 real,   intent(out),    dimension(ifms:ifme, jfms:jfme),    optional    :: canqft       !< canopy latent heat flux [W m-2]
-real,   intent(inout),  dimension(ifms:ifme, jfms:jfme),    optional    :: canopy_fuel_frac !< canopy fuel fraction [W m-2]
+real,   intent(inout),  dimension(ifms:ifme, jfms:jfme),    optional    :: canopy_fuel_frac !< canopy fuel fraction [-]
 
 !*** local
 integer::i,j
