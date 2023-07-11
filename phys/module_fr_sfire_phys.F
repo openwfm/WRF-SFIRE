@@ -7,6 +7,7 @@ module module_fr_sfire_phys
 
 use module_model_constants, only: cp,xlv
 use module_fr_sfire_util
+use, intrinsic :: iso_c_binding
 
 implicit none
 PRIVATE
@@ -26,16 +27,28 @@ real,pointer,dimension(:,:):: tempf                ! air temperature (K) (Balbi 
 real,pointer,dimension(:,:):: rhof                 ! air pressure (Pa) (Balbi model only)
 real,pointer,dimension(:,:):: ffwidth              ! fire front width (m) (Balbi model only)
 real,pointer,dimension(:,:,:):: fmc_gc_f           ! fuel moisture contents, ground by class (1)
-
+real,pointer,dimension(:,:):: u10f,v10f            ! wind components at 10 meters (m/s) at the fire mesh
+real,pointer,dimension(:,:):: ustf                 ! U* in similarity theory (m/s) at the fire mesh
+real,pointer,dimension(:,:):: tskf                 ! surface skin temperature (K) at the fire mesh
+real,pointer,dimension(:,:,:):: tslbf              ! soil temperature at different layers (K) at the fire mesh
+real,pointer,dimension(:,:):: q2f                  ! water vapor mixing ratio at 2 meters (kg/kg) at the fire mesh
+real,pointer,dimension(:,:):: qfxf                 ! upward moisture flux at the surface (kg/m^2/s) at the fire mesh
+real,pointer,dimension(:,:,:):: smoisf             ! soil moisture at different layers (m^3/m^3) at the fire mesh
+real,pointer,dimension(:,:):: rainncf              ! accumulated total grid scale precipitation (mm) at the fire mesh
+real,pointer,dimension(:,:):: snowncf              ! accumulated total grid scale snow and ice (mm) at the fire mesh
+real,pointer,dimension(:,:):: psfcf                ! surface pressure (Pa) at the fire mesh
+real,pointer,dimension(:,:):: swdownf              ! downward short wave flux at ground surface (W/m^2) at the fire mesh
+real,pointer,dimension(:,:):: pblhf                ! planetary boundary layer height (m) at the fire mesh
 end type fire_params
 
 ! verbosity and diagnostic switches, can be activated when this module is USEd
 logical, public:: compare_rothermel=.false.       ! run comparison in fire_ros
-logical, public:: call_write_fuels_m=.true.       ! create file fuels_m for graphics postprocessing 
+logical, public:: call_write_fuels_m=.false.      ! create file fuels_m for graphics postprocessing 
 integer, public:: balbi_msglevel=2                ! prints in fire_ros_balbi, 0=nothing 1=errors 2=warnings 3=diagnostics
 integer, public:: balbi_nc_max=10                 ! max number of balbi no convergence cases
 integer, public:: balbi_nc_count=0                ! counter of balbi no convergence cases
 integer, public:: behave_msglevel=2               ! prints in fire_ros_behave, 0=nothing 1=errors 2=warnings 3=diagnostics
+integer, public:: ml_msglevel=2                   ! prints in fire_ros_ml, 0=nothing 1=errors 2=warnings 3=diagnostics
 
 ! subroutines and functions 
 PUBLIC:: init_fuel_cats,fire_ros,heat_fluxes,set_nfuel_cat,set_fire_params, &
@@ -1040,9 +1053,11 @@ implicit none
 integer, intent(in):: nsteps   ! number of steps for speed computation
 real, intent(in):: maxwind,maxslope ! from zero to these
 
-integer:: iounit,k,j,i,m,isave
+integer:: iounit,k,j,i,m,s,isave
 type(fire_params)::fp
 real, dimension(1:3,1:nsteps), target::vx,vy,zsf,dzdxf,dzdyf,bbb,phisc,phiwc,r_0,fgip,ischap,fmc_g,wind,nfuel_cat,rhof,tempf,ffwidth
+real, dimension(1:3,1:nsteps), target::u10f,v10f,ustf,tskf,q2f,qfxf,rainncf,snowncf,psfcf,swdownf,pblhf
+real, dimension(1:3,6,1:nsteps), target::tslbf,smoisf
 real, dimension(1:3,max_moisture_classes,1:nsteps), target::fmc_gc_f
 real, dimension(1:3,1:nsteps)::fuel_time,ros,fwh,fz0
 real::ros_back,ros_wind,ros_slope,propx,propy,r,speed,tanphi
@@ -1067,10 +1082,34 @@ fp%rhof=>rhof
 fp%tempf=>tempf
 fp%ffwidth=>ffwidth
 fp%fmc_gc_f=>fmc_gc_f
+fp%u10f=>u10f
+fp%v10f=>v10f
+fp%ustf=>ustf
+fp%tskf=>tskf
+fp%tslbf=>tslbf
+fp%q2f=>q2f
+fp%qfxf=>qfxf
+fp%smoisf=>smoisf
+fp%rainncf=>rainncf
+fp%snowncf=>snowncf
+fp%psfcf=>psfcf
+fp%swdownf=>swdownf
+fp%pblhf=>pblhf
 
-rhof = 1.
-tempf = 300.
-ffwidth = 100.
+rhof = 1.0
+tempf = 300.0
+ffwidth = 100.0
+u10f = 3.0
+v10f = 2.0
+ustf = 0.5
+tskf = 297.2
+q2f = 0.008
+qfxf = 0.00009
+rainncf = 2.6
+snowncf = 0.002
+psfcf = 8380.4
+swdownf = 518.7
+pblhf = 114.0
 
 iounit = open_text_file('fuels.m','write')
 
@@ -1134,6 +1173,20 @@ do k=1,nfuelcats
            fmc_gc_f(1,m,j)=fuelmc_g
            fmc_gc_f(2,m,j)=fuelmc_g
            fmc_gc_f(3,m,j)=(fuelmce(k)*(j-1))/(nsteps-2)
+       enddo
+       do s=1,3
+          tslbf(s,1,j) = 297.2
+          tslbf(s,2,j) = 296.0
+          tslbf(s,3,j) = 293.6
+          tslbf(s,4,j) = 292.5
+          tslbf(s,5,j) = 286.8
+          tslbf(s,6,j) = 281.1
+          smoisf(s,1,j) = 0.08
+          smoisf(s,2,j) = 0.16
+          smoisf(s,3,j) = 0.18
+          smoisf(s,4,j) = 0.19
+          smoisf(s,5,j) = 0.22
+          smoisf(s,6,j) = 0.25
        enddo
     enddo
     isave=fire_fmc_read
@@ -1594,6 +1647,8 @@ else if (ibeh .eq. 3) then
     call fire_ros_wirc(ros,nvx,nvy,i,j,fp,ierrx,msg)
 else if (ibeh .eq. 4) then
     call fire_ros_behave(ros,nvx,nvy,i,j,fp,ierrx,msg)
+else if (ibeh .eq. 5) then
+    call fire_ros_ml(ros,nvx,nvy,i,j,fp,ierrx,msg)
 else
     if (fire_advection.ne.0) then ! from flags in module_fr_sfire_util
         ! wind speed is total speed 
@@ -2351,6 +2406,121 @@ if(behave_msglevel.ge.3)then
 endif
 
 end subroutine fire_ros_behave
+
+!
+!***
+!
+
+subroutine fire_ros_ml(ros,nvx,nvy,i,j,fp,ierrx,msg)
+! in
+!       nvx,nvy direction of propagation, normalized 
+!       i,j     indices in the fire grid
+!       fp      fire grid arrays 
+! out
+!       ros     rate of spread
+!       ierrx   error code
+!       msg     error message
+! global
+!       fuel categories from namelist.fire
+!
+! ML-based fire spread model using SVM as ground truth data 
+
+!*** arguments
+implicit none
+interface 
+function ros_ml_predict(x) result(y) bind(c)
+    use iso_c_binding
+    real(c_double) :: x(47)
+    real(c_double) :: y
+end function ros_ml_predict
+end interface
+real, intent(out)::ros
+real, intent(in)::nvx,nvy
+integer, intent(in)::i,j
+type(fire_params),intent(in)::fp
+integer, intent(out)::ierrx
+character(len=*), intent(out)::msg
+
+!*** local variables
+integer, parameter:: nfeatures=47
+real(8):: x(nfeatures)
+real:: zsf, u10, v10, ust, t2, tsk
+real:: tslb_0, tslb_1, tslb_2, tslb_3, tslb_4, tslb_5
+real:: q2, qfx
+real:: smois_0, smois_1, smois_2, smois_3, smois_4, smois_5
+real:: fmc_gc_0, fmc_gc_1, fmc_gc_2, fmc_gc_3, fmc_gc_4
+real:: rainnc, snownc, psfc, swdown, pblh, nfuel_cat
+real:: nfuel_cat_dummy(nfuelcats)
+real:: vx, vy, dzdxf, dzdyf, speed, tanphi
+integer:: k, f
+
+!*** executable
+! retrieve inputs
+nfuel_cat = fp%nfuel_cat(i,j)       ! fuel categories
+k = int(nfuel_cat)                  ! fuel index
+zsf = fp%zsf(i,j)
+dzdxf = fp%dzdxf(i,j)
+dzdyf = fp%dzdyf(i,j)
+u10 = fp%u10f(i,j)
+v10 = fp%v10f(i,j)
+ust = fp%ustf(i,j)
+t2 = fp%tempf(i,j)
+tsk = fp%tskf(i,j)
+tslb_0 = fp%tslbf(i,1,j)
+tslb_1 = fp%tslbf(i,2,j)
+tslb_2 = fp%tslbf(i,3,j)
+tslb_3 = fp%tslbf(i,4,j)
+tslb_4 = fp%tslbf(i,5,j)
+tslb_5 = fp%tslbf(i,6,j)
+q2 = fp%q2f(i,j)
+qfx = fp%qfxf(i,j)
+smois_0 = fp%smoisf(i,1,j)
+smois_1 = fp%smoisf(i,2,j)
+smois_2 = fp%smoisf(i,3,j)
+smois_3 = fp%smoisf(i,4,j)
+smois_4 = fp%smoisf(i,5,j)
+smois_5 = fp%smoisf(i,6,j)
+fmc_gc_0 = fp%fmc_gc_f(i,1,j)
+fmc_gc_1 = fp%fmc_gc_f(i,2,j)
+fmc_gc_2 = fp%fmc_gc_f(i,3,j)
+fmc_gc_3 = fp%fmc_gc_f(i,4,j)
+fmc_gc_4 = fp%fmc_gc_f(i,5,j)
+rainnc = fp%rainncf(i,j)
+snownc = fp%snowncf(i,j)
+psfc = fp%psfcf(i,j)
+swdown = fp%swdownf(i,j)
+pblh = fp%pblhf(i,j)
+nfuel_cat_dummy = 0.
+do f=1,nfuelcats
+    if (f.eq.k) then
+        nfuel_cat_dummy(f)=1.
+    endif
+enddo
+! unused variables that maybe used later?
+vx = fp%vx(i,j)
+vy = fp%vy(i,j)
+speed  = vx*nvx + vy*nvy            ! wind speed in the spread direction
+tanphi = dzdxf*nvx + dzdyf*nvy      ! slope in the spread direction
+! constructing features array for prediction
+x(1:nfeatures-nfuelcats) = (/ zsf, dzdxf, dzdyf, nvx, nvy, u10, v10, ust, t2, tsk, &
+                              tslb_0, tslb_1, tslb_2, tslb_3, tslb_4, tslb_5, q2, qfx, &
+                              smois_0, smois_1, smois_2, smois_3, smois_4, smois_5, &
+                              fmc_gc_0, fmc_gc_1, fmc_gc_2, fmc_gc_3, fmc_gc_4, &
+                              rainnc, snownc, psfc, swdown, pblh /)
+x(nfeatures-nfuelcats+1:nfeatures) = nfuel_cat_dummy
+ros = ros_ml_predict(x)
+! print the outputs
+if(ml_msglevel.ge.3)then
+!$OMP CRITICAL(SFIRE_PHYS_CRIT)
+do f=1,nfeatures
+    write(msg,*)'x',f,'=',x(f)
+    call message(msg)
+end do
+write(msg,*)'y=',ros
+call message(msg)
+!$OMP END CRITICAL(SFIRE_PHYS_CRIT)
+endif
+end subroutine fire_ros_ml
 
 !
 !***

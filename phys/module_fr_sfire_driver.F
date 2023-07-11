@@ -82,7 +82,8 @@ use module_fr_sfire_util
 HALO_SFIRE_WIND_A_sub, halo_fire_ph_sub, halo_fire_zsf_sub, halo_fire_longlat_sub, &
 halo_fire_phb_sub, halo_fire_z0_sub, halo_fire_lfn1_sub, HALO_FIRE_LFN_OUT_sub, &
 HALO_FIRE_MAG_sub, HALO_FIRE_MFG_sub, halo_fire_ndwi_sub, & 
-HALO_SFIRE_RHO2FIRE_ATM_sub, HALO_SFIRE_RHO2FIRE_SUB_sub
+HALO_SFIRE_RHO2FIRE_ATM_sub, HALO_SFIRE_RHO2FIRE_SUB_sub, &
+HALO_SFIRE_ML_ATM_sub, HALO_SFIRE_ML_SUB_sub
 #endif
 use module_fr_sfire_atm, only: read_emissions_table, add_fire_emissions
 
@@ -404,11 +405,17 @@ call print_2d_stats(ifps,min(ifpe,ifde-ir),jfps,min(jfpe,jfde-jr),ifms,ifme,jfms
             if(ibeh.eq.2)then
 #include "HALO_SFIRE_RHO2FIRE_ATM.inc"
             endif
+            if(ibeh.eq.5)then
+#include "HALO_SFIRE_ML_ATM.inc"
+            endif
         elseif(fire_ifun.eq.4)then
 !           halo exchange on fire winds width 2 for a 2-step RK method
 #include "HALO_FIRE_WIND_F.inc"
             if(ibeh.eq.2)then
 #include "HALO_SFIRE_RHO2FIRE_SUB.inc"
+            endif
+            if(ibeh.eq.5)then
+#include "HALO_SFIRE_ML_SUB.inc"
             endif
             if(run_fuel_moisture)then
             ! have interpolated to the fire grid
@@ -500,7 +507,13 @@ call print_2d_stats(ifps,min(ifpe,ifde-ir),jfps,min(jfpe,jfde-jr),ifms,ifme,jfms
             fp%fmc_g, &                             !  write-only alias. need to exit before using fp again
             fp%fmc_gc_f, &                             !  write-only alias. need to exit before using fp again
             grid%ndwi, &
-            grid%fndwi)
+            grid%fndwi, &
+            config_flags%num_soil_layers,                                & ! number of soil layers
+            grid%u10, grid%v10, grid%ust, grid%tsk, grid%tslb,           & ! weather variables for ML-based ROS model
+            grid%qfx, grid%smois, grid%snownc, grid%swdown, grid%pblh,   & ! weather variables for ML-based ROS model
+            grid%u10f, grid%v10f, grid%ustf, grid%tskf, grid%tslbf,      & ! weather variables for ML-based ROS model interpolated to fire mesh
+            grid%q2f, grid%qfxf, grid%smoisf, grid%rainncf,              & ! weather variables for ML-based ROS model interpolated to fire mesh
+            grid%snowncf, grid%psfcf, grid%swdownf, grid%pblhf)            ! weather variables for ML-based ROS model interpolated to fire mesh
  
 
 #ifdef DM_PARALLEL
@@ -614,7 +627,13 @@ subroutine sfire_driver_phys (ifun,    &
     fmc_g,                      &  ! fuel moisture, alias of fp%fmc_g
     fmc_gc_f,                   &  ! fuel moisture, alias of fp%fmc_gc_f
     ndwi,                       &
-    fndwi)                         ! ndwi on fire grid
+    fndwi,                      &  ! ndwi on fire grid
+    num_soil_layers,            &  ! number of soil layers
+    u10, v10, ust, tsk, tslb,           &  ! weather variables for ML-based ROS model
+    qfx, smois, snownc, swdown, pblh,   &  ! weather variables for ML-based ROS model
+    u10f, v10f, ustf, tskf, tslbf,      &  ! weather variables for ML-based ROS model interpolated to fire mesh
+    q2f, qfxf, smoisf, rainncf,         &  ! weather variables for ML-based ROS model interpolated to fire mesh
+    snowncf, psfcf, swdownf, pblhf)        ! weather variables for ML-based ROS model interpolated to fire mesh
 
 
 implicit none
@@ -678,7 +697,13 @@ real, intent(inout), dimension(ifms:ifme, jfms:jfme)::     &
 real, intent(out), dimension(ifms:ifme, jfms:jfme)::  &
     fire_area, &                                 ! fraction of area of each cell burning
     fuel_frac_burnt,                           & ! fraction of mass of fuel burnt
-    tempf,rhof,ffwidth                           ! variables for Balbi ROS model
+    tempf,rhof,ffwidth,                        & ! variables for Balbi ROS model
+    u10f, v10f, ustf, tskf,                    & ! variables for ML-based ROS model
+    q2f, qfxf, rainncf,                        & ! variables for ML-based ROS model
+    snowncf, psfcf, swdownf, pblhf               ! variables for ML-based ROS model
+
+real, intent(out), dimension(ifms:ifme,1:num_soil_layers,jfms:jfme):: &
+    tslbf, smoisf   ! variables for ML-based ROS model
 
 real, intent(out), dimension(ims:ime, jms:jme):: &  ! redundant arrays, for display purposes only (atm grid)
     avg_fuel_frac,                               &  ! average fuel fraction
@@ -712,7 +737,11 @@ real, intent(out), dimension(ims:ime,nfmc,jms:jme):: fmc_equi,fmc_lag
 real, intent(inout), dimension(ifms:ifme,jfms:jfme):: fmc_g
 real, intent(inout), dimension(ifms:ifme,nfmc,jfms:jfme):: fmc_gc_f
 
-
+! ML-based ROS model arguments
+integer, intent(in):: num_soil_layers
+real, intent(in), dimension(ims:ime,jms:jme):: u10, v10, ust, tsk
+real, intent(in), dimension(ims:ime,jms:jme):: qfx, snownc, swdown, pblh
+real, intent(in), dimension(ims:ime,1:num_soil_layers,jms:jme):: tslb, smois
 
 !  ***** data (constant in time) *****
 
@@ -723,14 +752,16 @@ real, intent(out), dimension(ifms:ifme, jfms:jfme)::fuel_time   ! fire params ar
 type(fire_params),intent(inout)::fp
     
 !*** local
-real :: dxf,dyf,time_start,latm, s
-integer :: its,ite,jts,jte,kts,kte, &            ! tile
+real :: dxf,dyf,time_start,latm,s
+integer :: its,ite,jts,jte,kts,kte,      &  ! tile
     ij,i,j,k,id,pid,ipe1,jpe1,ite1,jte1, &
-    ii,jj,                                 &
-    ifts,ifte,jfts,jfte                          ! fire tile
+    ii,jj,                               &
+    ifts,ifte,jfts,jfte,                 &  ! fire tile
+    sl ! soil layer index
 character(len=128)::msg
 character(len=3)::kk
 real, parameter::zero=0.
+real, dimension(ifms:ifme,jfms:jfme):: tslbf_i, smoisf_i
 
 !*** executable
 
@@ -997,6 +1028,192 @@ do ij=1,num_tiles
          ffwidth(ifts:ifte,jfts:jfte)     = 100.     ! default for now
 
       end if for_balbi
+        
+      for_ml_ros: if(ibeh.eq.5)then
+
+         call message('ibeh=5: interpolating atmosphere input for ML-based rate of spread model')
+         if(.not.use_atm_vars)call crash('ibeh=5 ML-based rate of spread model requires atmosphere but use_atm_vars=false')
+
+         call interpolate_z2fire(id,1,            & ! for debug output, <= 0 no output
+            ids,ide,  jds,jde,                    & ! atm grid dimensions
+            ims,ime,  jms,jme,                    &
+            ips,ipe,jps,jpe,                              &
+            its,ite,jts,jte,                              &
+            ifds, ifde, jfds, jfde,                       & ! fire grid dimensions
+            ifms, ifme, jfms, jfme,                       &
+            ifts,ifte,jfts,jfte,                          &
+            ir,jr,                                        & ! atm/fire grid ratio
+            t2,                                          & ! atm grid arrays in
+            tempf)                                      ! fire grid arrays out
+
+         call interpolate_z2fire(id,1,            & ! for debug output, <= 0 no output
+            ids,ide,  jds,jde,                    & ! atm grid dimensions
+            ims,ime,  jms,jme,                    &
+            ips,ipe,jps,jpe,                              &
+            its,ite,jts,jte,                              &
+            ifds, ifde, jfds, jfde,                       & ! fire grid dimensions
+            ifms, ifme, jfms, jfme,                       &
+            ifts,ifte,jfts,jfte,                          &
+            ir,jr,                                        & ! atm/fire grid ratio
+            u10,                                          & ! atm grid arrays in
+            u10f)                                      ! fire grid arrays out
+
+         call interpolate_z2fire(id,1,            & ! for debug output, <= 0 no output
+            ids,ide,  jds,jde,                    & ! atm grid dimensions
+            ims,ime,  jms,jme,                    &
+            ips,ipe,jps,jpe,                              &
+            its,ite,jts,jte,                              &
+            ifds, ifde, jfds, jfde,                       & ! fire grid dimensions
+            ifms, ifme, jfms, jfme,                       &
+            ifts,ifte,jfts,jfte,                          &
+            ir,jr,                                        & ! atm/fire grid ratio
+            v10,                                          & ! atm grid arrays in
+            v10f)                                      ! fire grid arrays out
+
+         call interpolate_z2fire(id,1,            & ! for debug output, <= 0 no output
+            ids,ide,  jds,jde,                    & ! atm grid dimensions
+            ims,ime,  jms,jme,                    &
+            ips,ipe,jps,jpe,                              &
+            its,ite,jts,jte,                              &
+            ifds, ifde, jfds, jfde,                       & ! fire grid dimensions
+            ifms, ifme, jfms, jfme,                       &
+            ifts,ifte,jfts,jfte,                          &
+            ir,jr,                                        & ! atm/fire grid ratio
+            ust,                                          & ! atm grid arrays in
+            ustf)                                      ! fire grid arrays out
+
+         call interpolate_z2fire(id,1,            & ! for debug output, <= 0 no output
+            ids,ide,  jds,jde,                    & ! atm grid dimensions
+            ims,ime,  jms,jme,                    &
+            ips,ipe,jps,jpe,                              &
+            its,ite,jts,jte,                              &
+            ifds, ifde, jfds, jfde,                       & ! fire grid dimensions
+            ifms, ifme, jfms, jfme,                       &
+            ifts,ifte,jfts,jfte,                          &
+            ir,jr,                                        & ! atm/fire grid ratio
+            tsk,                                          & ! atm grid arrays in
+            tskf)                                      ! fire grid arrays out
+
+         call interpolate_z2fire(id,1,            & ! for debug output, <= 0 no output
+            ids,ide,  jds,jde,                    & ! atm grid dimensions
+            ims,ime,  jms,jme,                    &
+            ips,ipe,jps,jpe,                              &
+            its,ite,jts,jte,                              &
+            ifds, ifde, jfds, jfde,                       & ! fire grid dimensions
+            ifms, ifme, jfms, jfme,                       &
+            ifts,ifte,jfts,jfte,                          &
+            ir,jr,                                        & ! atm/fire grid ratio
+            q2,                                          & ! atm grid arrays in
+            q2f)                                      ! fire grid arrays out
+
+         call interpolate_z2fire(id,1,            & ! for debug output, <= 0 no output
+            ids,ide,  jds,jde,                    & ! atm grid dimensions
+            ims,ime,  jms,jme,                    &
+            ips,ipe,jps,jpe,                              &
+            its,ite,jts,jte,                              &
+            ifds, ifde, jfds, jfde,                       & ! fire grid dimensions
+            ifms, ifme, jfms, jfme,                       &
+            ifts,ifte,jfts,jfte,                          &
+            ir,jr,                                        & ! atm/fire grid ratio
+            qfx,                                          & ! atm grid arrays in
+            qfxf)                                      ! fire grid arrays out
+
+         call interpolate_z2fire(id,1,            & ! for debug output, <= 0 no output
+            ids,ide,  jds,jde,                    & ! atm grid dimensions
+            ims,ime,  jms,jme,                    &
+            ips,ipe,jps,jpe,                              &
+            its,ite,jts,jte,                              &
+            ifds, ifde, jfds, jfde,                       & ! fire grid dimensions
+            ifms, ifme, jfms, jfme,                       &
+            ifts,ifte,jfts,jfte,                          &
+            ir,jr,                                        & ! atm/fire grid ratio
+            rainnc,                                          & ! atm grid arrays in
+            rainncf)                                      ! fire grid arrays out
+        
+         call interpolate_z2fire(id,1,            & ! for debug output, <= 0 no output
+            ids,ide,  jds,jde,                    & ! atm grid dimensions
+            ims,ime,  jms,jme,                    &
+            ips,ipe,jps,jpe,                              &
+            its,ite,jts,jte,                              &
+            ifds, ifde, jfds, jfde,                       & ! fire grid dimensions
+            ifms, ifme, jfms, jfme,                       &
+            ifts,ifte,jfts,jfte,                          &
+            ir,jr,                                        & ! atm/fire grid ratio
+            snownc,                                          & ! atm grid arrays in
+            snowncf)                                      ! fire grid arrays out
+
+         call interpolate_z2fire(id,1,            & ! for debug output, <= 0 no output
+            ids,ide,  jds,jde,                    & ! atm grid dimensions
+            ims,ime,  jms,jme,                    &
+            ips,ipe,jps,jpe,                              &
+            its,ite,jts,jte,                              &
+            ifds, ifde, jfds, jfde,                       & ! fire grid dimensions
+            ifms, ifme, jfms, jfme,                       &
+            ifts,ifte,jfts,jfte,                          &
+            ir,jr,                                        & ! atm/fire grid ratio
+            psfc,                                          & ! atm grid arrays in
+            psfcf)                                      ! fire grid arrays out
+
+         call interpolate_z2fire(id,1,            & ! for debug output, <= 0 no output
+            ids,ide,  jds,jde,                    & ! atm grid dimensions
+            ims,ime,  jms,jme,                    &
+            ips,ipe,jps,jpe,                              &
+            its,ite,jts,jte,                              &
+            ifds, ifde, jfds, jfde,                       & ! fire grid dimensions
+            ifms, ifme, jfms, jfme,                       &
+            ifts,ifte,jfts,jfte,                          &
+            ir,jr,                                        & ! atm/fire grid ratio
+            swdown,                                          & ! atm grid arrays in
+            swdownf)                                      ! fire grid arrays out
+
+         call interpolate_z2fire(id,1,            & ! for debug output, <= 0 no output
+            ids,ide,  jds,jde,                    & ! atm grid dimensions
+            ims,ime,  jms,jme,                    &
+            ips,ipe,jps,jpe,                              &
+            its,ite,jts,jte,                              &
+            ifds, ifde, jfds, jfde,                       & ! fire grid dimensions
+            ifms, ifme, jfms, jfme,                       &
+            ifts,ifte,jfts,jfte,                          &
+            ir,jr,                                        & ! atm/fire grid ratio
+            pblh,                                          & ! atm grid arrays in
+            pblhf)                                      ! fire grid arrays out
+         
+         do sl=1,num_soil_layers
+            call interpolate_z2fire(id,1,            & ! for debug output, <= 0 no output
+                ids,ide,  jds,jde,                    & ! atm grid dimensions
+                ims,ime,  jms,jme,                    &
+                ips,ipe,jps,jpe,                              &
+                its,ite,jts,jte,                              &
+                ifds, ifde, jfds, jfde,                       & ! fire grid dimensions
+                ifms, ifme, jfms, jfme,                       &
+                ifts,ifte,jfts,jfte,                          &
+                ir,jr,                                        & ! atm/fire grid ratio
+                tslb(:,sl,:),                                 & ! atm grid arrays in
+                tslbf_i)                                        ! fire grid arrays out
+            do j=jfts,jfte
+                do i=ifts,ifte
+                    tslbf(i,sl,j) = tslbf_i(i,j)
+                enddo
+            enddo
+
+            call interpolate_z2fire(id,1,            & ! for debug output, <= 0 no output
+                ids,ide,  jds,jde,                    & ! atm grid dimensions
+                ims,ime,  jms,jme,                    &
+                ips,ipe,jps,jpe,                              &
+                its,ite,jts,jte,                              &
+                ifds, ifde, jfds, jfde,                       & ! fire grid dimensions
+                ifms, ifme, jfms, jfme,                       &
+                ifts,ifte,jfts,jfte,                          &
+                ir,jr,                                        & ! atm/fire grid ratio
+                smois(:,sl,:),                                & ! atm grid arrays in
+                smoisf_i)                                       ! fire grid arrays out
+            do j=jfts,jfte
+                do i=ifts,ifte
+                    smoisf(i,sl,j) = smoisf_i(i,j)
+                enddo
+            enddo
+        enddo
+      end if for_ml_ros
  
       use_atm: if(use_atm_vars)then                                  
      
@@ -1812,6 +2029,19 @@ subroutine set_fp_from_grid(grid,fp)
     fp%tempf => grid%tempf     ! temperature
     fp%rhof => grid%rhof     ! surface air density
     fp%ffwidth => grid%ffwidth     ! fire front width 
+    fp%u10f => grid%u10f
+    fp%v10f => grid%v10f
+    fp%ustf => grid%ustf
+    fp%tskf => grid%tskf
+    fp%tslbf => grid%tslbf
+    fp%q2f => grid%q2f
+    fp%qfxf => grid%qfxf
+    fp%smoisf => grid%smoisf
+    fp%rainncf => grid%rainncf
+    fp%snowncf => grid%snowncf
+    fp%psfcf => grid%psfcf
+    fp%swdownf => grid%swdownf
+    fp%pblhf => grid%pblhf
 
 end subroutine set_fp_from_grid
 
@@ -1922,6 +2152,36 @@ subroutine check_grid_alloc(grid,config_flags)
         call check_size(size(grid%tempf),'tempf')
         call check_size(size(grid%rhof),'rhof')
         call check_size(size(grid%ffwidth),'ffwidth')
+    endif
+    if(ibeh.eq.5)then        
+        call check_size(size(grid%u10),'u10')
+        call check_size(size(grid%u10f),'u10f')
+        call check_size(size(grid%v10),'v10')
+        call check_size(size(grid%v10f),'v10f')
+        call check_size(size(grid%ust),'ust')
+        call check_size(size(grid%ustf),'ustf')
+        call check_size(size(grid%t2),'t2')
+        call check_size(size(grid%tempf),'tempf')
+        call check_size(size(grid%tsk),'tsk')
+        call check_size(size(grid%tskf),'tskf')
+        call check_size(size(grid%tslb),'tslb')
+        call check_size(size(grid%tslbf),'tslbf')
+        call check_size(size(grid%q2),'q2')
+        call check_size(size(grid%q2f),'q2f')
+        call check_size(size(grid%qfx),'qfx')
+        call check_size(size(grid%qfxf),'qfxf')
+        call check_size(size(grid%smois),'smois')
+        call check_size(size(grid%smoisf),'smoisf')
+        call check_size(size(grid%rainnc),'rainnc')
+        call check_size(size(grid%rainncf),'rainncf')
+        call check_size(size(grid%snownc),'snownc')
+        call check_size(size(grid%snowncf),'snowncf')
+        call check_size(size(grid%psfc),'psfc')
+        call check_size(size(grid%psfcf),'psfcf')
+        call check_size(size(grid%swdown),'swdown')
+        call check_size(size(grid%swdownf),'swdownf')
+        call check_size(size(grid%pblh),'pblh')
+        call check_size(size(grid%pblhf),'pblhf')
     endif
 
 end subroutine check_grid_alloc
