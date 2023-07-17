@@ -27,6 +27,7 @@ ATM_OBJ = \
     module_fr_sfire_model.o \
     module_fr_sfire_core.o \
     module_fr_sfire_phys.o \
+    module_fr_sfire_fields.o \
     module_fr_sfire_atm.o \
     module_fr_sfire_util.o  \
     wrf_fakes.o
@@ -39,6 +40,7 @@ FIRE_OBJ = \
     module_fr_sfire_model.o \
     module_fr_sfire_core.o \
     module_fr_sfire_phys.o \
+    module_fr_sfire_fields.o \
     module_fr_sfire_atm.o \
     module_fr_sfire_util.o  \
 	module_fr_sfire_driver.o \
@@ -53,11 +55,13 @@ INIT_OBJ = \
 FUELS_OBJ = \
     fuels_main.o \
     module_fr_sfire_phys.o \
+    module_fr_sfire_fields.o \
     module_fr_sfire_util.o  \
     wrf_fakes.o
 
 FIRE_ROS_OBJ = \
     module_fr_sfire_phys.o \
+    module_fr_sfire_fields.o \
     module_fr_sfire_util.o  \
     wrf_fakes.o
     
@@ -68,18 +72,21 @@ FUEL_INTERP_OBJ = \
     fuel_interp_test_main.o \
     module_fr_sfire_core.o \
     module_fr_sfire_phys.o \
+    module_fr_sfire_fields.o \
     module_fr_sfire_util.o  \
     wrf_fakes.o
 
 MOISTURE_TEST_OBJ = \
     moisture_test_main.o \
     module_fr_sfire_phys.o \
+    module_fr_sfire_fields.o \
     module_fr_sfire_util.o  \
     wrf_fakes.o
     
 MOISTURE_OBJ = \
     moisture_main.o \
     module_fr_sfire_phys.o \
+    module_fr_sfire_fields.o \
     module_fr_sfire_util.o  \
     wrf_fakes.o
 
@@ -131,6 +138,7 @@ fire_ros.exe: $(MAKEFILE) $(FIRE_ROS_OBJ) fire_ros_main.o
 
 moisture_test_main.o: $(MAKEFILE) \
     module_fr_sfire_phys.o  \
+    module_fr_sfire_fields.o  \
     module_fr_sfire_util.o 
 
 moisture_main.o: $(MAKEFILE) \
@@ -141,6 +149,7 @@ fire.o: $(MAKEFILE) \
     module_fr_sfire_model.o \
     module_fr_sfire_core.o  \
 	module_fr_sfire_driver.o \
+	module_fr_sfire_fields.o \
     module_domain.o \
     module_configure.o \
     wrf_fakes.o \

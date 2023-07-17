@@ -98,7 +98,7 @@ implicit none
 
 private
 public sfire_driver_em,use_atm_vars,set_flags, &
-       set_fp_from_grid, fire_ignition_convert
+       set_fp_from_grid, fire_ignition_convert, set_sfire_fields_from_grid
 public ifun_beg, ifun_step, ifun_end
 
 logical:: use_atm_vars=.true.   !  interpolate wind from atm mesh and average output fluxes back
@@ -172,6 +172,8 @@ subroutine sfire_driver_em ( grid , config_flags                    &
 ! populate our structures from wrf
 
     call set_fp_from_grid(grid,fp)
+
+    call set_sfire_fields_from_grid(grid)
 
 ! copy configuration flags to sfire internal structures
     call set_flags(config_flags)
@@ -486,7 +488,6 @@ call print_2d_stats(ifps,min(ifpe,ifde-ir),jfps,min(jfpe,jfde-jr),ifms,ifme,jfms
             grid%fz0, grid%fwh,grid%can_top,grid%cuf,grid%cvf, &
             grid%tempf, grid%rhof,grid%ffwidth,             & ! variables for Balbi ROS model
             grid%cfb, &                                       ! Crown fraction burnt variable
-            grid%canopy_fuel_frac, &                          ! Canopy fuel fraction
             fp,                                    & ! structure with pointers passed to spread rate calculation
             config_flags%nfmc,         & ! moisture model variables start
             run_advance_moisture,run_fuel_moisture,dt_moisture,     &    ! moisture model control
@@ -602,7 +603,6 @@ subroutine sfire_driver_phys (ifun,    &
     fz0,fwh,can_top,cuf,cvf,                      & ! input fuel map/vegetation variables on fire mesh
     tempf,rhof,ffwidth,                           & ! variables for Balbi ROS model
     cfb,                                          & ! crown fire model variables
-    canopy_fuel_frac,                             & ! canopy fuel fraction [-]
     fp,                                           & ! fire params
     nfmc,                                     & ! number of fuel moisture classes
     run_advance_moisture,run_fuel_moisture,dt_moisture,& ! moisture model control
@@ -679,7 +679,7 @@ real, intent(inout), dimension(ifms:ifme, jfms:jfme)::     &
     lfn,tign,fuel_frac,                        & ! state: level function, ign time, fuel left
     can_fuel_frac,                             & ! state: canopy fuel fraction
     lfn_out,                                   & ! fire wind velocities
-    cfb, canopy_fuel_frac                        !< variable for crown fire model
+    cfb                                          !< variable for crown fire model
 
 real, intent(out), dimension(ifms:ifme, jfms:jfme)::  &
     fire_area, &                                  ! fraction of area of each cell burning
@@ -1001,7 +1001,6 @@ do ij=1,num_tiles
 
          ffwidth(ifts:ifte,jfts:jfte)     = 100.     ! default for now
          cfb(ifts:ifte,jfts:jfte)         = 0.       ! default for now
-         canopy_fuel_frac(ifts:ifte,jfts:jfte) = 1.  ! default for now
 
       end if for_balbi
  
@@ -1834,10 +1833,24 @@ subroutine set_fp_from_grid(grid,fp)
     fp%tempf => grid%tempf     ! temperature
     fp%rhof => grid%rhof     ! surface air density
     fp%ffwidth => grid%ffwidth     ! fire front width 
-    fp%cfb => grid%cfb       ! canopy fraction burnt
-    fp%canopy_fuel_frac => grid%canopy_fuel_frac    ! canopy fuel fraction
 
 end subroutine set_fp_from_grid
+
+subroutine set_sfire_fields_from_grid(grid)
+
+    use module_fr_sfire_fields, only: cfb
+    
+    implicit none
+
+    type(domain),   intent(in)  :: grid
+
+    ! pointer to grid variable
+    cfb => grid%cfb
+
+    ! Initialize value on array
+    cfb(:, :) = 0.
+
+end subroutine set_sfire_fields_from_grid
 
 subroutine check_grid_alloc(grid,config_flags)
 
@@ -1948,7 +1961,6 @@ subroutine check_grid_alloc(grid,config_flags)
         call check_size(size(grid%ffwidth),'ffwidth')
     endif
     call check_size(size(grid%cfb),'cfb')
-    call check_size(size(grid%canopy_fuel_frac),'canopy_fuel_frac')
     
 end subroutine check_grid_alloc
 

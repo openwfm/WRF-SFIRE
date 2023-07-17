@@ -79,7 +79,6 @@ state    real     lfn_s2    *i*j      fire        1         z    r    "LFN_S2" "
 state    real     lfn_s3    *i*j      fire        1         z    r    "LFN_S3" "level set function for reinitialization integration" "1"
 #
 state    real     fuel_frac *i*j      fire        1         z    hr    "FUEL_FRAC" "fuel remaining" "1"
-state    real     can_fuel_frac *i*j  fire        1         z    hr    "CAN_FUEL_FRAC" "canopy fuel remaining" "1"
 state    real     fire_area *i*j      fire        1         z    hr    "FIRE_AREA" "fraction of cell area on fire" "1"
 
 # sfire variables on fire grid
@@ -104,7 +103,7 @@ state    real     tempf     *i*j      fire        1         z    hr    "TEMPF"  
 state    real     rhof      *i*j      fire        1         z    hr    "RHOFF"    "surface air density"  "Pa"
 state    real     ffwidth   *i*j      fire        1         z    hr    "FFWIDTH"  "fire front width"  "m"
 state    real     cfb       *i*j      fire        1         z    hr    "CFB"  "canopy fraction burnt"  "1"
-state    real     canopy_fuel_frac       *i*j      fire        1         z    hr    "CANOPY_FUEL_FRAC"  "canopy fuel fraction"  "1"
+state    real     can_fuel_frac *i*j  fire        1         z    hr    "CAN_FUEL_FRAC" "canopy fuel remaining" "1"
 # 
 # ------------------------------------------------------------------------------------------------------------------------
 # fuel moisture variables

@@ -2162,8 +2162,7 @@ intrinsic max,min,sqrt,nint,tiny,huge
             end select
   
             ! get rate of spread from wind speed and slope
-
-            rr = fire_rate_of_spread(diffCx, diffCy, i, j, fp)
+            rr = fire_rate_of_spread(diffCx, diffCy, i, j, fp, save_cfb=.true.)
 
             nerr = nerr + ierrx
 
