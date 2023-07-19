@@ -38,7 +38,7 @@ integer, public:: balbi_nc_count=0                ! counter of balbi no converge
 ! subroutines and functions 
 PUBLIC:: init_fuel_cats,fire_ros,heat_fluxes,set_nfuel_cat,set_fire_params, &
 write_fuels_m,fire_risk,fire_intensity,fuel_moisture,advance_moisture,fuel_name,&
-fire_rate_of_spread
+fire_rate_of_spread, set_canopy_data, initialize_sfire_fields
 
 ! types
 public:: fire_params
@@ -174,7 +174,8 @@ PUBLIC:: mfuelcats
    INTEGER, SAVE      :: no_fuel_cat2 = 99999999  ! all categories between no_fuel_cat and no_fuel_cat2 are no fuel
    INTEGER, SAVE      :: ibeh=1             ! spread formula 0 = MacArthur, 1 = Rothermel, 2 = Balbi
    CHARACTER (len=80), DIMENSION(mfuelcats ), save :: fuel_name
-   INTEGER, DIMENSION( mfuelcats ), save :: ichap,itree 
+   INTEGER, DIMENSION( mfuelcats ), save :: ichap 
+   INTEGER, DIMENSION( mfuelcats ), save :: itree !< tree type
    REAL   , DIMENSION( mfuelcats ), save :: windrf,weight,fgi,fci,fci_d,fct,fcbr, &
    fueldepthm,fueldens,fuelmce,   &
    fcwh,fcz0, ffw, &
@@ -184,7 +185,8 @@ PUBLIC:: mfuelcats
 
    PUBLIC :: n_tree_type
    INTEGER, PARAMETER                       :: n_tree_type = 8          !< number of tree type categories
-   REAL   , DIMENSION(n_tree_type), SAVE    :: tree_z_max, tree_z_min   !< canopy top and bottom height (AGL) as function of tree type. The tree type is given by itree flag for each fuel
+   REAL   , DIMENSION(n_tree_type), SAVE    :: tree_z_max               !< canopy top height (AGL) as function of tree type.
+   REAL   , DIMENSION(n_tree_type), SAVE    :: tree_z_min               !< canopy bottom height (AGL) as function of tree type.
    REAL   , DIMENSION(n_tree_type), SAVE    :: tree_burn_time           !< canopy characteristic burn time
 ! =============================================================================
 ! Standard 13 fire behavior fuel models (for surface fires), along with some
@@ -252,9 +254,9 @@ PUBLIC:: mfuelcats
    DATA k_tc / 4.025e-02, 1.621e-02, 3.752e-02, 3.000e-02, 1.812e-02, 3.621e-02, 3.778e-02, &
     8.770e-04, 1.781e-03, 8.216e-03, 7.405e-03, 1.772e-02, 2.169e-02, 3.000e-02, zf*0 / ! fuel thermal conductivity
 
-   DATA tree_z_max / 10., 20., 15., 24., 22.5, 10., 2.2, 0.73 /
-   DATA tree_z_min / 3. , 6. , 5. , 12., 10. , 5. , 1.,  0.73 /         ! temporary values (development purpose only)
-   DATA tree_burn_time / 10. , 10. , 10. , 10., 10. , 10. , 10., 10. /  ! temporary values (development purpose only)
+   DATA tree_z_max / 10., 20., 15., 24., 22.5, 10., 2.2, 0.73 /         ! canopy top height as function of tree type [m]
+   DATA tree_z_min / 3. , 6. , 5. , 12., 10. , 5. , 1.,  0.73 /         ! canopy bottom height as function of tree type [m]
+   DATA tree_burn_time / 10. , 10. , 10. , 10., 10. , 10. , 10., 10. /  ! canopy burning time function of tree type [m]
    
    ! =========================================================================
 
@@ -777,6 +779,10 @@ IF ( wrf_dm_on_monitor() ) THEN
 ENDIF
 
 ! broadcast fuel tables
+!$OMP CRITICAL(SFIRE_MODEL_CRIT)
+write(*,*) "BCAST fuel data"
+!$OMP END CRITICAL(SFIRE_MODEL_CRIT)
+
 call wrf_dm_bcast_real(cmbcnst,1)
 call wrf_dm_bcast_real(hfgl,1)
 call wrf_dm_bcast_real(fuelmc_g,1)
@@ -811,7 +817,7 @@ call wrf_dm_bcast_real(fmc_gl_ndwi_rate, nfuelcats)
 call wrf_dm_bcast_real(fmc_gl_ndwi_stdev,nfuelcats)
 call wrf_dm_bcast_real(fmc_gl_stdev,     nfuelcats)
 call wrf_dm_bcast_real(k_tc,   nfuelcats)
-CALL wrf_dm_bcast_real(tree_z_min,   n_tree_type)
+CALL wrf_dm_bcast_real(tree_z_max,   n_tree_type)
 CALL wrf_dm_bcast_real(tree_z_min,   n_tree_type)
 CALL wrf_dm_bcast_real(tree_burn_time,   n_tree_type)
 ! broadcast moisture tables
@@ -1513,6 +1519,94 @@ endif
 
 end subroutine set_nfuel_cat            
 
+
+!------------------------------------------------------------------------------------------------------------------
+! SUBROUTINE: set_canopy_data
+!>   Fill canopy field variable for top height, bottom height and fuel load
+!!
+!!   The following fields are initialized by this routine (see description in module_fr_sfire_fields):
+!!     - can_top
+!!     - can_bottom
+!!     - can_fuel_load
+!!  
+!!   Namelist input fire_can_fuel_read sets the source of information for setting the canopy data:
+!!     - fire_can_fuel_read == -1 : default value meaning no initialization should be performed
+!!     - fire_can_fuel_read == 0  : The canopy data are set according to surface fuel category.
+!!     - fire_can_fuel_read == 1  : The canopy data are given by WRF input file and should not be modified.
+!------------------------------------------------------------------------------------------------------------------
+subroutine set_canopy_data(       &
+  ifms,ifme,jfms,jfme,            &
+  ifts, ifte, jfts, jfte,         &
+  i_fire_can_fuel_read, nfuel_cat )
+
+  use module_fr_sfire_fields, only: can_top, can_bottom, can_fuel_load
+
+  implicit none
+
+  ! 0. Declarations
+  !    ------------
+
+  ! 0.1 Arguments
+  integer,                intent(in)  :: ifms                 !< fire mesh index start on x axis
+  integer,                intent(in)  :: ifme                 !< fire mesh index end   on x axis
+  integer,                intent(in)  :: jfms                 !< fire mesh index start on y axis
+  integer,                intent(in)  :: jfme                 !< fire mesh index end   on y axis
+  integer,                intent(in)  :: ifts                 !< fire tile index start on x axis
+  integer,                intent(in)  :: ifte                 !< fire tile index end   on x axis
+  integer,                intent(in)  :: jfts                 !< fire tile index start on y axis
+  integer,                intent(in)  :: jfte                 !< fire tile index end   on y axis
+  integer,                intent(in)  :: i_fire_can_fuel_read !< source of data for canopy data
+  real, dimension(ifms:ifme, jfms:jfme),  intent(in)  :: nfuel_cat            !< surface fuel class
+
+  ! 0.2 Locals
+  integer :: surf_fuel_cat  !< local fuel category
+  integer :: i, j           !< loop indexes
+
+  
+
+  ! 1. Fill the canopy data variable
+  !    -----------------------------
+
+  select case (i_fire_can_fuel_read)
+    case (0)
+      ! The canopy data are set according to surface fuel category.
+      do j = jfts, jfte
+        do  i = ifts, ifte
+          ! get local fuel cat and convert to integer
+          surf_fuel_cat = int(nfuel_cat(i, j))
+          
+          can_top(i, j)       = tree_z_max(itree(surf_fuel_cat))
+          can_bottom(i, j)    = tree_z_min(itree(surf_fuel_cat))
+          can_fuel_load(i, j) = fci_d(surf_fuel_cat)
+        enddo
+      enddo
+    
+    case (-1, 1)
+      ! The canopy data should have been initialized in the WRF input file or no initialization should be done. Nothing to do
+      return
+
+    case default
+      ! A non standard value of fire_can_fuel_read has been given.
+      ! Don't know what the user wants to do = crash
+      call crash("set_canopy_data: fire_can_fuel_read value is not valid. Please check namelist.input file.")
+
+  end select
+
+end subroutine set_canopy_data
+
+subroutine initialize_sfire_fields()
+
+    use module_fr_sfire_fields, only: cfb, can_top, can_bottom, can_fuel_load
+    
+    implicit none
+
+    ! Initialize value on array
+    cfb(:, :)           = 0.
+    can_top(:, :)       = 0.
+    can_bottom(:, :)    = 0.
+    can_fuel_load(:, :) = 0.
+
+end subroutine initialize_sfire_fields
 !
 !**********************
 !            
@@ -1686,7 +1780,7 @@ end subroutine fire_ros
 subroutine fire_crown_ros(fp, propx, propy, i, j, ros, ierrx, msg, save_cfb)
     
     use module_fr_sfire_util, only: fire_use_windrf
-    use module_fr_sfire_fields, only: cfb
+    use module_fr_sfire_fields, only: cfb, can_top, can_bottom, can_fuel_load
     
     implicit none
 
@@ -1731,7 +1825,7 @@ subroutine fire_crown_ros(fp, propx, propy, i, j, ros, ierrx, msg, save_cfb)
     real                :: wind_speed_no_wrf    !< wind speed in the spread direction without wrf
 
     !! tmp
-    real    :: canopy_bottom, canopy_top, canopy_bulk_density  !< canopy properties
+    real    :: canopy_bulk_density  !< canopy bulk density
     real    :: cfb_local
     logical :: save_cfb_local
 
@@ -1745,10 +1839,6 @@ subroutine fire_crown_ros(fp, propx, propy, i, j, ros, ierrx, msg, save_cfb)
 
     ! get local fuel class of surface fuel
     surf_fuel_cat = fp%nfuel_cat(i, j)
-    
-    ! get canopy top and bottom from surface fuel type
-    canopy_top = tree_z_max(itree(surf_fuel_cat))
-    canopy_bottom = tree_z_min(itree(surf_fuel_cat))
 
     ! get normal direction and wind
     scale = sqrt(propx ** 2 + propy ** 2 + epsilon(0.))
@@ -1767,14 +1857,14 @@ subroutine fire_crown_ros(fp, propx, propy, i, j, ros, ierrx, msg, save_cfb)
     !!    --------------------------------
 
     ! compute bulk density for canopy
-    if (canopy_top - canopy_bottom > 0.) then
-        canopy_bulk_density = fci_d(surf_fuel_cat) / (canopy_top - canopy_bottom)
+    if (can_top(i, j) - can_bottom(i, j) > 0.) then
+        canopy_bulk_density = can_fuel_load(i, j) / (can_top(i, j) - can_bottom(i, j))
     else
         canopy_bulk_density = 0.
     endif
 
     ! R_init_prime = 60 * ((canopy_base_height * (460 + 25.9 * canopy_foliar_moisture_content))) ** 1.5 / (delta_H * sigma_d)
-    ros_init_prime = 60. * ((canopy_bottom * (460. + 25.9 * fuelmc_c))) ** 1.5 / (cmbcnst * fgi(surf_fuel_cat))
+    ros_init_prime = 60. * ((can_bottom(i, j) * (460. + 25.9 * fuelmc_c))) ** 1.5 / (cmbcnst * fgi(surf_fuel_cat))
 
     ! surface ros is below initiation threshold, no passive of active crowning -> do not change ros and return
     if (ros <= ros_init_prime .or. canopy_bulk_density == 0.) then

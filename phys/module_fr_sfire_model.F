@@ -17,6 +17,7 @@ subroutine sfire_model (                    &
     restart,replay,                         & ! use existing state, prescribe spread
     run_fuel_moisture,                      & ! if need update fuel moisture in pass 4
     ifuelread,nfuel_cat0,                   & ! initialize fuel categories
+    i_fire_can_fuel_read,                   & ! initialize canopy fuel data
     ifds,ifde,jfds,jfde,                    & ! fire domain dims - the whole domain
     ifms,ifme,jfms,jfme,                    & ! fire memory dims - how declared
     ifps,ifpe,jfps,jfpe,                    & ! patch - nodes owned by this process
@@ -92,6 +93,7 @@ logical, intent(in):: replay                ! if true, use tign_g for level set
 logical, intent(in)::run_fuel_moisture      ! 
 ! scalar data
 integer, intent(in) :: ifuelread,nfuel_cat0 ! for set_fire_params
+integer, intent(in) :: i_fire_can_fuel_read !< source of data for canopy data
 integer, intent(in) :: ifds,ifde,jfds,jfde,&  ! fire domain bounds
         ifps,ifpe,jfps,jfpe                ! patch - nodes owned by this process
 integer, intent(in) :: ifts,ifte,jfts,jfte  ! fire tile bounds
@@ -208,6 +210,15 @@ elseif(ifun.eq.2)then
             ifts,ifte,jfts,jfte, &
             ifuelread,nfuel_cat0,&
             fp%zsf,nfuel_cat)            ! better not use the extrapolated zsf!!
+        
+        ! set default value for sfire fields
+        call initialize_sfire_fields()
+            
+        ! Initialize canopy fuel data
+        call set_canopy_data(               &
+            ifms,ifme,jfms,jfme,            &
+            ifts, ifte, jfts, jfte,         &
+            i_fire_can_fuel_read, nfuel_cat )
 
         ! uses nfuel_cat to set the other fuel data arrays
         ! needs zsf on halo width 1 to compute the terrain gradient

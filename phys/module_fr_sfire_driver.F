@@ -1071,34 +1071,6 @@ do ij=1,num_tiles
           !parameterization to scale the winds down to the FWH.
 
           elseif(fire_use_windrf.eq.4)then wind_rf          ! massman interpolation below fwh
-          
-!$OMP CRITICAL(SFIRE_DRIVER_CRIT)
-            call message('fire_use_windrf option 4 has been selected....!')
-            write(msg, '(A20,I1)') 'fire_can_top_read = ', fire_can_top_read
-            call message(msg)
-!$OMP END CRITICAL(SFIRE_DRIVER_CRIT)
-
-            !Lets set the canopy height, using either a look up table, or just explictly setting it 
-            !using WRF input data from LANDFIRE.
-
-            if(fire_can_top_read == 0)then
-
-                can_top = 0                             ! Initialize canopy top array on fire mesh 
-
-                call find_trees_fmesh(id,             & ! to identify debugging prints and files if needed
-                ids,ide, kds,kde, jds,jde,                    & ! atm grid dimensions
-                ims,ime, kms,kme, jms,jme,                    &
-                ips,ipe,jps,jpe,                              &
-                its,ite,jts,jte,                              &
-                ifds, ifde, jfds, jfde,                       & ! fire grid dimensions
-                ifms, ifme, jfms, jfme,                       &
-                ifps, ifpe, jfps, jfpe,                       & ! fire patch bounds
-                ifts,ifte,jfts,jfte,                          &
-                ir,jr,                                        & ! atm/fire grid ratio
-                can_top, nfuel_cat)                             ! tree canopy height info 
-            
-            end if 
-
 
             !Compute canopy top winds. Save this variable to cuf and cvf, which is like
             !vf and uf in terms of dimensionality, except that its canopy top winds.
@@ -1175,6 +1147,7 @@ do ij=1,num_tiles
     call sfire_model (id,ifun,restart,replay,  &
         run_fuel_moisture,                      & ! if fuel moisture needs to be updated
         ifuelread,nfuel_cat0,                   & ! initialize fuel categories
+        config_flags%fire_can_fuel_read,        & ! initialize canopy fuel data
         ifds,ifde,jfds,jfde,                    & ! fire domain dims
         ifms,ifme,jfms,jfme,                    & ! fire memory dims
         ifps,ifpe,jfps,jfpe,                    &
@@ -1838,7 +1811,7 @@ end subroutine set_fp_from_grid
 
 subroutine set_sfire_fields_from_grid(grid)
 
-    use module_fr_sfire_fields, only: cfb
+    use module_fr_sfire_fields, only: cfb, can_top, can_bottom, can_fuel_load
     
     implicit none
 
@@ -1846,9 +1819,9 @@ subroutine set_sfire_fields_from_grid(grid)
 
     ! pointer to grid variable
     cfb => grid%cfb
-
-    ! Initialize value on array
-    cfb(:, :) = 0.
+    can_top => grid%can_top
+    can_bottom => grid%can_bottom
+    can_fuel_load => grid%can_fuel_load
 
 end subroutine set_sfire_fields_from_grid
 
@@ -1961,6 +1934,9 @@ subroutine check_grid_alloc(grid,config_flags)
         call check_size(size(grid%ffwidth),'ffwidth')
     endif
     call check_size(size(grid%cfb),'cfb')
+    call check_size(size(grid%can_top),'can_top')
+    call check_size(size(grid%can_bottom),'can_bottom')
+    call check_size(size(grid%can_fuel_load),'can_fuel_load')
     
 end subroutine check_grid_alloc
 
