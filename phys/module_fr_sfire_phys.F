@@ -1331,105 +1331,126 @@ end subroutine set_fire_params
 !*******************
 !
 
-subroutine heat_fluxes(dt,fp,                     &
-        ifms,ifme,jfms,jfme,                      &  ! memory dims
-        ifts,ifte,jfts,jfte,                      &  ! tile dims
-        iffs,iffe,jffs,jffe,                      &  ! fuel_frac_burnt dims
-        fgip,fuel_frac_burnt,                     & !in
-        grnhft,grnqft,                            & !out: surface + canopy heat fluxes
-        fire_area, canhft, canqft, can_fuel_frac) !out: canopy heat fluxes
+!------------------------------------------------------------------------------------------------------------------
+! SUBROUTINE: heat_fluxes
+!>   Compute heat fluxes on the fire grid
+!!
+!!  Compute ground and canopy heat fluxes  
+!------------------------------------------------------------------------------------------------------------------
+subroutine heat_fluxes(dt,fp,               &
+  ifms,ifme,jfms,jfme,                      & ! memory dims
+  ifts,ifte,jfts,jfte,                      & ! tile dims
+  iffs,iffe,jffs,jffe,                      & ! fuel_frac_burnt dims
+  fgip,fuel_frac_burnt,                     & !in
+  grnhft,grnqft,                            & !out: surface + canopy heat fluxes
+  fire_area, canhft, canqft, can_fuel_frac  ) !out: canopy heat fluxes
 
-    use module_fr_sfire_fields, only: cfb
+  use module_fr_sfire_fields, only: cfb
 
-    implicit none
+  implicit none
 
-    !*** purpose        
-    ! compute the heat fluxes on the fire grid cells
+  !*** arguments
+  type(fire_params),  intent(in   )  :: fp !< fire params
+  real,               intent(in   )  :: dt !< the fire time step [s]
 
-    !*** arguments
-    type(fire_params), intent(in)::fp
-    real, intent(in)::dt          ! dt  the fire time step (the fire model advances time by this)
-    integer, intent(in)::ifts,ifte,jfts,jfte,ifms,ifme,jfms,jfme,iffs,iffe,jffs,jffe   ! dimensions
-    real, intent(in),dimension(ifms:ifme,jfms:jfme):: fgip
-    real, intent(in),dimension(iffs:iffe,jffs:jffe):: fuel_frac_burnt
-    real,   intent(out),    dimension(ifms:ifme, jfms:jfme)                 :: grnhft !< surface + canopy sensible heat flux [W m-2]                                 
-    real,   intent(in),     dimension(ifms:ifme, jfms:jfme),    optional    :: fire_area    !< proportion of the fire cell burning [-]
-    real, intent(out),dimension(ifms:ifme,jfms:jfme),optional:: grnqft
-    real,   intent(out),    dimension(ifms:ifme, jfms:jfme),    optional    :: canhft       !< canopy sensible heat flux [W m-2]
-    real,   intent(out),    dimension(ifms:ifme, jfms:jfme),    optional    :: canqft       !< canopy latent heat flux [W m-2]
-    real,   intent(inout),  dimension(ifms:ifme, jfms:jfme),    optional    :: can_fuel_frac !< canopy fuel fraction [-]
+  integer,  intent(in   )  :: ifts  ! fire tile start index x axis
+  integer,  intent(in   )  :: ifte  ! fire tile end   index x axis
+  integer,  intent(in   )  :: jfts  ! fire tile start index y axis
+  integer,  intent(in   )  :: jfte  ! fire tile end   index y axis
 
-    !*** local
-    integer::i,j
-    real:: dmass,bmst
+  integer,  intent(in   )  :: ifms  ! fire mesh start index x axis
+  integer,  intent(in   )  :: ifme  ! fire mesh end   index x axis
+  integer,  intent(in   )  :: jfms  ! fire mesh start index y axis
+  integer,  intent(in   )  :: jfme  ! fire mesh end   index y axis
 
-    integer :: i_tree_cat       !< tree class
+  integer,  intent(in   )  :: iffs  ! fire fuel frac burnt start index x axis
+  integer,  intent(in   )  :: iffe  ! fire fuel frac burnt end   index x axis
+  integer,  intent(in   )  :: jffs  ! fire fuel frac burnt start index y axis
+  integer,  intent(in   )  :: jffe  ! fire fuel frac burnt end   index y axis
 
-    logical::latent, canopy_sensible, canopy_latent
+  real, intent(in   ),  dimension(ifms:ifme,jfms:jfme)  :: fgip             !< init mass from fuel model [kg m-2]
+  real, intent(in   ),  dimension(iffs:iffe,jffs:jffe)  :: fuel_frac_burnt  !< fraction burned this call [-]
 
-    real    :: can_fuel_cons    !< Fuel consumption for canopy [s-1]
-    real    :: mlr_canopy       !< Mass Loss Rate for canopy [s-1]
-    real    :: can_hflx         !< Sensible heat flux for canopy [W m-2]
-    real    :: can_qflx         !< Latent heat flux for canopy [W m-2]
-    real    :: loc_fire_area    !< local fire area if present
+  real, intent(  out),  dimension(ifms:ifme, jfms:jfme)             :: grnhft !< surface sensible heat flux [W m-2]   
+  real, intent(  out),  dimension(ifms:ifme,jfms:jfme),   optional  :: grnqft !< latent sensible heat flux [W m-2]
 
-    !*** executable        
-    latent = present(grnqft)
-    ! flag for canopy flux computation
-    canopy_sensible = present(canhft)
-    canopy_latent = present(canqft)
+  real, intent(in   ),  dimension(ifms:ifme, jfms:jfme),  optional    :: fire_area    !< proportion of the fire cell burning [-]
+  real, intent(  out),  dimension(ifms:ifme, jfms:jfme),  optional    :: canhft       !< canopy sensible heat flux [W m-2]
+  real, intent(  out),  dimension(ifms:ifme, jfms:jfme),  optional    :: canqft       !< canopy latent heat flux [W m-2]
+  real, intent(inout),  dimension(ifms:ifme, jfms:jfme),  optional    :: can_fuel_frac !< canopy fuel fraction [-]
 
-    do j=jfts,jfte
-        do i=ifts,ifte
-            ! fire area
-            if (present(fire_area)) then
-                loc_fire_area = fire_area(i, j)
-            else
-                loc_fire_area = 1.
-            endif
+  !*** local
+  integer :: i, j
+  real    :: dmass, bmst
 
-            ! get tree class
-            i_tree_cat = itree(fp%nfuel_cat(i, j))
-            
-            ! init canopy fluxes
-            
-            ! compute mass loss rate for canopy
-            if (canopy_sensible .OR. canopy_latent) then
-                if (i_tree_cat == 0) then
-                    can_fuel_cons = 0.
-                else
-                    can_fuel_cons = can_fuel_frac(i, j) / tree_burn_time(i_tree_cat)
-                endif
+  integer :: i_tree_cat !< tree class
 
-                mlr_canopy = min(loc_fire_area * cfb(i, j) * can_fuel_cons, can_fuel_frac(i, j) / dt)
+  logical :: latent, canopy_sensible, canopy_latent
 
-                ! update canopy fuel fraction
-                can_fuel_frac(i, j) = can_fuel_frac(i, j) - dt * mlr_canopy
+  real    :: can_fuel_cons    !< Fuel consumption for canopy [s-1]
+  real    :: mlr_canopy       !< Mass Loss Rate for canopy [s-1]
+  real    :: can_hflx         !< Sensible heat flux for canopy [W m-2]
+  real    :: can_qflx         !< Latent heat flux for canopy [W m-2]
+  real    :: loc_fire_area    !< local fire area if present [-]
 
-            else
-                mlr_canopy = 0.
-            endif
-            
-            ! compute canopy fluxes
-            can_hflx = cmbcnst * fci_d(fp%nfuel_cat(i, j)) * mlr_canopy
-            can_qflx = xlv * fci_d(fp%nfuel_cat(i, j)) * (.56 + fuelmc_c) * mlr_canopy
+  !*** executable        
+  latent = present(grnqft)
+  ! flag for canopy flux computation
+  canopy_sensible = present(canhft)
+  canopy_latent = present(canqft)
 
-            ! Surface fluxes
-            dmass =                     &     ! ground fuel dry mass burnt this call (kg/m^2)
-                fgip(i,j)             &     ! init mass from fuel model no (kg/m^2) = fgi(nfuel_cat(i,j)
-                * fuel_frac_burnt(i,j)        ! fraction burned this call    (1)
-            bmst     = fp%fmc_g(i,j)/(1.+fp%fmc_g(i,j))
-            grnhft(i,j) = (dmass/dt)*(1.-bmst)*cmbcnst       ! J/m^2/sec
-            if(latent)grnqft(i,j) = (bmst+(1.-bmst)*.56)*(dmass/dt)*xlv ! 
-            ! bmst = relative water contents; 0.56 = est. ratio of water from burning
-            ! xlv = nominal specific latent heat of water J/kg (dependence on temperature ignored)
-            ! xlv is  defined in module_model_constants 
+  do j = jfts, jfte
+    do i = ifts, ifte
+      ! fire area
+      if (present(fire_area)) then
+        loc_fire_area = fire_area(i, j)
+      else
+        loc_fire_area = 1.
+      endif
 
-            ! save canopy heat fluxes
-            if (canopy_sensible) canhft(i, j) = can_hflx
-            if (canopy_latent)   canqft(i, j) = can_qflx
-        enddo
+      ! get tree class
+      i_tree_cat = itree(fp%nfuel_cat(i, j))
+      
+      ! init canopy fluxes
+      
+      ! compute mass loss rate for canopy
+      if (canopy_sensible .or. canopy_latent) then
+        if (i_tree_cat == 0) then
+          can_fuel_cons = 0.
+        else
+          can_fuel_cons = can_fuel_frac(i, j) / tree_burn_time(i_tree_cat)
+        endif
+
+        mlr_canopy = min(loc_fire_area * cfb(i, j) * can_fuel_cons, can_fuel_frac(i, j) / dt)
+
+        ! update canopy fuel fraction
+        can_fuel_frac(i, j) = can_fuel_frac(i, j) - dt * mlr_canopy
+
+      else
+        mlr_canopy = 0.
+      endif
+      
+      ! compute canopy fluxes
+      can_hflx = cmbcnst * fci_d(fp%nfuel_cat(i, j)) * mlr_canopy
+      can_qflx = xlv * fci_d(fp%nfuel_cat(i, j)) * (.56 + fuelmc_c) * mlr_canopy
+
+      ! Surface fluxes
+      dmass = fgip(i, j) * fuel_frac_burnt(i, j) 
+      bmst     = fp%fmc_g(i, j) / (1. + fp%fmc_g(i, j))
+      
+      ! Surface grounf heat flux
+      grnhft(i, j) = (dmass / dt) * (1. - bmst) * cmbcnst
+      
+      if(latent) grnqft(i, j) = (bmst + (1. - bmst) * .56) * (dmass / dt) * xlv
+      ! bmst = relative water contents; 0.56 = est. ratio of water from burning
+      ! xlv = nominal specific latent heat of water J/kg (dependence on temperature ignored)
+      ! xlv is  defined in module_model_constants 
+
+      ! save canopy heat fluxes
+      if (canopy_sensible) canhft(i, j) = can_hflx
+      if (canopy_latent)   canqft(i, j) = can_qflx
     enddo
+  enddo
 
 end subroutine heat_fluxes
 
@@ -1547,16 +1568,17 @@ subroutine set_canopy_data(       &
   !    ------------
 
   ! 0.1 Arguments
-  integer,                intent(in)  :: ifms                 !< fire mesh index start on x axis
-  integer,                intent(in)  :: ifme                 !< fire mesh index end   on x axis
-  integer,                intent(in)  :: jfms                 !< fire mesh index start on y axis
-  integer,                intent(in)  :: jfme                 !< fire mesh index end   on y axis
-  integer,                intent(in)  :: ifts                 !< fire tile index start on x axis
-  integer,                intent(in)  :: ifte                 !< fire tile index end   on x axis
-  integer,                intent(in)  :: jfts                 !< fire tile index start on y axis
-  integer,                intent(in)  :: jfte                 !< fire tile index end   on y axis
-  integer,                intent(in)  :: i_fire_can_fuel_read !< source of data for canopy data
-  real, dimension(ifms:ifme, jfms:jfme),  intent(in)  :: nfuel_cat            !< surface fuel class
+  integer,  intent(in   ) :: ifms                 !< fire mesh index start on x axis
+  integer,  intent(in   ) :: ifme                 !< fire mesh index end   on x axis
+  integer,  intent(in   ) :: jfms                 !< fire mesh index start on y axis
+  integer,  intent(in   ) :: jfme                 !< fire mesh index end   on y axis
+  integer,  intent(in   ) :: ifts                 !< fire tile index start on x axis
+  integer,  intent(in   ) :: ifte                 !< fire tile index end   on x axis
+  integer,  intent(in   ) :: jfts                 !< fire tile index start on y axis
+  integer,  intent(in   ) :: jfte                 !< fire tile index end   on y axis
+  integer,  intent(in   ) :: i_fire_can_fuel_read !< source of data for canopy data
+
+  real, dimension(ifms:ifme, jfms:jfme),  intent(in   )  :: nfuel_cat            !< surface fuel class
 
   ! 0.2 Locals
   integer :: surf_fuel_cat  !< local fuel category
@@ -1568,45 +1590,60 @@ subroutine set_canopy_data(       &
   !    -----------------------------
 
   select case (i_fire_can_fuel_read)
-    case (0)
-      ! The canopy data are set according to surface fuel category.
-      do j = jfts, jfte
-        do  i = ifts, ifte
-          ! get local fuel cat and convert to integer
-          surf_fuel_cat = int(nfuel_cat(i, j))
-          
-          can_top(i, j)       = tree_z_max(itree(surf_fuel_cat))
-          can_bottom(i, j)    = tree_z_min(itree(surf_fuel_cat))
-          can_fuel_load(i, j) = fci_d(surf_fuel_cat)
-        enddo
-      enddo
-    
-    case (-1, 1)
-      ! The canopy data should have been initialized in the WRF input file or no initialization should be done. Nothing to do
-      return
+  case (-1)
+    ! The canopy data shouldbe as default value. Nothing to do
+    can_top(:, :)       = 0.
+    can_bottom(:, :)    = 0.
+    can_fuel_load(:, :) = 0.
 
-    case default
-      ! A non standard value of fire_can_fuel_read has been given.
-      ! Don't know what the user wants to do = crash
-      call crash("set_canopy_data: fire_can_fuel_read value is not valid. Please check namelist.input file.")
+  case (0)
+    ! The canopy data are set according to surface fuel category.
+    do j = jfts, jfte
+      do  i = ifts, ifte
+        ! get local fuel cat and convert to integer
+        surf_fuel_cat = int(nfuel_cat(i, j))
+        
+        can_top(i, j)       = tree_z_max(itree(surf_fuel_cat))
+        can_bottom(i, j)    = tree_z_min(itree(surf_fuel_cat))
+        can_fuel_load(i, j) = fci_d(surf_fuel_cat)
+      enddo
+    enddo
+    
+  case (1)
+    ! The canopy data should have been initialized in the WRF input file. Nothing to do
+    return
+
+  case default
+    ! A non standard value of fire_can_fuel_read has been given.
+    ! Don't know what the user wants to do = crash
+    call crash("set_canopy_data: fire_can_fuel_read value is not valid. Please check namelist.input file.")
 
   end select
 
 end subroutine set_canopy_data
 
+
+!------------------------------------------------------------------------------------------------------------------
+! SUBROUTINE: initialize_sfire_fields
+!>   Initialize fields defined in sfire_fields module
+!!
+!!  Set a default value for each field in the module  
+!------------------------------------------------------------------------------------------------------------------
 subroutine initialize_sfire_fields()
 
-    use module_fr_sfire_fields, only: cfb, can_top, can_bottom, can_fuel_load
-    
-    implicit none
+  use module_fr_sfire_fields, only: cfb, can_top, can_bottom, can_fuel_load
+  
+  implicit none
 
-    ! Initialize value on array
-    cfb(:, :)           = 0.
-    can_top(:, :)       = 0.
-    can_bottom(:, :)    = 0.
-    can_fuel_load(:, :) = 0.
+  ! Initialize value on array
+  cfb(:, :)           = 0.
+  can_top(:, :)       = 0.
+  can_bottom(:, :)    = 0.
+  can_fuel_load(:, :) = 0.
 
 end subroutine initialize_sfire_fields
+
+
 !
 !**********************
 !            
@@ -1767,206 +1804,205 @@ end subroutine fire_ros
 
 !------------------------------------------------------------------------------------------------------------------
 ! SUBROUTINE: fire_crown_ros
-!   Compute the crown fire rate of spread
-!
-!   @note Method is from Scott, J. H. (2001). Assessing crown fire potential by linking models of surface and crown
-!   fire behavior. 
-!   US Department of Agriculture, Forest Service, Rocky Mountain Research Station.
-!
-!   todo:   - Use map for canopy top, canopy bottom, canopy fuel moisture, canopy fuel load
-!           - Use previous time step value as starting values for w_init and w_act computation
-!  
+!>   Compute the crown fire rate of spread
+!!
+!!   Note Method is from Scott, J. H. (2001). Assessing crown fire potential by linking models of surface and crown
+!!   fire behavior. 
+!!   US Department of Agriculture, Forest Service, Rocky Mountain Research Station.
+!!
+!!   todo:   - Use previous time step value as starting values for w_init and w_act computation
+!!  
 !------------------------------------------------------------------------------------------------------------------
 subroutine fire_crown_ros(fp, propx, propy, i, j, ros, ierrx, msg, save_cfb)
     
-    use module_fr_sfire_util, only: fire_use_windrf
-    use module_fr_sfire_fields, only: cfb, can_top, can_bottom, can_fuel_load
+  use module_fr_sfire_util, only: fire_use_windrf
+  use module_fr_sfire_fields, only: cfb, can_top, can_bottom, can_fuel_load
+  
+  implicit none
+
+  ! 0. Declaration
+  !    -----------
+
+  ! 0.1 Arguments
+  !     ----------
+
+  type(fire_params),  intent(in   ) :: fp       !< fire properties
+  real,               intent(in   ) :: propx    !< x direction, not normalized
+  real,               intent(in   ) :: propy    !< y direction, not normalized
+  integer,            intent(in   ) :: i        !< position on the fire grid on x axis
+  integer,            intent(in   ) :: j        !< position on the fire grid on y axis
+  real,               intent(inout) :: ros      !< rate of spread with crowning
+  integer,            intent(  out) :: ierrx    !< error flag
+  character(len=*),   intent(  out) :: msg      !< error message
+  logical,  optional, intent(in   ) :: save_cfb !< store cfb in global cfb variable
+
+  ! 0.2 Locals
+  !     ------
+  
+  integer, parameter  :: max_ite = 20         !< max iteration for convergence
+  integer, parameter  :: crown_fuel_cat = 10  !< fuel category used for canopy
+  real, parameter     :: tol = 1e-5           !< tolerance for convergence
+
+  integer             :: n_ite                !< iteration counter for passive crowning bounds
+  integer             :: surf_fuel_cat        !< fuel category used for surface
+  
+  real                :: f_n, f_n_1           !< score function for passive crowning bounds
+  real                :: inc                  !< wind increment for passive crowning bounds
+  real                :: nvx, nvy             !< normal direction
+  real                :: ros_init_prime       !< ros that ingnite canopy
+  real                :: ros_act_prime        !< active ros threshold
+  real                :: ros_active_crown     !< active crown fire ros 
+  real                :: scale                !< normal norm
+  real                :: w_n                  !< current wind value for passive crowning bounds
+  real                :: w_n_1                !< next iteration for wind value for passive crowning bounds
+  real                :: wind_act             !< wind speed for active crowning initiation
+  real                :: wind_init            !< wind speed for passive crowning initiation
+  real                :: wind_speed           !< wind speed in the spread direction
+  real                :: wind_speed_no_wrf    !< wind speed in the spread direction without wrf
+
+  ! tmp
+  real    :: canopy_bulk_density  !< canopy bulk density
+  real    :: cfb_local
+  logical :: save_cfb_local
+
+
+  ! 1. Initialisation
+  !    --------------
+
+  ! save crown fraction burnt flag
+  save_cfb_local = .false.
+  if (present(save_cfb)) save_cfb_local = save_cfb
+
+  ! get local fuel class of surface fuel
+  surf_fuel_cat = fp%nfuel_cat(i, j)
+
+  ! get normal direction and wind
+  scale = sqrt(propx ** 2 + propy ** 2 + epsilon(0.))
+  nvx = propx / scale
+  nvy = propy / scale
+  wind_speed =  fp%vx(i, j) * nvx + fp%vy(i, j) * nvy
+
+  ! remove the wind reduction factor from the projection
+  if (fire_use_windrf == 1) then
+    wind_speed_no_wrf = wind_speed / windrf(surf_fuel_cat)
+  else
+    wind_speed_no_wrf = wind_speed
+  endif
+
+  ! 2. Compute initiation ROS threshold
+  !    --------------------------------
+
+  ! compute bulk density for canopy
+  if (can_top(i, j) - can_bottom(i, j) > 0.) then
+    canopy_bulk_density = can_fuel_load(i, j) / (can_top(i, j) - can_bottom(i, j))
+  else
+    canopy_bulk_density = 0.
+  endif
+
+  ! R_init_prime = 60 * ((canopy_base_height * (460 + 25.9 * canopy_foliar_moisture_content))) ** 1.5 / (delta_H * sigma_d)
+  ros_init_prime = 60. * ((can_bottom(i, j) * (460. + 25.9 * fuelmc_c))) ** 1.5 / (cmbcnst * fgi(surf_fuel_cat))
+
+  ! surface ros is below initiation threshold, no passive of active crowning -> do not change ros and return
+  if (ros <= ros_init_prime .or. canopy_bulk_density == 0.) then
+    if (save_cfb_local) cfb(i, j) = 0.
+    return
+  endif
+
+  ! 3. Compute active ROS threshold
+  !    ----------------------------
+
+  ! active ros threshold
+  ros_act_prime = 0.05 / canopy_bulk_density
+
+  ! compute active ros
+  ! R_active = 3.34 * surface_ros(fuel=10, wind= 0.4 * 10m wind)
+  call fire_ros(ros_active_crown, propx, propy, i, j, fp, ierrx, msg, surf_fuel_cat=crown_fuel_cat, wind_speed=0.4 * wind_speed_no_wrf)
+  ros_active_crown = 3.34 * ros_active_crown
+
+  ! active ros is above active threshold, return active crowning
+  if (ros_active_crown >= ros_act_prime) then
+    ros = ros_active_crown
+    if (save_cfb_local) cfb(i, j) = 1.
+    return
+  endif
+
+  ! 4. Compute passive ROS
+  !    -------------------
+
+  ! 4.1 get the wind that leads to surface_ros == R_init_prime
+
+  ! Init values for wind and ros
+  w_n = 0.
+  w_n_1 = wind_speed
+  ! f_n = ros(surface_fuel, w_n) - ros_init_prime
+  call fire_ros(f_n, propx, propy, i, j, fp, ierrx, msg,surf_fuel_cat=surf_fuel_cat, wind_speed=w_n)
+  f_n = f_n - ros_init_prime
+  ! f_n_1 = ros - ros_init_prime (as surface ros with input wind has already been computed previously)
+  f_n_1 = ros - ros_init_prime
+  
+  ! secante method to cenverge
+  n_ite = 1
+  do while (abs(f_n) > tol .AND. n_ite <= max_ite)
+    ! update increment
+    inc = (w_n - w_n_1) / (f_n - f_n_1)
     
-    implicit none
-
-    !! 0. Declaration
-    !!    -----------
-
-    !! 0.1 Arguments
-    !!     ----------
-
-    type(fire_params),  intent(in)      :: fp       !< fire properties
-    real,               intent(in)      :: propx    !< x direction, not normalized
-    real,               intent(in)      :: propy    !< y direction, not normalized
-    integer,            intent(in)      :: i        !< position on the fire grid on x axis
-    integer,            intent(in)      :: j        !< position on the fire grid on y axis
-    real,               intent(inout)   :: ros      !< rate of spread with crowning
-    integer,            intent(out)     :: ierrx    !< error flag
-    character(len=*),   intent(out)     :: msg      !< error message
-    logical,  optional, intent(in)      :: save_cfb !< store cfb in global cfb variable
-
-    !! 0.2 Locals
-    !!     ------
+    ! update n-1 values
+    w_n_1 = w_n
+    f_n_1 = f_n
     
-    integer, parameter  :: max_ite = 20         !< max iteration for convergence
-    integer, parameter  :: crown_fuel_cat = 10  !< fuel category used for canopy
-    real, parameter     :: tol = 1e-5           !< tolerance for convergence
-
-    integer             :: n_ite                !< iteration counter for passive crowning bounds
-    integer             :: surf_fuel_cat        !< fuel category used for surface
-    
-    real                :: f_n, f_n_1           !< score function for passive crowning bounds
-    real                :: inc                  !< wind increment for passive crowning bounds
-    real                :: nvx, nvy             !< normal direction
-    real                :: ros_init_prime       !< ros that ingnite canopy
-    real                :: ros_act_prime        !< active ros threshold
-    real                :: ros_active_crown     !< active crown fire ros 
-    real                :: scale                !< normal norm
-    real                :: w_n                  !< current wind value for passive crowning bounds
-    real                :: w_n_1                !< next iteration for wind value for passive crowning bounds
-    real                :: wind_act             !< wind speed for active crowning initiation
-    real                :: wind_init            !< wind speed for passive crowning initiation
-    real                :: wind_speed           !< wind speed in the spread direction
-    real                :: wind_speed_no_wrf    !< wind speed in the spread direction without wrf
-
-    !! tmp
-    real    :: canopy_bulk_density  !< canopy bulk density
-    real    :: cfb_local
-    logical :: save_cfb_local
-
-
-    !! 1. Initialisation
-    !!    --------------
-
-    !! save crown fraction burnt flag
-    save_cfb_local = .false.
-    if (present(save_cfb)) save_cfb_local = save_cfb
-
-    ! get local fuel class of surface fuel
-    surf_fuel_cat = fp%nfuel_cat(i, j)
-
-    ! get normal direction and wind
-    scale = sqrt(propx ** 2 + propy ** 2 + epsilon(0.))
-    nvx = propx / scale
-    nvy = propy / scale
-    wind_speed =  fp%vx(i, j) * nvx + fp%vy(i, j) * nvy
-
-    ! remove the wind reduction factor from the projection
-    if (fire_use_windrf == 1) then
-        wind_speed_no_wrf = wind_speed / windrf(surf_fuel_cat)
-    else
-        wind_speed_no_wrf = wind_speed
-    endif
-
-    !! 2. Compute initiation ROS threshold
-    !!    --------------------------------
-
-    ! compute bulk density for canopy
-    if (can_top(i, j) - can_bottom(i, j) > 0.) then
-        canopy_bulk_density = can_fuel_load(i, j) / (can_top(i, j) - can_bottom(i, j))
-    else
-        canopy_bulk_density = 0.
-    endif
-
-    ! R_init_prime = 60 * ((canopy_base_height * (460 + 25.9 * canopy_foliar_moisture_content))) ** 1.5 / (delta_H * sigma_d)
-    ros_init_prime = 60. * ((can_bottom(i, j) * (460. + 25.9 * fuelmc_c))) ** 1.5 / (cmbcnst * fgi(surf_fuel_cat))
-
-    ! surface ros is below initiation threshold, no passive of active crowning -> do not change ros and return
-    if (ros <= ros_init_prime .or. canopy_bulk_density == 0.) then
-        if (save_cfb_local) cfb(i, j) = 0.
-        return
-    endif
-
-    !! 3. Compute active ROS threshold
-    !!    ----------------------------
-
-    ! active ros threshold
-    ros_act_prime = 0.05 / canopy_bulk_density
-
-    ! compute active ros
-    ! R_active = 3.34 * surface_ros(fuel=10, wind= 0.4 * 10m wind)
-    call fire_ros(ros_active_crown, propx, propy, i, j, fp, ierrx, msg, surf_fuel_cat=crown_fuel_cat, wind_speed=0.4 * wind_speed_no_wrf)
-    ros_active_crown = 3.34 * ros_active_crown
-
-    ! active ros is above active threshold, return active crowning
-    if (ros_active_crown >= ros_act_prime) then
-        ros = ros_active_crown
-        if (save_cfb_local) cfb(i, j) = 1.
-        return
-    endif
-
-    !! 4. Compute passive ROS
-    !!    -------------------
-
-    !! 4.1 get the wind that leads to surface_ros == R_init_prime
-
-    ! Init values for wind and ros
-    w_n = 0.
-    w_n_1 = wind_speed
-    ! f_n = ros(surface_fuel, w_n) - ros_init_prime
+    ! update n values
+    w_n = min(30., max(0., w_n - inc * f_n))
     call fire_ros(f_n, propx, propy, i, j, fp, ierrx, msg,surf_fuel_cat=surf_fuel_cat, wind_speed=w_n)
     f_n = f_n - ros_init_prime
-    ! f_n_1 = ros - ros_init_prime (as surface ros with input wind has already been computed previously)
-    f_n_1 = ros - ros_init_prime
     
-    ! secante method to cenverge
-    n_ite = 1
-    do while (abs(f_n) > tol .AND. n_ite <= max_ite)
-        ! update increment
-        inc = (w_n - w_n_1) / (f_n - f_n_1)
-        
-        ! update n-1 values
-        w_n_1 = w_n
-        f_n_1 = f_n
-        
-        ! update n values
-        w_n = min(30., max(0., w_n - inc * f_n))
-        call fire_ros(f_n, propx, propy, i, j, fp, ierrx, msg,surf_fuel_cat=surf_fuel_cat, wind_speed=w_n)
-        f_n = f_n - ros_init_prime
-        
-        ! update counter
-        n_ite = n_ite + 1
-    enddo
+    ! update counter
+    n_ite = n_ite + 1
+  enddo
+  
+  ! save value of wind
+  wind_init = w_n
+  
+  ! 4.2 get the wind that leads to active_ros == R_act_prime
+  
+  ! Init values for wind and ros
+  w_n = 30.
+  w_n_1 = wind_speed
+  ! f_n = 3.34 * ros(crown_fuel, 0.4 * w_n) - ros_init_prime
+  call fire_ros(f_n, propx, propy, i, j, fp, ierrx, msg, surf_fuel_cat=crown_fuel_cat, wind_speed=0.4 * w_n)
+  f_n = 3.34 * f_n - ros_act_prime
+  f_n_1 = ros_active_crown - ros_act_prime
+
+  ! secante method to cenverge
+  n_ite = 1
+  do while (abs(f_n) > tol .AND. n_ite <= max_ite)
+    ! update increment
+    inc = (w_n - w_n_1) / (f_n - f_n_1)
     
-    ! save value of wind
-    wind_init = w_n
+    ! update n-1 values
+    w_n_1 = w_n
+    f_n_1 = f_n
     
-    !! 4.2 get the wind that leads to active_ros == R_act_prime
-    
-    ! Init values for wind and ros
-    w_n = 30.
-    w_n_1 = wind_speed
-    ! f_n = 3.34 * ros(crown_fuel, 0.4 * w_n) - ros_init_prime
+    ! update n values
+    w_n = min(30., max(0., w_n - inc * f_n))
     call fire_ros(f_n, propx, propy, i, j, fp, ierrx, msg, surf_fuel_cat=crown_fuel_cat, wind_speed=0.4 * w_n)
     f_n = 3.34 * f_n - ros_act_prime
-    f_n_1 = ros_active_crown - ros_act_prime
-
-    ! secante method to cenverge
-    n_ite = 1
-    do while (abs(f_n) > tol .AND. n_ite <= max_ite)
-        ! update increment
-        inc = (w_n - w_n_1) / (f_n - f_n_1)
-        
-        ! update n-1 values
-        w_n_1 = w_n
-        f_n_1 = f_n
-        
-        ! update n values
-        w_n = min(30., max(0., w_n - inc * f_n))
-        call fire_ros(f_n, propx, propy, i, j, fp, ierrx, msg, surf_fuel_cat=crown_fuel_cat, wind_speed=0.4 * w_n)
-        f_n = 3.34 * f_n - ros_act_prime
-        
-        ! update counter
-        n_ite = n_ite + 1
-
-    enddo
     
-    ! save value of wind
-    wind_act = w_n
-    
-    !! 4.3 Compute crown fraction burnt
+    ! update counter
+    n_ite = n_ite + 1
 
-    cfb_local = min(max(0., (wind_speed - wind_init) / (wind_act - wind_init)), 1.)
+  enddo
+  
+  ! save value of wind
+  wind_act = w_n
+  
+  ! 4.3 Compute crown fraction burnt
 
-    !! 4.4 Combine surface and active ros to get passive ros
-    ros = min(6., ros + cfb_local * (ros_active_crown - ros))
+  cfb_local = min(max(0., (wind_speed - wind_init) / (wind_act - wind_init)), 1.)
 
-    if (save_cfb_local) cfb(i, j) = cfb_local
+  ! 4.4 Combine surface and active ros to get passive ros
+  ros = min(6., ros + cfb_local * (ros_active_crown - ros))
+
+  if (save_cfb_local) cfb(i, j) = cfb_local
 
 end subroutine fire_crown_ros
 
