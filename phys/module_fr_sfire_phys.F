@@ -1338,14 +1338,14 @@ end subroutine set_fire_params
 !!  Compute ground and canopy heat fluxes  
 !------------------------------------------------------------------------------------------------------------------
 subroutine heat_fluxes(dt,fp,               &
-  ifms,ifme,jfms,jfme,                      & ! memory dims
-  ifts,ifte,jfts,jfte,                      & ! tile dims
-  iffs,iffe,jffs,jffe,                      & ! fuel_frac_burnt dims
-  fgip,fuel_frac_burnt,                     & !in
-  grnhft,grnqft,                            & !out: surface + canopy heat fluxes
-  fire_area, canhft, canqft, can_fuel_frac  ) !out: canopy heat fluxes
+  ifms, ifme, jfms, jfme,                   & ! memory dims
+  ifts, ifte, jfts, jfte,                   & ! tile dims
+  iffs, iffe, jffs, jffe,                   & ! fuel_frac_burnt dims
+  fgip, fuel_frac_burnt,                    & ! in
+  grnhft, grnqft,                           & ! out: surface + canopy heat fluxes
+  fire_area, canhft, canqft, can_fuel_frac  ) ! out: canopy heat fluxes
 
-  use module_fr_sfire_fields, only: cfb
+  use module_fr_sfire_fields, only: cfb, can_bulk_density, can_top, can_bottom
 
   implicit none
 
@@ -1431,12 +1431,12 @@ subroutine heat_fluxes(dt,fp,               &
       endif
       
       ! compute canopy fluxes
-      can_hflx = cmbcnst * fci_d(fp%nfuel_cat(i, j)) * mlr_canopy
-      can_qflx = xlv * fci_d(fp%nfuel_cat(i, j)) * (.56 + fuelmc_c) * mlr_canopy
+      can_hflx = cmbcnst * can_bulk_density(i, j) * (can_top(i, j) - can_bottom(i, j)) * mlr_canopy
+      can_qflx = xlv * can_bulk_density(i, j) * (can_top(i, j) - can_bottom(i, j)) * (.56 + fuelmc_c) * mlr_canopy
 
       ! Surface fluxes
       dmass = fgip(i, j) * fuel_frac_burnt(i, j) 
-      bmst     = fp%fmc_g(i, j) / (1. + fp%fmc_g(i, j))
+      bmst  = fp%fmc_g(i, j) / (1. + fp%fmc_g(i, j))
       
       ! Surface grounf heat flux
       grnhft(i, j) = (dmass / dt) * (1. - bmst) * cmbcnst
@@ -1548,7 +1548,7 @@ end subroutine set_nfuel_cat
 !!   The following fields are initialized by this routine (see description in module_fr_sfire_fields):
 !!     - can_top
 !!     - can_bottom
-!!     - can_fuel_load
+!!     - can_bulk_density
 !!  
 !!   Namelist input fire_can_fuel_read sets the source of information for setting the canopy data:
 !!     - fire_can_fuel_read == -1 : default value meaning no initialization should be performed
@@ -1560,7 +1560,7 @@ subroutine set_canopy_data(       &
   ifts, ifte, jfts, jfte,         &
   i_fire_can_fuel_read, nfuel_cat )
 
-  use module_fr_sfire_fields, only: can_top, can_bottom, can_fuel_load
+  use module_fr_sfire_fields, only: can_top, can_bottom, can_bulk_density
 
   implicit none
 
@@ -1592,9 +1592,9 @@ subroutine set_canopy_data(       &
   select case (i_fire_can_fuel_read)
   case (-1)
     ! The canopy data shouldbe as default value. Nothing to do
-    can_top(:, :)       = 0.
-    can_bottom(:, :)    = 0.
-    can_fuel_load(:, :) = 0.
+    can_top(:, :)           = 0.
+    can_bottom(:, :)        = 0.
+    can_bulk_density(:, :)  = 0.
 
   case (0)
     ! The canopy data are set according to surface fuel category.
@@ -1603,9 +1603,9 @@ subroutine set_canopy_data(       &
         ! get local fuel cat and convert to integer
         surf_fuel_cat = int(nfuel_cat(i, j))
         
-        can_top(i, j)       = tree_z_max(itree(surf_fuel_cat))
-        can_bottom(i, j)    = tree_z_min(itree(surf_fuel_cat))
-        can_fuel_load(i, j) = fci_d(surf_fuel_cat)
+        can_top(i, j)           = tree_z_max(itree(surf_fuel_cat))
+        can_bottom(i, j)        = tree_z_min(itree(surf_fuel_cat))
+        can_bulk_density(i, j)  = fci_d(surf_fuel_cat) / (can_top(i, j) - can_bottom(i, j))
       enddo
     enddo
     
@@ -1631,15 +1631,15 @@ end subroutine set_canopy_data
 !------------------------------------------------------------------------------------------------------------------
 subroutine initialize_sfire_fields()
 
-  use module_fr_sfire_fields, only: cfb, can_top, can_bottom, can_fuel_load
+  use module_fr_sfire_fields, only: cfb, can_top, can_bottom, can_bulk_density
   
   implicit none
 
   ! Initialize value on array
-  cfb(:, :)           = 0.
-  can_top(:, :)       = 0.
-  can_bottom(:, :)    = 0.
-  can_fuel_load(:, :) = 0.
+  cfb(:, :)               = 0.
+  can_top(:, :)           = 0.
+  can_bottom(:, :)        = 0.
+  can_bulk_density(:, :)  = 0.
 
 end subroutine initialize_sfire_fields
 
@@ -1816,7 +1816,7 @@ end subroutine fire_ros
 subroutine fire_crown_ros(fp, propx, propy, i, j, ros, ierrx, msg, save_cfb)
     
   use module_fr_sfire_util, only: fire_use_windrf
-  use module_fr_sfire_fields, only: cfb, can_top, can_bottom, can_fuel_load
+  use module_fr_sfire_fields, only: cfb, can_top, can_bottom, can_bulk_density
   
   implicit none
 
@@ -1861,7 +1861,6 @@ subroutine fire_crown_ros(fp, propx, propy, i, j, ros, ierrx, msg, save_cfb)
   real                :: wind_speed_no_wrf    !< wind speed in the spread direction without wrf
 
   ! tmp
-  real    :: canopy_bulk_density  !< canopy bulk density
   real    :: cfb_local
   logical :: save_cfb_local
 
@@ -1892,18 +1891,11 @@ subroutine fire_crown_ros(fp, propx, propy, i, j, ros, ierrx, msg, save_cfb)
   ! 2. Compute initiation ROS threshold
   !    --------------------------------
 
-  ! compute bulk density for canopy
-  if (can_top(i, j) - can_bottom(i, j) > 0.) then
-    canopy_bulk_density = can_fuel_load(i, j) / (can_top(i, j) - can_bottom(i, j))
-  else
-    canopy_bulk_density = 0.
-  endif
-
   ! R_init_prime = 60 * ((canopy_base_height * (460 + 25.9 * canopy_foliar_moisture_content))) ** 1.5 / (delta_H * sigma_d)
   ros_init_prime = 60. * ((can_bottom(i, j) * (460. + 25.9 * fuelmc_c))) ** 1.5 / (cmbcnst * fgi(surf_fuel_cat))
 
   ! surface ros is below initiation threshold, no passive of active crowning -> do not change ros and return
-  if (ros <= ros_init_prime .or. canopy_bulk_density == 0.) then
+  if (ros <= ros_init_prime .or. can_bulk_density(i, j) == 0.) then
     if (save_cfb_local) cfb(i, j) = 0.
     return
   endif
@@ -1912,7 +1904,7 @@ subroutine fire_crown_ros(fp, propx, propy, i, j, ros, ierrx, msg, save_cfb)
   !    ----------------------------
 
   ! active ros threshold
-  ros_act_prime = 0.05 / canopy_bulk_density
+  ros_act_prime = 0.05 / can_bulk_density(i, j)
 
   ! compute active ros
   ! R_active = 3.34 * surface_ros(fuel=10, wind= 0.4 * 10m wind)
@@ -1935,7 +1927,7 @@ subroutine fire_crown_ros(fp, propx, propy, i, j, ros, ierrx, msg, save_cfb)
   w_n = 0.
   w_n_1 = wind_speed
   ! f_n = ros(surface_fuel, w_n) - ros_init_prime
-  call fire_ros(f_n, propx, propy, i, j, fp, ierrx, msg,surf_fuel_cat=surf_fuel_cat, wind_speed=w_n)
+  call fire_ros(f_n, propx, propy, i, j, fp, ierrx, msg, surf_fuel_cat=surf_fuel_cat, wind_speed=w_n)
   f_n = f_n - ros_init_prime
   ! f_n_1 = ros - ros_init_prime (as surface ros with input wind has already been computed previously)
   f_n_1 = ros - ros_init_prime
@@ -1952,7 +1944,7 @@ subroutine fire_crown_ros(fp, propx, propy, i, j, ros, ierrx, msg, save_cfb)
     
     ! update n values
     w_n = min(30., max(0., w_n - inc * f_n))
-    call fire_ros(f_n, propx, propy, i, j, fp, ierrx, msg,surf_fuel_cat=surf_fuel_cat, wind_speed=w_n)
+    call fire_ros(f_n, propx, propy, i, j, fp, ierrx, msg, surf_fuel_cat=surf_fuel_cat, wind_speed=w_n)
     f_n = f_n - ros_init_prime
     
     ! update counter

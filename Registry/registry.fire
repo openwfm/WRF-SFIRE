@@ -185,7 +185,9 @@ state    real     unit_fxlat  -         -         -         -    hr    "UNIT_FXL
 state    real     phisc     *i*j      fire        1         z    hr    "PHISC"     "fuel"
 state    real     wz0       *i*j      fire        1         z    hr    "WZ0"       "WRF roughness length"
 state    real     fwh       *i*j      fire        1         z    hr    "FWH"       "fuel fire wind height"
-state    real     can_top   *i*j      fire        1         z   i012hr   "CAN_TOP"   "Height of tree canopy"
+state    real     can_top   *i*j      fire        1         z    hr   "CAN_TOP"   "Height of tree canopy top"
+state    real     can_bottom    *i*j  fire        1         z    hr   "CAN_BOTTOM"   "Height of tree canopy base"
+state    real     can_bulk_density *i*j fire      1         z    hr   "CAN_BULK_DENSITY"   "canopy bulk density"
 
 
 #
@@ -282,6 +284,7 @@ rconfig   real    fire_ext_grnd          namelist,fire         max_domains      
 rconfig   real    fire_ext_crwn          namelist,fire         max_domains           50.     -      "fire_ext_crwn"    "extinction depth of crown fire heat" "m"
 rconfig   real    fire_wind_height       namelist,fire         max_domains           6.096   -      "fire_wind_height" "height of uah,vah wind in fire spread formula" "m"
 rconfig   integer fire_fuel_read         namelist,fire         max_domains           -1      -      "fire_fuel_read"   "fuel categories are set by: if 0, uniform; if 1, user-presc; if 2, read from file"   ""
+rconfig   integer fire_can_fuel_read     namelist,fire         max_domains           -1      -      "fire_can_fuel_read"    "Canopy data (top, bottom, fuel load) are set by: if -1: do not set canopy data, if 0: from fuel cat; if 1: read from file"   ""
 rconfig   integer fire_fuel_cat          namelist,fire         max_domains           1       -      "fire_fuel_cat"     "fuel category if ifuelread=0"              ""
 #
 # ------------------------------------------------------------------------------------------------------------------------

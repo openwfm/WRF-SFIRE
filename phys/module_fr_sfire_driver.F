@@ -1811,7 +1811,7 @@ end subroutine set_fp_from_grid
 
 subroutine set_sfire_fields_from_grid(grid)
 
-    use module_fr_sfire_fields, only: cfb, can_top, can_bottom, can_fuel_load
+    use module_fr_sfire_fields, only: cfb, can_top, can_bottom, can_bulk_density
     
     implicit none
 
@@ -1821,7 +1821,7 @@ subroutine set_sfire_fields_from_grid(grid)
     cfb => grid%cfb
     can_top => grid%can_top
     can_bottom => grid%can_bottom
-    can_fuel_load => grid%can_fuel_load
+    can_bulk_density => grid%can_bulk_density
 
 end subroutine set_sfire_fields_from_grid
 
@@ -1936,7 +1936,7 @@ subroutine check_grid_alloc(grid,config_flags)
     call check_size(size(grid%cfb),'cfb')
     call check_size(size(grid%can_top),'can_top')
     call check_size(size(grid%can_bottom),'can_bottom')
-    call check_size(size(grid%can_fuel_load),'can_fuel_load')
+    call check_size(size(grid%can_bulk_density),'can_bulk_density')
     
 end subroutine check_grid_alloc
 

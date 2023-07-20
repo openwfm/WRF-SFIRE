@@ -11,9 +11,9 @@ module module_fr_sfire_fields
 
   implicit none
 
-  real, pointer,  public, dimension(:, :) :: can_bottom     !< canopy bottom height [m]
-  real, pointer,  public, dimension(:, :) :: can_fuel_load  !< canopy fuel load [kg m-2]
-  real, pointer,  public, dimension(:, :) :: can_top        !< canopy top height [m]
-  real, pointer,  public, dimension(:, :) :: cfb            !< crown fraction burnt [-]
+  real, pointer,  public, dimension(:, :) :: can_bottom       !< canopy bottom height [m]
+  real, pointer,  public, dimension(:, :) :: can_bulk_density !< canopy bulk density [kg m-3]
+  real, pointer,  public, dimension(:, :) :: can_top          !< canopy top height [m]
+  real, pointer,  public, dimension(:, :) :: cfb              !< crown fraction burnt [-]
             
 end module module_fr_sfire_fields
