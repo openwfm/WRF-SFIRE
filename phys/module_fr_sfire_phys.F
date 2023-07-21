@@ -1338,46 +1338,48 @@ end subroutine set_fire_params
 !!  Compute ground and canopy heat fluxes  
 !------------------------------------------------------------------------------------------------------------------
 subroutine heat_fluxes(dt,fp,               &
-  ifms, ifme, jfms, jfme,                   & ! memory dims
-  ifts, ifte, jfts, jfte,                   & ! tile dims
-  iffs, iffe, jffs, jffe,                   & ! fuel_frac_burnt dims
-  fgip, fuel_frac_burnt,                    & ! in
-  grnhft, grnqft,                           & ! out: surface + canopy heat fluxes
-  fire_area, canhft, canqft, can_fuel_frac  ) ! out: canopy heat fluxes
+  ifms, ifme, jfms, jfme,                   &
+  ifts, ifte, jfts, jfte,                   &
+  iffs, iffe, jffs, jffe,                   &
+  fgip, fuel_frac_burnt,                    & 
+  grnhft, grnqft,                           &
+  fire_area, canhft, canqft, can_fuel_frac  )
 
   use module_fr_sfire_fields, only: cfb, can_bulk_density, can_top, can_bottom
 
   implicit none
 
-  !*** arguments
+  ! 0. Declaration
+  !    -----------
+  
   type(fire_params),  intent(in   )  :: fp !< fire params
   real,               intent(in   )  :: dt !< the fire time step [s]
 
-  integer,  intent(in   )  :: ifts  ! fire tile start index x axis
-  integer,  intent(in   )  :: ifte  ! fire tile end   index x axis
-  integer,  intent(in   )  :: jfts  ! fire tile start index y axis
-  integer,  intent(in   )  :: jfte  ! fire tile end   index y axis
+  integer,  intent(in   )  :: ifts  !< fire tile start index x axis
+  integer,  intent(in   )  :: ifte  !< fire tile end   index x axis
+  integer,  intent(in   )  :: jfts  !< fire tile start index y axis
+  integer,  intent(in   )  :: jfte  !< fire tile end   index y axis
 
-  integer,  intent(in   )  :: ifms  ! fire mesh start index x axis
-  integer,  intent(in   )  :: ifme  ! fire mesh end   index x axis
-  integer,  intent(in   )  :: jfms  ! fire mesh start index y axis
-  integer,  intent(in   )  :: jfme  ! fire mesh end   index y axis
+  integer,  intent(in   )  :: ifms  !< fire mesh start index x axis
+  integer,  intent(in   )  :: ifme  !< fire mesh end   index x axis
+  integer,  intent(in   )  :: jfms  !< fire mesh start index y axis
+  integer,  intent(in   )  :: jfme  !< fire mesh end   index y axis
 
-  integer,  intent(in   )  :: iffs  ! fire fuel frac burnt start index x axis
-  integer,  intent(in   )  :: iffe  ! fire fuel frac burnt end   index x axis
-  integer,  intent(in   )  :: jffs  ! fire fuel frac burnt start index y axis
-  integer,  intent(in   )  :: jffe  ! fire fuel frac burnt end   index y axis
+  integer,  intent(in   )  :: iffs  !< fire fuel frac burnt start index x axis
+  integer,  intent(in   )  :: iffe  !< fire fuel frac burnt end   index x axis
+  integer,  intent(in   )  :: jffs  !< fire fuel frac burnt start index y axis
+  integer,  intent(in   )  :: jffe  !< fire fuel frac burnt end   index y axis
 
   real, intent(in   ),  dimension(ifms:ifme,jfms:jfme)  :: fgip             !< init mass from fuel model [kg m-2]
   real, intent(in   ),  dimension(iffs:iffe,jffs:jffe)  :: fuel_frac_burnt  !< fraction burned this call [-]
 
   real, intent(  out),  dimension(ifms:ifme, jfms:jfme)             :: grnhft !< surface sensible heat flux [W m-2]   
-  real, intent(  out),  dimension(ifms:ifme,jfms:jfme),   optional  :: grnqft !< latent sensible heat flux [W m-2]
+  real, intent(  out),  dimension(ifms:ifme, jfms:jfme),  optional  :: grnqft !< latent sensible heat flux [W m-2]
 
-  real, intent(in   ),  dimension(ifms:ifme, jfms:jfme),  optional    :: fire_area    !< proportion of the fire cell burning [-]
-  real, intent(  out),  dimension(ifms:ifme, jfms:jfme),  optional    :: canhft       !< canopy sensible heat flux [W m-2]
-  real, intent(  out),  dimension(ifms:ifme, jfms:jfme),  optional    :: canqft       !< canopy latent heat flux [W m-2]
-  real, intent(inout),  dimension(ifms:ifme, jfms:jfme),  optional    :: can_fuel_frac !< canopy fuel fraction [-]
+  real, intent(in   ),  dimension(ifms:ifme, jfms:jfme),  optional    :: fire_area      !< proportion of the fire cell burning [-]
+  real, intent(  out),  dimension(ifms:ifme, jfms:jfme),  optional    :: canhft         !< canopy sensible heat flux [W m-2]
+  real, intent(  out),  dimension(ifms:ifme, jfms:jfme),  optional    :: canqft         !< canopy latent heat flux [W m-2]
+  real, intent(inout),  dimension(ifms:ifme, jfms:jfme),  optional    :: can_fuel_frac  !< canopy fuel fraction [-]
 
   !*** local
   integer :: i, j
