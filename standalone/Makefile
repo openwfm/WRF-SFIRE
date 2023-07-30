@@ -83,14 +83,9 @@ MOISTURE_OBJ = \
     module_fr_sfire_util.o  \
     wrf_fakes.o
 
-.PHONY: all
-
-
-#.PHONY: all
-
 default: fire_ros
 
-all: fire fire_ros
+all: fire.exe fire_ros
 
 moisture: moisture.exe
 moisture.exe: $(MAKEFILE) libesmf_time.a $(MOISTURE_OBJ)
@@ -112,7 +107,7 @@ atm: atm.exe
 atm.exe: $(MAKEFILE) atm.o $(FIRE_OBJ)
 	$(FC) $(FCFLAGS) -o atm.exe fire.o $(FIRE_OBJ) $(LDFLAGS)
 
-fire: fire.exe
+
 fire.exe: $(MAKEFILE) fire_main.o $(FIRE_OBJ)
 	$(FC) $(FCFLAGS) -o fire.exe fire_main.o $(FIRE_OBJ) $(LDFLAGS)
 
