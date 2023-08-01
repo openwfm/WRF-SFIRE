@@ -2383,13 +2383,13 @@ subroutine fire_ros_wirc(ros, nvx, nvy, i, j, fp, ierrx, msg, surf_fuel_cat, win
   real    :: dph            !< preheating distance [m]
   real    :: F_bv           !< view factor flame base radiation [-]
   real    :: F_fv           !< view factor flame sheet radiation [-]
-  real    :: fmc            !< fuel moisture [-]
+  real    :: flame_height   !< flame vertical extension [m]
+  real    :: flame_length   !< flame_length [m]
+  real    :: fmc            !< fuel moisture content [-]
+  real    :: fmc_star       !< relative fuel moisture content [-]
   real    :: gamma          !< tilt angle [rad]
-  real    :: H              !< flame vertical extension [m]
-  real    :: L_f            !< flame_length [m]
   real    :: leaf_area      !< dead leaf area [-]
   real    :: leaf_area_t    !< total leaf area [-]
-  real    :: m_star         !< relative moisture [-]
   real    :: phi_b          !< radiative flux from flame base [W m-1]
   real    :: phi_cc         !< convective cooling flux [W m-1]
   real    :: phi_ch         !< convective heating flux [W m-1]
@@ -2466,8 +2466,8 @@ subroutine fire_ros_wirc(ros, nvx, nvy, i, j, fp, ierrx, msg, surf_fuel_cat, win
   ! 1.2 Dead fraction
 
   ! (coefficient are from Rothermel ros model in WRF)
-  m_star = min(fmc / fuelmce(surf_fuel_cat), 1.)
-  dead_fraction = -3.52 * m_star ** 3 + 5.11 * m_star ** 2 - 2.59 * m_star + 1.
+  fmc_star = min(fmc / fuelmce(surf_fuel_cat), 1.)
+  dead_fraction = -3.52 * fmc_star**3 + 5.11 * fmc_star**2 - 2.59 * fmc_star + 1.
 
   ! Add moisture to oven dry fuel load
   sigma_t = fgi(surf_fuel_cat) * (1. + fmc)
@@ -2506,14 +2506,14 @@ subroutine fire_ros_wirc(ros, nvx, nvy, i, j, fp, ierrx, msg, surf_fuel_cat, win
         / (tau0 * rho_air * T_a)
 
   ! Flame vertical extension due to buoyancy
-  H = u0 ** 2 / (g * (Tflame / T_a - 1.))
+  flame_height = u0 ** 2 / (g * (Tflame / T_a - 1.))
 
   ! time to reach the flame tip
-  tau_H = H / u0
+  tau_H = flame_height / u0
 
   ! Position of flame tip in natural base
   xft = wind_speed * tau_H * cos(alpha)
-  zft = H + wind_speed * tau_H * sin(alpha)
+  zft = flame_height + wind_speed * tau_H * sin(alpha)
 
   ! Position of flame tip in slope base
   xft_s =  xft * cos(alpha) + zft * sin(alpha)
@@ -2523,19 +2523,19 @@ subroutine fire_ros_wirc(ros, nvx, nvy, i, j, fp, ierrx, msg, surf_fuel_cat, win
   gamma = atan(xft_s / zft_s)
 
   ! flame length
-  L_f = sqrt(xft ** 2 + zft ** 2)
+  flame_length = sqrt(xft ** 2 + zft ** 2)
 
   ! 3. Preheating length
   !    =================
 
   A_ph = 0.01 * rad_fraction                                                                                        &
-        * (L_f + min_dph + sqrt(L_f**2 + min_dph**2 - 2. * min_dph * L_f * sin(gamma)))  &
+        * (flame_length + min_dph + sqrt(flame_length**2 + min_dph**2 - 2. * min_dph * flame_length * sin(gamma)))  &
         - min_dph
-  num1 = (min_dph**2 - A_ph**2) * (2. * L_f * sin(gamma) + min_dph)
+  num1 = (min_dph**2 - A_ph**2) * (2. * flame_length * sin(gamma) + min_dph)
   num2 = A_ph * sqrt(                                             &
         - (min_dph - A_ph)                                        &
         * (min_dph + A_ph)                                        &
-        * (A_ph**2 - min_dph**2 - 4. * L_f**2 * cos(gamma) ** 2)  &
+        * (A_ph**2 - min_dph**2 - 4. * flame_length**2 * cos(gamma) ** 2)  &
     )
   denom = 2. * (min_dph**2 - A_ph**2)
   dph = max(min_dph, ((num1 - num2) / denom))
@@ -2567,7 +2567,7 @@ subroutine fire_ros_wirc(ros, nvx, nvy, i, j, fp, ierrx, msg, surf_fuel_cat, win
   !    ==========================
   
   ! View factor
-  lambda_b = dph / L_f
+  lambda_b = dph / flame_length
   F_fv = 1. + lambda_b - sqrt(1. + lambda_b**2 - 2. * lambda_b * cos(.5 * piconst - gamma))
 
   ! Transparancy
@@ -2581,7 +2581,7 @@ subroutine fire_ros_wirc(ros, nvx, nvy, i, j, fp, ierrx, msg, surf_fuel_cat, win
   endif
 
   ! Numerator and denominator of flame sheet radiative term
-  eq_B = 0.5 * dead_fraction * sigma_d * chi0 * delta_h_comb * F_fv * L_f * (1. - exp(-a_v * L_r))
+  eq_B = 0.5 * dead_fraction * sigma_d * chi0 * delta_h_comb * F_fv * flame_length * (1. - exp(-a_v * L_r))
   eq_C = cos(gamma) / (r00 * sav_metric)
 
   ! 6. Convective heating
