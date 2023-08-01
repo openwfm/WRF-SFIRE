@@ -62,6 +62,7 @@ state    real     uah            ij       fire        1         X     hr   "UAH"
 state    real     vah            ij       fire        1         Y     hr   "VAH"      "wind at fire_wind_height" "m/s"
 state    real     grnhfx_fu      ij       fire        1         z     r   "GRNHFX_FU"   "heat flux from ground fire (feedback unsensitive)" "W/m^2" 
 state    real     grnqfx_fu      ij       fire        1         z     r   "GRNQFX_FU"   "moisture flux from ground fire (feedback unsensitive)" "W/m^2"
+state    real     can_fx_z0      ij       fire        1         z     hr   "CAN_FX_Z0"  "Minimal injection height for canopy heat fluxes" "m"
 
 # ------------------------------------------------------------------------------------------------------------------------
 # sfire variables on fire grid
@@ -188,6 +189,7 @@ state    real     fwh       *i*j      fire        1         z    hr    "FWH"    
 state    real     can_top   *i*j      fire        1         z    hr   "CAN_TOP"   "Height of tree canopy top"
 state    real     can_bottom    *i*j  fire        1         z    hr   "CAN_BOTTOM"   "Height of tree canopy base"
 state    real     can_bulk_density *i*j fire      1         z    hr   "CAN_BULK_DENSITY"   "canopy bulk density"
+state    real     can_load_loss    *i*j fire      1         z    hr   "CAN_LOAD_LOSS"   "canopy load loss"
 
 
 #

@@ -620,6 +620,7 @@ subroutine sfire_driver_phys (ifun,    &
     ndwi,                       &
     fndwi)                         ! ndwi on fire grid
 
+  use module_fr_sfire_fields, only: can_fx_z0, can_bottom
 
 implicit none
 
@@ -1257,6 +1258,13 @@ do ij=1,num_tiles
             its,ite,jts,jte,      &
             grnqfx)
 
+          call mean_2d_cells_non_zero(       &
+          ifms, ifme, jfms, jfme,           &
+          ifts, ifte, jfts, jfte,           &
+          ims,  ime,  jms,  jme,            &
+          its,  ite,  jts,  jte,            &
+          can_bottom, can_fx_z0              )
+
 !$OMP CRITICAL(SFIRE_DRIVER_CRIT)
           write(msg,'(a,f6.3)')'fire-atmosphere feedback scaling ',fire_atm_feedback
 !$OMP end CRITICAL(SFIRE_DRIVER_CRIT)
@@ -1811,7 +1819,7 @@ end subroutine set_fp_from_grid
 
 subroutine set_sfire_fields_from_grid(grid)
 
-    use module_fr_sfire_fields, only: cfb, can_top, can_bottom, can_bulk_density
+    use module_fr_sfire_fields, only: cfb, can_top, can_bottom, can_bulk_density, can_fx_z0
     
     implicit none
 
@@ -1822,6 +1830,7 @@ subroutine set_sfire_fields_from_grid(grid)
     can_top => grid%can_top
     can_bottom => grid%can_bottom
     can_bulk_density => grid%can_bulk_density
+    can_fx_z0 => grid%can_fx_z0
 
 end subroutine set_sfire_fields_from_grid
 
@@ -1937,11 +1946,12 @@ subroutine check_grid_alloc(grid,config_flags)
     call check_size(size(grid%can_top),'can_top')
     call check_size(size(grid%can_bottom),'can_bottom')
     call check_size(size(grid%can_bulk_density),'can_bulk_density')
+    call check_size(size(grid%can_fx_z0),'can_fx_z0')
     
 end subroutine check_grid_alloc
 
 subroutine check_size(sz,name,req)
-integer, intent(in)::sz
+    integer, intent(in)::sz
 integer, optional::req
 character(len=*), intent(in)::name
 character(len=128)::msg

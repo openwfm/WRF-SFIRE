@@ -534,7 +534,7 @@ do j=jts,jte
                 T = max(T,t2_floor)
                 P = max(P,psfc_floor)
                 Q = max(Q,q2_floor)
-	    endif
+        endif
 
             ! compute the relative humidity
             ! ES=610.78*exp(17.269*(T-273.161)/(T-35.861))
@@ -626,7 +626,7 @@ do j=jts,jte
                 ! diagnostic prints
                 if(fire_print_msg.ge.3)then
 !$OMP CRITICAL(SFIRE_PHYS_CRIT)
-		    write(msg,*)'i=',i,' j=',j,'EMC_w=',EMC_w,' EMC_d=',EMC_d
+            write(msg,*)'i=',i,' j=',j,'EMC_w=',EMC_w,' EMC_d=',EMC_d
                     call message(msg)
                     write(msg,*)'fmc_old=',fmc,' equi=',equi,' change=',change,' fmc=',fmc
                     call message(msg)
@@ -1636,7 +1636,7 @@ end subroutine set_canopy_data
 !------------------------------------------------------------------------------------------------------------------
 subroutine initialize_sfire_fields()
 
-  use module_fr_sfire_fields, only: cfb, can_top, can_bottom, can_bulk_density
+  use module_fr_sfire_fields, only: cfb, can_top, can_bottom, can_bulk_density, can_fx_z0
   
   implicit none
 
@@ -1645,6 +1645,7 @@ subroutine initialize_sfire_fields()
   can_top(:, :)           = 0.
   can_bottom(:, :)        = 0.
   can_bulk_density(:, :)  = 0.
+  can_fx_z0(:, :)         = 0.
 
 end subroutine initialize_sfire_fields
 
