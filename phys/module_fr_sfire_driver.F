@@ -403,13 +403,13 @@ call print_2d_stats(ifps,min(ifpe,ifde-ir),jfps,min(jfpe,jfde-jr),ifms,ifme,jfms
 !           halo exchange on atm winds and geopotential for interpolation
 #include "HALO_SFIRE_WIND_A.inc"
 #include "HALO_FIRE_PH.inc"
-            if(ibeh.eq.2)then
+            if(ibeh.eq.2 .or. ibeh == 3)then
 #include "HALO_SFIRE_RHO2FIRE_ATM.inc"
             endif
         elseif(fire_ifun.eq.4)then
 !           halo exchange on fire winds width 2 for a 2-step RK method
 #include "HALO_FIRE_WIND_F.inc"
-            if(ibeh.eq.2)then
+            if(ibeh.eq.2 .or. ibeh == 3)then
 #include "HALO_SFIRE_RHO2FIRE_SUB.inc"
             endif
             if(run_fuel_moisture)then
@@ -964,10 +964,10 @@ do ij=1,num_tiles
 
     elseif(ifun.eq.3)then  ! interpolate atmosphere variables to the fire grid
   
-      for_balbi: if(ibeh.eq.2)then
+      for_balbi: if(ibeh.eq.2 .or. ibeh == 3)then
 
-         call message('ibeh=2: interpolating atmosphere input for Balbi rate of spread model')
-         if(.not.use_atm_vars)call crash('ibeh=2 Balbi model requires atmosphere but use_atm_vars=false')
+         call message('ibeh=2 or 3: interpolating atmosphere input for rate of spread model')
+         if(.not.use_atm_vars)call crash('ibeh=2 or 3, ros model requires atmosphere but use_atm_vars=false')
          
          ! balbi_msglevel = 4
 
