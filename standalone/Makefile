@@ -41,7 +41,7 @@ FIRE_OBJ = \
     module_fr_sfire_phys.o \
     module_fr_sfire_atm.o \
     module_fr_sfire_util.o  \
-	module_fr_sfire_driver.o \
+    module_fr_sfire_driver.o \
     wrf_fakes.o
 
 INIT_OBJ = \
@@ -135,7 +135,7 @@ moisture_main.o: $(MAKEFILE) \
 fire.o: $(MAKEFILE) \
     module_fr_sfire_model.o \
     module_fr_sfire_core.o  \
-	module_fr_sfire_driver.o \
+    module_fr_sfire_driver.o \
     module_domain.o \
     module_configure.o \
     wrf_fakes.o \
