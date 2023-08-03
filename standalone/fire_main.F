@@ -230,14 +230,17 @@ write(*,'(2(a,i5))')'using frames from',iframe_start,' to',iframe_end
 
 itimestep = 0
 ifun_start=1
-do iframe=iframe_start,iframe_end ! interval ending with iframe
+do iframe=1,iframe_end ! interval ending with iframe
   if(.not.uniform)then
     call read_vars(inputfile,info,iframe,grid)
     uf2=grid%uf
     vf2=grid%vf
     fmc_g2=grid%fmc_g
   endif
-  do istep=1,nsteps
+
+  if (iframe.ge.iframe_start) then ! interpolate and run fire model  
+
+   do istep=1,nsteps
     itimestep=info%ntimes * (iframe - 1) + istep
     grid%itimestep = itimestep
     grid%xtime = itimestep * grid%dt / 60.
@@ -291,8 +294,9 @@ do iframe=iframe_start,iframe_end ! interval ending with iframe
     
     enddo
     ifun_start=3
-  enddo
-  call write_vars(outputfile,grid,info,iframe)
+   enddo
+  endif
+  call write_vars(outputfile,grid,info,iframe) 
   if(.not.uniform)then
     uf1=uf2
     vf1=vf2
