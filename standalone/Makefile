@@ -83,7 +83,7 @@ MOISTURE_OBJ = \
     module_fr_sfire_util.o  \
     wrf_fakes.o
 
-default: fire_ros
+default: all
 
 all: fire.exe fire_ros
 
@@ -107,6 +107,7 @@ atm: atm.exe
 atm.exe: $(MAKEFILE) atm.o $(FIRE_OBJ)
 	$(FC) $(FCFLAGS) -o atm.exe fire.o $(FIRE_OBJ) $(LDFLAGS)
 
+fire_main.o: fire_main.F $(FIRE_OBJ)
 
 fire.exe: $(MAKEFILE) fire_main.o $(FIRE_OBJ)
 	$(FC) $(FCFLAGS) -o fire.exe fire_main.o $(FIRE_OBJ) $(LDFLAGS)
