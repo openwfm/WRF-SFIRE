@@ -1348,7 +1348,7 @@ subroutine heat_fluxes(dt,fp,               &
   grnhft, grnqft,                           &
   fire_area, canhft, canqft, can_fuel_frac  )
 
-  use module_fr_sfire_fields, only: cfb, can_bulk_density, can_top, can_bottom
+  use module_fr_sfire_fields, only: cfb, can_bulk_density, can_top, can_bottom, can_fuel_burnt
 
   implicit none
 
@@ -1392,11 +1392,10 @@ subroutine heat_fluxes(dt,fp,               &
 
   logical :: latent, canopy_sensible, canopy_latent
 
-  real    :: can_fuel_cons    !< Fuel consumption for canopy [s-1]
-  real    :: mlr_canopy       !< Mass Loss Rate for canopy [s-1]
-  real    :: can_hflx         !< Sensible heat flux for canopy [W m-2]
-  real    :: can_qflx         !< Latent heat flux for canopy [W m-2]
-  real    :: loc_fire_area    !< local fire area if present [-]
+  real    :: can_fuel_cons      !< Fuel consumption for canopy [s-1]
+  real    :: mlr_canopy         !< Mass Loss Rate for canopy [s-1]
+  real    :: can_load_loss_rate !< Load loss rate for canopy [kg m-2 s-1]
+  real    :: loc_fire_area      !< local fire area if present [-]
 
   !*** executable        
   latent = present(grnqft)
@@ -1435,9 +1434,15 @@ subroutine heat_fluxes(dt,fp,               &
         mlr_canopy = 0.
       endif
       
+      ! Canopy load loss rate (dot(sigma))
+      can_load_loss_rate = can_bulk_density(i, j) * (can_top(i, j) - can_bottom(i, j)) * mlr_canopy
+
+      ! save the load of fuel burnt 
+      can_fuel_burnt(i, j) = dt * can_load_loss_rate
+
       ! compute canopy fluxes
-      can_hflx = cmbcnst * can_bulk_density(i, j) * (can_top(i, j) - can_bottom(i, j)) * mlr_canopy
-      can_qflx = xlv * can_bulk_density(i, j) * (can_top(i, j) - can_bottom(i, j)) * (.56 + fuelmc_c) * mlr_canopy
+      if (canopy_sensible) canhft(i, j) = cmbcnst * can_load_loss_rate
+      if (canopy_latent)   canqft(i, j) = xlv * can_load_loss_rate * (.56 + fuelmc_c)
 
       ! Surface fluxes
       dmass = fgip(i, j) * fuel_frac_burnt(i, j) 
@@ -1450,10 +1455,6 @@ subroutine heat_fluxes(dt,fp,               &
       ! bmst = relative water contents; 0.56 = est. ratio of water from burning
       ! xlv = nominal specific latent heat of water J/kg (dependence on temperature ignored)
       ! xlv is  defined in module_model_constants 
-
-      ! save canopy heat fluxes
-      if (canopy_sensible) canhft(i, j) = can_hflx
-      if (canopy_latent)   canqft(i, j) = can_qflx
     enddo
   enddo
 
@@ -1636,7 +1637,7 @@ end subroutine set_canopy_data
 !------------------------------------------------------------------------------------------------------------------
 subroutine initialize_sfire_fields()
 
-  use module_fr_sfire_fields, only: cfb, can_top, can_bottom, can_bulk_density, can_fx_z0
+  use module_fr_sfire_fields, only: cfb, can_top, can_bottom, can_bulk_density, can_fx_z0, can_fuel_burnt
   
   implicit none
 
@@ -1645,6 +1646,7 @@ subroutine initialize_sfire_fields()
   can_top(:, :)           = 0.
   can_bottom(:, :)        = 0.
   can_bulk_density(:, :)  = 0.
+  can_fuel_burnt(:, :)    = 0.
   can_fx_z0(:, :)         = 0.
 
 end subroutine initialize_sfire_fields

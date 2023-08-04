@@ -49,6 +49,7 @@ state    real     ndvi      ij      fire        1         z   i012hr    "NDVI"  
 # outputs to atm model
 state    real     rthfrten  ikj      fire        1         z     hr   "RTHFRTEN" "temperature tendency" "K/s"
 state    real     rqvfrten  ikj      fire        1         z     hr   "RQVFRTEN" "humidity tendency" 
+state    real     can_fx_z0 ij       fire        1         z     -    "CAN_FX_Z0"  "Minimal injection height for canopy heat fluxes" "m"
 
 # ------------------------------------------------------------------------------------------------------------------------
 # diagnostics only
@@ -62,7 +63,6 @@ state    real     uah            ij       fire        1         X     hr   "UAH"
 state    real     vah            ij       fire        1         Y     hr   "VAH"      "wind at fire_wind_height" "m/s"
 state    real     grnhfx_fu      ij       fire        1         z     r   "GRNHFX_FU"   "heat flux from ground fire (feedback unsensitive)" "W/m^2" 
 state    real     grnqfx_fu      ij       fire        1         z     r   "GRNQFX_FU"   "moisture flux from ground fire (feedback unsensitive)" "W/m^2"
-state    real     can_fx_z0      ij       fire        1         z     hr   "CAN_FX_Z0"  "Minimal injection height for canopy heat fluxes" "m"
 
 # ------------------------------------------------------------------------------------------------------------------------
 # sfire variables on fire grid
@@ -103,8 +103,9 @@ state    real     ros_front     *i*j      fire        1         z    hr    "ROS_
 state    real     tempf     *i*j      fire        1         z    hr    "TEMPF"    "temperature at 2m"  "K"
 state    real     rhof      *i*j      fire        1         z    hr    "RHOFF"    "surface air density"  "Pa"
 state    real     ffwidth   *i*j      fire        1         z    hr    "FFWIDTH"  "fire front width"  "m"
-state    real     cfb       *i*j      fire        1         z    hr    "CFB"  "canopy fraction burnt"  "1"
+state    real     cfb       *i*j      fire        1         z    -    "CFB"  "canopy fraction burnt"  "1"
 state    real     can_fuel_frac *i*j  fire        1         z    hr    "CAN_FUEL_FRAC" "canopy fuel remaining" "1"
+state    real     can_fuel_burnt *i*j fire        1         z    -    "CAN_FUEL_BURNT" "burning mass in canopy" "kg/m^2"
 # 
 # ------------------------------------------------------------------------------------------------------------------------
 # fuel moisture variables
@@ -189,8 +190,6 @@ state    real     fwh       *i*j      fire        1         z    hr    "FWH"    
 state    real     can_top   *i*j      fire        1         z    hr   "CAN_TOP"   "Height of tree canopy top"
 state    real     can_bottom    *i*j  fire        1         z    hr   "CAN_BOTTOM"   "Height of tree canopy base"
 state    real     can_bulk_density *i*j fire      1         z    hr   "CAN_BULK_DENSITY"   "canopy bulk density"
-state    real     can_load_loss    *i*j fire      1         z    hr   "CAN_LOAD_LOSS"   "canopy load loss"
-
 
 #
 

@@ -14,6 +14,7 @@ module module_fr_sfire_fields
   ! 2d fire grid
   real, pointer,  public, dimension(:, :) :: can_bottom       !< canopy bottom height [m]
   real, pointer,  public, dimension(:, :) :: can_bulk_density !< canopy bulk density [kg m-3]
+  real, pointer,  public, dimension(:, :) :: can_fuel_burnt   !< canopy fuel burnt durint time step [kg m-2]
   real, pointer,  public, dimension(:, :) :: can_top          !< canopy top height [m]
   real, pointer,  public, dimension(:, :) :: cfb              !< crown fraction burnt [-]
 
