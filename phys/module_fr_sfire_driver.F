@@ -502,6 +502,7 @@ call print_2d_stats(ifps,min(ifpe,ifde-ir),jfps,min(jfpe,jfde-jr),ifms,ifme,jfms
             grid%fmc_equi,                      & ! fuel moisture fields updated, by class, equilibrium diagnostic 
             grid%fmc_lag,                      & ! fuel moisture fields updated, by class, tendency diagnostic
             fp%fmc_g, &                             !  write-only alias. need to exit before using fp again
+            fp%fmc_gc_f, &                             !  write-only alias. need to exit before using fp again
             grid%ndwi, &
             grid%fndwi)
  
@@ -617,6 +618,7 @@ subroutine sfire_driver_phys (ifun,    &
     fmc_equi,                   &  ! fuel moisture fields updated, by class equilibrium diagnostic
     fmc_lag,                    &  ! fuel moisture fields updated, by class tendency diagnostic
     fmc_g,                      &  ! fuel moisture, alias of fp%fmc_g
+    fmc_gc_f,                   &  ! fuel moisture, alias of fp%fmc_gc_f
     ndwi,                       &
     fndwi)                         ! ndwi on fire grid
 
@@ -717,6 +719,7 @@ real, intent(inout), dimension(ims:ime,nfmc,jms:jme):: fmc_gc
 real, intent(inout), dimension(ims:ime,2,jms:jme):: fmep
 real, intent(out), dimension(ims:ime,nfmc,jms:jme):: fmc_equi,fmc_lag
 real, intent(inout), dimension(ifms:ifme,jfms:jfme):: fmc_g
+real, intent(inout), dimension(ifms:ifme,nfmc,jfms:jfme):: fmc_gc_f
 
 
 
@@ -1135,7 +1138,8 @@ do ij=1,num_tiles
         nfuel_cat,                         & ! fuel data
         fndwi,                             & ! satellite sensing interpolated on fire grid
         fmc_gc,                             & ! moisture contents by class on atmospheric grid
-        fmc_g                                & ! weighted fuel moisture contents on fire grid
+        fmc_g,                                & ! weighted fuel moisture contents on fire grid
+        fmc_gc_f                             & ! moisture contents by class on fire grid
         )
         call message('fuel_moisture end')
       endif
@@ -1810,6 +1814,7 @@ subroutine set_fp_from_grid(grid,fp)
     fp%ischap => grid%ischap ! spread formula coeff
     fp%fuel_time => grid%fuel_time ! time for fuel to burn to 1/e
     fp%fmc_g => grid%fmc_g   ! fuel moisture, ground
+    fp%fmc_gc_f => grid%fmc_gc_f   ! fuel moisture, ground by class
     fp%nfuel_cat => grid%nfuel_cat ! fuel category
     fp%tempf => grid%tempf     ! temperature
     fp%rhof => grid%rhof     ! surface air density
@@ -1927,6 +1932,7 @@ subroutine check_grid_alloc(grid,config_flags)
         call check_size(size(grid%psfc_old),'psfc_old')
         call check_size(size(grid%rh_fire),'rh_fire')
         call check_size(size(grid%fmc_g),'fmc_g')
+        call check_size(size(grid%fmc_gc_f),'fmc_gc_f')
     endif
     if (config_flags%fmoisti_interp .eq. 1)then
         call check_size(size(grid%fmc_gc),'fmc_gc')

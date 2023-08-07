@@ -13,10 +13,10 @@
 
 package   fire_sfire    ifire==2                    -             state:avg_fuel_frac,bbb,betafl,burnt_area_dt,canhfx,canqfx,dzdxf,dzdyf,fcanhfx,fcanqfx,fgip,fgrnhfx,fgrnqfx,fire_area,fire_smoke,flame_length,fmc_equi,fmc_g,fmc_gc,fmep,fmc_lag,fmoist_lasttime,fmoist_nexttime,fuel_frac,fuel_time,fxlat,fxlong,fz0,grnhfx,grnhfx_fu,grnqfx,grnqfx_fu,iboros,ischap,lfn,lfn_0,lfn_1,lfn_2,lfn_hist,lfn_s0,lfn_s1,lfn_s2,lfn_s3,lfn_time,nfuel_cat,phiwc,psfc_old,q2_old,r_0,rain_old,rh_fire,ros,ros_front,rqvfrten,rthfrten,t2_old,tign_g,uah,uf,vah,vf,zsf,fs_last_gen_dt,fs_gen_idmax,fs_count_reset,fs_fire_ROSdt,fs_fire_area,fs_fuel_spotting_risk,fs_count_landed_all,fs_count_landed_hist,fs_landing_mask,fs_gen_inst,fs_frac_landed,fs_spotting_lkhd 
 
-package   fire_sfire1    ifire==1                    -             state:avg_fuel_frac,nfuel_cat,zsf,tign_g,tign_in,fire_hfx,rthfrten,rqvfrten,grnhfx,grnqfx,canhfx,canqfx,dzdxf,dzdyf,lfn,lfn_out,fuel_frac,can_fuel_frac,fire_area,uf,vf,fgrnhfx,fgrnqfx,fcanhfx,fcanhfx,fcanqfx,ros,fxlong,fxlat,fuel_time,bbb,phiwc,phisc,r_0,fgip,ischap,fz0,fwh,unit_fxlong,unit_fxlat,ndwi,ndvi,fmc_g,fmc_gc,fndwi,flineint,flineint2,f_ros0,f_rosx,f_rosy,f_ros,f_int,f_lineint,f_lineint2,f_ros11,f_ros12,f_ros13,f_ros21,f_ros23,f_ros31,f_ros32,f_ros33,wz0,can_top,cuf,cvf,uah,vah,tempf,rhof,ffwidth, cfb
+package   fire_sfire1    ifire==1                    -             state:avg_fuel_frac,nfuel_cat,zsf,tign_g,tign_in,fire_hfx,rthfrten,rqvfrten,grnhfx,grnqfx,canhfx,canqfx,dzdxf,dzdyf,lfn,lfn_out,fuel_frac,fire_area,uf,vf,fgrnhfx,fgrnqfx,fcanhfx,fcanhfx,fcanqfx,ros,fxlong,fxlat,fuel_time,bbb,phiwc,phisc,r_0,fgip,ischap,fz0,fwh,unit_fxlong,unit_fxlat,ndwi,ndvi,fmc_g,fmc_gc,fmc_gc_f,fndwi,flineint,flineint2,f_ros0,f_rosx,f_rosy,f_ros,f_int,f_lineint,f_lineint2,f_ros11,f_ros12,f_ros13,f_ros21,f_ros23,f_ros31,f_ros32,f_ros33,wz0,can_top,can_bottom, can_bulk_density, cuf,cvf,uah,vah,tempf,rhof,ffwidth, cfb, can_fuel_frac, can_fuel_burnt, can_fx_z0
 
-package  fire_fmoist_run   fmoisti_run==1           -             state:fmc_gc,fmep,fmc_equi,fmc_lag,t2_old,q2_old,rain_old,psfc_old,rh_fire
-package  fire_fmoist_interp fmoisti_interp==1       -             state:fmc_gc
+package  fire_fmoist_run   fmoisti_run==1           -             state:fmc_gc,fmc_gc_f,fmep,fmc_equi,fmc_lag,t2_old,q2_old,rain_old,psfc_old,rh_fire
+package  fire_fmoist_interp fmoisti_interp==1       -             state:fmc_gc,fmc_gc_f
 
 # ------------------------------------------------------------------------------------------------------------------------
 #<Table> <Type>  <Sym>           <Dims>   <Use>   <NumTLev> <Stagger>  <IO>     <DNAME>      <DESCRIP>     <UNITS>   
@@ -116,8 +116,9 @@ state    real     fndwi     *i*j      fire        1         z   i012hr    "FNDWI
 dimspec  num_fmc    -   namelist=nfmc              z      fuel_moisture_classes 
 dimspec  num_fmep    -   constant=2                z      fuel_moisture_extended_parameters
 #
-rconfig  integer  nfmc  namelist,fire  1    5  -   "nfmc" "number of fuel moisture classes"
+rconfig  integer  nfmc  namelist,fire  1    6  -   "nfmc" "number of fuel moisture classes"
 state    real     fmc_gc  i{num_fmc}j fire      1           z   i012hr   "FMC_GC"  "fuel moisture contents by class" "1"
+state    real     fmc_gc_f   *i{num_fmc}*j    fire        1         z   i012hr "FMC_GC_F"     "ground fuel moisture contents by class" "1"
 state    real     fmep    i{num_fmep}j fire      1         z    i012hr   "FMEP"  "fuel moisture extended model parameters" "1"
 state    real     fmc_equi  i{num_fmc}j fire     1         z     hr   "FMC_EQUI"  "fuel moisture contents by class equilibrium (diagnostics only)" "1"
 state    real     fmc_lag  i{num_fmc}j fire     1         z      hr   "FMC_TEND"  "fuel moisture contents by class time lag (diagnostics only)" "h"
@@ -137,7 +138,7 @@ rconfig integer   fmoist_freq       namelist,fire  max_domains    0       hr   "
 rconfig real      fmoist_dt         namelist,fire  max_domains    600     hr   "fmoist_dt  "    "moisture model time step" "s"
 rconfig real      fmep_decay_tlag   namelist,fire  1              999999  hr   "fmep_decay_tlag" "time constant of assimilated adjustments of equilibria decay" "1"
 #
-halo      HALO_FIRE_MFG dyn_em 24:fmc_g
+halo      HALO_FIRE_MFG dyn_em 24:fmc_g,fmc_gc_f
 halo      HALO_FIRE_MAG dyn_em 8:fmc_gc
 #
 

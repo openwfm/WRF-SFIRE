@@ -63,6 +63,7 @@ module module_domain
       real, pointer, dimension(:,:)::fndwi => null()
       real, pointer, dimension(:,:,:)::fmc_lag => null()
       real, pointer, dimension(:,:,:)::fmc_gc => null()
+      real, pointer, dimension(:,:,:)::fmc_gc_f => null()
       real, pointer, dimension(:,:,:)::fmc_equi => null()
       real, pointer, dimension(:,:,:)::fmep => null()
       real, pointer, dimension(:,:,:,:)::chem => null()
