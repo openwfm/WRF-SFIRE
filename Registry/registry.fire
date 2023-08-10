@@ -106,10 +106,11 @@ state    real     ffwidth   *i*j      fire        1         z    hr    "FFWIDTH"
 state    real     cfb       *i*j      fire        1         z    -    "CFB"  "canopy fraction burnt"  "1"
 state    real     can_fuel_frac *i*j  fire        1         z    hr    "CAN_FUEL_FRAC" "canopy fuel remaining" "1"
 state    real     can_fuel_burnt *i*j fire        1         z    -    "CAN_FUEL_BURNT" "burning mass in canopy" "kg/m^2"
+state    real   surf_moisture_frac *i*j fire      1         z    hr   "SURF_MOISTURE_FRAC" "surface fuel moisture fraction" "1"
 
 # multi layer heat flux variable
 dimspec  nlay   -           constant=4      z    surf_heat_flux_layer
-state    real   surf_mass_frac {nlay}*i*j fire      1         z    hr   "SURF_MASS_FRAC" "surface fuel mass fraction" "1"
+state    real   surf_mass_frac *i{nlay}*j fire      1         z    hr   "SURF_MASS_FRAC" "surface fuel mass fraction" "1"
 
 # 
 # ------------------------------------------------------------------------------------------------------------------------

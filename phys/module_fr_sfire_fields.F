@@ -17,6 +17,7 @@ module module_fr_sfire_fields
   real, pointer,  public, dimension(:, :) :: can_fuel_burnt     !< canopy fuel burnt durint time step [kg m-2]
   real, pointer,  public, dimension(:, :) :: can_top            !< canopy top height [m]
   real, pointer,  public, dimension(:, :) :: cfb                !< crown fraction burnt [-]
+  real, pointer,  public, dimension(:, :) :: surf_moisture_frac !< surface moisture fraction for each layer for heat fluxes computation [-]
   
   ! 2d fire grid + layers
   real, pointer,  public, dimension(:, :, :)  :: surf_mass_frac !< surface mass fraction for each layer for heat fluxes computation [-]
