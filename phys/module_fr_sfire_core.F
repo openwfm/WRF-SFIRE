@@ -686,27 +686,27 @@ enddo
 #endif
 
 ! consistency check after sum
-!fmax=0
-!do j=jts,jte
-!    do i=its,ite        
-!       if(fire_area(i,j).eq.0.)then
-!           if(fuel_frac(i,j).lt.1.-1e-6)then
-!!$OMP CRITICAL(SFIRE_CORE_CRIT)
-!               write(msg,'(a,2i6,2(a,f11.8))')'fuel_left: at node',i,j, &
-!                   ' fuel burnt',1-fuel_frac(i,j),' but fire area',fire_area(i,j)
-!!$OMP END CRITICAL(SFIRE_CORE_CRIT)
-!               call crash(msg)
-!           endif
-!       else
-!           frat=(1-fuel_frac(i,j))/fire_area(i,j)
-!           fmax=max(fmax,frat)
-!       endif
-!    enddo
-!enddo
+fmax=0
+do j=jts,jte
+    do i=its,ite        
+       if(fire_area(i,j).eq.0.)then
+           if(fuel_frac(i,j).lt.1.-1e-6)then
 !$OMP CRITICAL(SFIRE_CORE_CRIT)
-!write(msg,'(a,4i6,a,e15.7)')'fuel_left: tile',its,ite,jts,jte,' max fuel burnt/area',fmax 
+               write(msg,'(a,2i6,2(a,f11.8))')'fuel_left: at node',i,j, &
+                   ' fuel burnt',1-fuel_frac(i,j),' but fire area',fire_area(i,j)
 !$OMP END CRITICAL(SFIRE_CORE_CRIT)
-!call message(msg)
+               call crash(msg)
+           endif
+       else
+           frat=(1-fuel_frac(i,j))/fire_area(i,j)
+           fmax=max(fmax,frat)
+       endif
+    enddo
+enddo
+!$OMP CRITICAL(SFIRE_CORE_CRIT)
+write(msg,'(a,4i6,a,e15.7)')'fuel_left: tile',its,ite,jts,jte,' max fuel burnt/area',fmax 
+!$OMP END CRITICAL(SFIRE_CORE_CRIT)
+call message(msg)
 
 return
 

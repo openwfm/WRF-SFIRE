@@ -403,13 +403,13 @@ call print_2d_stats(ifps,min(ifpe,ifde-ir),jfps,min(jfpe,jfde-jr),ifms,ifme,jfms
 !           halo exchange on atm winds and geopotential for interpolation
 #include "HALO_SFIRE_WIND_A.inc"
 #include "HALO_FIRE_PH.inc"
-            if(ibeh.eq.2)then
+            if(ibeh.eq.2 .or. ibeh == 3)then
 #include "HALO_SFIRE_RHO2FIRE_ATM.inc"
             endif
         elseif(fire_ifun.eq.4)then
 !           halo exchange on fire winds width 2 for a 2-step RK method
 #include "HALO_FIRE_WIND_F.inc"
-            if(ibeh.eq.2)then
+            if(ibeh.eq.2 .or. ibeh == 3)then
 #include "HALO_SFIRE_RHO2FIRE_SUB.inc"
             endif
             if(run_fuel_moisture)then
@@ -502,6 +502,7 @@ call print_2d_stats(ifps,min(ifpe,ifde-ir),jfps,min(jfpe,jfde-jr),ifms,ifme,jfms
             grid%fmc_equi,                      & ! fuel moisture fields updated, by class, equilibrium diagnostic 
             grid%fmc_lag,                      & ! fuel moisture fields updated, by class, tendency diagnostic
             fp%fmc_g, &                             !  write-only alias. need to exit before using fp again
+            fp%fmc_gc_f, &                             !  write-only alias. need to exit before using fp again
             grid%ndwi, &
             grid%fndwi)
  
@@ -617,9 +618,11 @@ subroutine sfire_driver_phys (ifun,    &
     fmc_equi,                   &  ! fuel moisture fields updated, by class equilibrium diagnostic
     fmc_lag,                    &  ! fuel moisture fields updated, by class tendency diagnostic
     fmc_g,                      &  ! fuel moisture, alias of fp%fmc_g
+    fmc_gc_f,                   &  ! fuel moisture, alias of fp%fmc_gc_f
     ndwi,                       &
     fndwi)                         ! ndwi on fire grid
 
+  use module_fr_sfire_fields, only: can_fx_z0, can_bottom
 
 implicit none
 
@@ -716,6 +719,7 @@ real, intent(inout), dimension(ims:ime,nfmc,jms:jme):: fmc_gc
 real, intent(inout), dimension(ims:ime,2,jms:jme):: fmep
 real, intent(out), dimension(ims:ime,nfmc,jms:jme):: fmc_equi,fmc_lag
 real, intent(inout), dimension(ifms:ifme,jfms:jfme):: fmc_g
+real, intent(inout), dimension(ifms:ifme,nfmc,jfms:jfme):: fmc_gc_f
 
 
 
@@ -964,10 +968,10 @@ do ij=1,num_tiles
 
     elseif(ifun.eq.3)then  ! interpolate atmosphere variables to the fire grid
   
-      for_balbi: if(ibeh.eq.2)then
+      for_balbi: if(ibeh.eq.2 .or. ibeh == 3)then
 
-         call message('ibeh=2: interpolating atmosphere input for Balbi rate of spread model')
-         if(.not.use_atm_vars)call crash('ibeh=2 Balbi model requires atmosphere but use_atm_vars=false')
+         call message('ibeh=2 or 3: interpolating atmosphere input for rate of spread model')
+         if(.not.use_atm_vars)call crash('ibeh=2 or 3, ros model requires atmosphere but use_atm_vars=false')
          
          ! balbi_msglevel = 4
 
@@ -1134,7 +1138,8 @@ do ij=1,num_tiles
         nfuel_cat,                         & ! fuel data
         fndwi,                             & ! satellite sensing interpolated on fire grid
         fmc_gc,                             & ! moisture contents by class on atmospheric grid
-        fmc_g                                & ! weighted fuel moisture contents on fire grid
+        fmc_g,                                & ! weighted fuel moisture contents on fire grid
+        fmc_gc_f                             & ! moisture contents by class on fire grid
         )
         call message('fuel_moisture end')
       endif
@@ -1256,6 +1261,13 @@ do ij=1,num_tiles
             ims, ime, jms, jme,   &
             its,ite,jts,jte,      &
             grnqfx)
+
+          call mean_2d_cells_non_zero(       &
+          ifms, ifme, jfms, jfme,           &
+          ifts, ifte, jfts, jfte,           &
+          ims,  ime,  jms,  jme,            &
+          its,  ite,  jts,  jte,            &
+          can_bottom, can_fx_z0              )
 
 !$OMP CRITICAL(SFIRE_DRIVER_CRIT)
           write(msg,'(a,f6.3)')'fire-atmosphere feedback scaling ',fire_atm_feedback
@@ -1802,6 +1814,7 @@ subroutine set_fp_from_grid(grid,fp)
     fp%ischap => grid%ischap ! spread formula coeff
     fp%fuel_time => grid%fuel_time ! time for fuel to burn to 1/e
     fp%fmc_g => grid%fmc_g   ! fuel moisture, ground
+    fp%fmc_gc_f => grid%fmc_gc_f   ! fuel moisture, ground by class
     fp%nfuel_cat => grid%nfuel_cat ! fuel category
     fp%tempf => grid%tempf     ! temperature
     fp%rhof => grid%rhof     ! surface air density
@@ -1811,7 +1824,7 @@ end subroutine set_fp_from_grid
 
 subroutine set_sfire_fields_from_grid(grid)
 
-    use module_fr_sfire_fields, only: cfb, can_top, can_bottom, can_bulk_density
+    use module_fr_sfire_fields, only: cfb, can_top, can_bottom, can_bulk_density, can_fx_z0, can_fuel_burnt
     
     implicit none
 
@@ -1822,6 +1835,8 @@ subroutine set_sfire_fields_from_grid(grid)
     can_top => grid%can_top
     can_bottom => grid%can_bottom
     can_bulk_density => grid%can_bulk_density
+    can_fuel_burnt => grid%can_fuel_burnt
+    can_fx_z0 => grid%can_fx_z0
 
 end subroutine set_sfire_fields_from_grid
 
@@ -1917,6 +1932,7 @@ subroutine check_grid_alloc(grid,config_flags)
         call check_size(size(grid%psfc_old),'psfc_old')
         call check_size(size(grid%rh_fire),'rh_fire')
         call check_size(size(grid%fmc_g),'fmc_g')
+        call check_size(size(grid%fmc_gc_f),'fmc_gc_f')
     endif
     if (config_flags%fmoisti_interp .eq. 1)then
         call check_size(size(grid%fmc_gc),'fmc_gc')
@@ -1937,11 +1953,13 @@ subroutine check_grid_alloc(grid,config_flags)
     call check_size(size(grid%can_top),'can_top')
     call check_size(size(grid%can_bottom),'can_bottom')
     call check_size(size(grid%can_bulk_density),'can_bulk_density')
+    call check_size(size(grid%can_fuel_burnt),'can_fuel_burnt')
+    call check_size(size(grid%can_fx_z0),'can_fx_z0')
     
 end subroutine check_grid_alloc
 
 subroutine check_size(sz,name,req)
-integer, intent(in)::sz
+    integer, intent(in)::sz
 integer, optional::req
 character(len=*), intent(in)::name
 character(len=128)::msg

@@ -610,6 +610,141 @@ call crash('sum_2d_cells: bad mesh sizes')
 
 end subroutine sum_2d_cells
 
+!------------------------------------------------------------------------------------------------------------------
+! SUBROUTINE: mean_2d_cells_non_zero
+!>  return the non-zero mean value over the fire mesh contained in the atmospheric mesh
+!!
+!!  For each atmospheric cell, compute the mean value of a fire field where its valus is not zero  
+!!  atm_field_out = mean(fire_field_in) where fire_field_in /= 0
+!------------------------------------------------------------------------------------------------------------------
+subroutine mean_2d_cells_non_zero(   &
+  ifms, ifme, jfms, jfme,           &
+  ifts, ifte, jfts, jfte,           &
+  ims,  ime,  jms,  jme,            &
+  its,  ite,  jts,  jte,            &
+  fire_field_in, atm_field_out      )  
+
+  implicit none
+
+  ! 0. Declaration
+  !    ===========
+
+  ! 0.1 Arguments
+
+  integer,  intent(in   ) :: ifms  !< fire mesh start index x axis
+  integer,  intent(in   ) :: ifme  !< fire mesh end   index x axis
+  integer,  intent(in   ) :: jfms  !< fire mesh start index y axis
+  integer,  intent(in   ) :: jfme  !< fire mesh end   index y axis
+  
+  integer,  intent(in   ) :: ifts  !< fire tile start index x axis
+  integer,  intent(in   ) :: ifte  !< fire tile end   index x axis
+  integer,  intent(in   ) :: jfts  !< fire tile start index y axis
+  integer,  intent(in   ) :: jfte  !< fire tile end   index y axis
+  
+  integer,  intent(in   ) :: ims   !< atm mesh start index x axis
+  integer,  intent(in   ) :: ime   !< atm mesh end   index x axis
+  integer,  intent(in   ) :: jms   !< atm mesh start index y axis
+  integer,  intent(in   ) :: jme   !< atm mesh end   index y axis
+
+  integer,  intent(in   ) :: its   !< atm tile start index x axis
+  integer,  intent(in   ) :: ite   !< atm tile end   index x axis
+  integer,  intent(in   ) :: jts   !< atm tile start index y axis
+  integer,  intent(in   ) :: jte   !< atm tile end   index y axis
+
+  real,     intent(in   ),  dimension(ifms:ifme, jfms:jfme) :: fire_field_in  !< field on fire grid we want to average
+  real,     intent(  out),  dimension(ims:ime,   jms:jme)   :: atm_field_out  !< field on atm grid returned
+  
+  ! 0.2 Locals
+
+  integer :: i, i_f, j, j_f, ir, jr, isz1, isz2, jsz1, jsz2, ioff, joff, ibase, jbase, n_non_zero
+  real :: tmp_sum, min_value_fire_field
+  character(len=128) :: msg
+
+  ! 1. Check mesh sizes
+  !    ================
+
+  ! check mesh dimensions and domain dimensions
+  call check_mesh_2dim(its, ite, jts, jte, ims, ime, jms, jme)
+  call check_mesh_2dim(ifts, ifte, jfts, jfte, ifms, ifme, jfms, jfme)
+
+  ! compute mesh sizes
+  isz1 = ite-its+1
+  jsz1 = jte-jts+1
+  isz2 = ifte-ifts+1
+  jsz2 = jfte-jfts+1
+
+  ! check mesh sizes
+  if(isz1.le.0.or.jsz1.le.0.or.isz2.le.0.or.jsz2.le.0)then
+  call message('all mesh sizes must be positive',level=0)
+  goto 9
+  endif
+
+  ! compute mesh ratios
+  ir=isz2/isz1
+  jr=jsz2/jsz1
+
+  if(isz2.ne.isz1*ir .or. jsz2.ne.jsz1*jr)then
+  call message('input mesh size must be multiple of output mesh size',level=0)
+  goto 9
+  endif
+
+
+  ! 2. Get mean value
+  !    ==============
+
+  ! set minimal value for the fire field
+  min_value_fire_field = 1e-9
+
+  do j = jts, jte
+    jbase = jfts + jr * (j - jts)
+    do i = its, ite
+      ibase=ifts+ir*(i-its)
+
+      ! initialize mean value
+      tmp_sum = 0.
+      n_non_zero = 0
+
+      do joff = 0, jr - 1
+        j_f = joff + jbase
+
+        do ioff = 0, ir - 1
+          i_f = ioff + ibase
+          
+          ! get contribution if field is non zero
+          if (fire_field_in(i_f, j_f) > min_value_fire_field) then
+            tmp_sum = tmp_sum + fire_field_in(i_f, j_f)
+            n_non_zero = n_non_zero + 1
+          endif
+        enddo
+      enddo
+      
+      ! Assign mean value to atmospheric field
+      if (n_non_zero > 0) then
+        atm_field_out(i, j) = tmp_sum / n_non_zero
+      else
+        atm_field_out(i, j) = 0.
+      end if
+    enddo
+  enddo
+
+  return
+
+  9 continue
+  !$OMP CRITICAL(SFIRE_UTIL_CRIT)
+  write(msg,91)ifts,ifte,jfts,jfte,ifms,ifme,jfms,jfme
+  call message(msg,level=0)
+  write(msg,91)its,ite,jts,jte,ims,ime,jms,jme
+  call message(msg,level=0)
+  write(msg,92)'input  mesh size:',isz2,jsz2
+  call message(msg,level=0)
+  91 format('dimensions: ',8i8)
+  write(msg,92)'output mesh size:',isz1,jsz1
+  call message(msg,level=0)
+  92 format(a,2i8)
+  !$OMP END CRITICAL(SFIRE_UTIL_CRIT)
+  call crash('min_2d_cells_non_zero: bad mesh sizes')
+
+end subroutine mean_2d_cells_non_zero
 
 
 ! module_fr_sfire_util%%interpolate_2d
