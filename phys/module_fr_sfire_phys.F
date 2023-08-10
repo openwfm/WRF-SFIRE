@@ -47,7 +47,7 @@ public:: fire_params
 
 ! variables
 PUBLIC:: fire_wind_height,fcz0,fcwh,have_fuel_cats,nfuelcats, &
-  no_fuel_cat,no_fuel_cat2,windrf,moisture_classes,itree,fueldepthm,ibeh
+  no_fuel_cat,no_fuel_cat2,windrf,moisture_classes,itree,fueldepthm,ibeh, use_multilayer_hf
 PUBLIC:: mfuelcats
 ! NOTE: fcwh and fcz0 are called fwh and fz0 in read/write statements
 
@@ -195,6 +195,27 @@ PUBLIC:: mfuelcats
    REAL   , DIMENSION(n_tree_type), SAVE    :: tree_z_max               !< canopy top height (AGL) as function of tree type.
    REAL   , DIMENSION(n_tree_type), SAVE    :: tree_z_min               !< canopy bottom height (AGL) as function of tree type.
    REAL   , DIMENSION(n_tree_type), SAVE    :: tree_burn_time           !< canopy characteristic burn time
+
+   ! LLNL fuel load data for 1h, 10h, 100h, live fuel and associated burn time
+  logical,  save      :: use_multilayer_hf = .true. !< flag to use multi layer scheme for surface fluxes
+  integer,  parameter :: n_layer_hf_surf = 4        !< number of layers used for surface heat fluxes computation (for now fixed to 4)
+  integer,  parameter :: n_fuel_cat_A13 = 13        !< number of fuel categories in Anderson fuel classification
+  real, dimension(n_fuel_cat_A13, n_layer_hf_surf), save  :: fuel_load_layers_hf = reshape(& 
+    (/0.1658858, 0.       , 0.       , 0.       , &
+      0.44834  , 0.22417  , 0.112085 , 0.112085 , &
+      0.6747517, 0.       , 0.       , 0.       , &
+      1.1230917, 0.8989217, 0.44834  , 1.1230917, &
+      0.22417  , 0.112085 , 0.       , 0.44834  , &
+      0.336255 , 0.560425 , 0.44834  , 0.       , &
+      0.2533121, 0.4191979, 0.336255 , 0.0829429, &
+      0.336255 , 0.22417  , 0.560425 , 0.       , &
+      0.6545764, 0.0919097, 0.0336255, 0.       , &
+      1.21     , 0.       , 0.       , 2.6945234, &
+      0.       , 0.       , 0.       , 3.9045234, &
+      0.8989217, 3.1451051, 3.7055301, 0.       , &
+      1.5714317, 5.1648768, 6.2879685, 0.        /), &
+      shape(fuel_load_layers_hf), order=(/2, 1/)) !< fuel load for each fuel class and for each size class [kg m-2]
+  real, dimension(n_layer_hf_surf), save  :: layer_burn_time  !< burn time for 1h, 10h, 100h, and live fuel [s]
 ! =============================================================================
 ! Standard 13 fire behavior fuel models (for surface fires), along with some
 !          estimated canopy properties (for crown fire).
@@ -284,6 +305,7 @@ PUBLIC:: mfuelcats
    DATA tree_z_min / 3. , 6. , 5. , 12., 10. , 5. , 1.,  0.73 /         ! canopy bottom height as function of tree type [m]
    DATA tree_burn_time / 10. , 10. , 10. , 10., 10. , 10. , 10., 10. /  ! canopy burning time function of tree type [m]
    
+   DATA layer_burn_time / 7., 500., 3600., 900. / ! burn time [s]
    ! =========================================================================
 
   logical, save :: have_fuel_cats=.false.
@@ -748,7 +770,7 @@ REAL   , DIMENSION( mfuelcats ) :: fwh, fz0
 
 ! read 
 namelist /fuel_scalars/ cmbcnst,hfgl,fuelmc_g,fuelmc_c,nfuelcats,no_fuel_cat,no_fuel_cat2,fire_wind_height,ibeh, &
-    ffwidth_thresh, balbi_msglevel
+    ffwidth_thresh, balbi_msglevel, use_multilayer_hf
 namelist /fuel_categories_anderson_13/ fuel_name,windrf,fgi,fueldepthm,savr, &
     fuelmce,fueldens,st,se,weight,fci_d,fct,ichap,itree,fwh,fz0,ffw,idynamic, &
     fmc_gl_ndwi_0,fmc_gl_ndwi_rate,fmc_gl_ndwi_stdev, fmc_gl_stdev, &
@@ -888,11 +910,14 @@ call wrf_dm_bcast_integer(wetting_model,     max_moisture_classes)
 call wrf_dm_bcast_integer(fmc_gc_initialization,     max_moisture_classes)
 call wrf_dm_bcast_integer(is_dead,     max_moisture_classes)
 call wrf_dm_bcast_real(fmc_gw,     mfuelcats*max_moisture_classes)
+call wrf_dm_bcast_real(fuel_load_layers_hf, n_fuel_cat_A13*n_layer_hf_surf)
+call wrf_dm_bcast_real(layer_burn_time, n_layer_hf_surf)
+call wrf_dm_bcast_logical(use_multilayer_hf, 1)
 
 ! moisture model derived scalars
 do i=1,moisture_classes
-    rec_drying_lag_sec(i)  = 1.0/(3600.0*drying_lag(i))
-    rec_wetting_lag_sec(i) = 1.0/(3600.0*wetting_lag(i))
+  rec_drying_lag_sec(i)  = 1.0/(3600.0*drying_lag(i))
+  rec_wetting_lag_sec(i) = 1.0/(3600.0*wetting_lag(i))
 enddo
 
 !-------------------------------- fuel model
@@ -1836,7 +1861,7 @@ end subroutine set_canopy_data
 !------------------------------------------------------------------------------------------------------------------
 subroutine initialize_sfire_fields()
 
-  use module_fr_sfire_fields, only: cfb, can_top, can_bottom, can_bulk_density, can_fx_z0, can_fuel_burnt
+  use module_fr_sfire_fields, only: cfb, can_top, can_bottom, can_bulk_density, can_fx_z0, can_fuel_burnt, surf_mass_frac
   
   implicit none
 
@@ -1847,6 +1872,7 @@ subroutine initialize_sfire_fields()
   can_bulk_density(:, :)  = 0.
   can_fuel_burnt(:, :)    = 0.
   can_fx_z0(:, :)         = 0.
+  surf_mass_frac(:, :, :) = 1.
 
 end subroutine initialize_sfire_fields
 
