@@ -1434,7 +1434,7 @@ subroutine heat_fluxes(dt,fp,               &
   implicit none
 
   ! 0. Declaration
-  !    -----------
+  !    ===========
   
   type(fire_params),  intent(in   )  :: fp !< fire params
   real,               intent(in   )  :: dt !< the fire time step [s]
@@ -1478,52 +1478,81 @@ subroutine heat_fluxes(dt,fp,               &
   real    :: can_load_loss_rate !< Load loss rate for canopy [kg m-2 s-1]
   real    :: loc_fire_area      !< local fire area if present [-]
 
+  ! Compute surface heat fluxes
+  call heat_fluxes_surf(dt,fp,                &
+    ifms, ifme, jfms, jfme,                   &
+    ifts, ifte, jfts, jfte,                   &
+    iffs, iffe, jffs, jffe,                   &
+    fgip, fuel_frac_burnt,                    & 
+    grnhft, grnqft                            )
+
+  ! Compute canopy heat fluxes
+  ! A minima sensible heat fluxes
+  if (present(fire_area) .and. present(canhft) .and. present(can_fuel_frac)) then
+    call heat_fluxes_canopy(dt,fp,               &
+      ifms, ifme, jfms, jfme,                   &
+      ifts, ifte, jfts, jfte,                   &
+      iffs, iffe, jffs, jffe,                   &
+      fgip, fuel_frac_burnt,                    & 
+      fire_area, canhft, can_fuel_frac, canqft  )
+  endif
+
+end subroutine heat_fluxes
+
+
+!------------------------------------------------------------------------------------------------------------------
+! SUBROUTINE: heat_fluxes_surf
+!>   Compute heat fluxes on the fire grid for surface only
+!!
+!!  Compute ground sensible and latent heat fluxes  
+!------------------------------------------------------------------------------------------------------------------
+subroutine heat_fluxes_surf(dt,fp,          &
+  ifms, ifme, jfms, jfme,                   &
+  ifts, ifte, jfts, jfte,                   &
+  iffs, iffe, jffs, jffe,                   &
+  fgip, fuel_frac_burnt,                    & 
+  grnhft, grnqft                            )
+  
+  implicit none
+
+  ! 0. Declaration
+  !    ===========
+  
+  type(fire_params),  intent(in   )  :: fp !< fire params
+  real,               intent(in   )  :: dt !< the fire time step [s]
+
+  integer,  intent(in   )  :: ifts  !< fire tile start index x axis
+  integer,  intent(in   )  :: ifte  !< fire tile end   index x axis
+  integer,  intent(in   )  :: jfts  !< fire tile start index y axis
+  integer,  intent(in   )  :: jfte  !< fire tile end   index y axis
+
+  integer,  intent(in   )  :: ifms  !< fire mesh start index x axis
+  integer,  intent(in   )  :: ifme  !< fire mesh end   index x axis
+  integer,  intent(in   )  :: jfms  !< fire mesh start index y axis
+  integer,  intent(in   )  :: jfme  !< fire mesh end   index y axis
+
+  integer,  intent(in   )  :: iffs  !< fire fuel frac burnt start index x axis
+  integer,  intent(in   )  :: iffe  !< fire fuel frac burnt end   index x axis
+  integer,  intent(in   )  :: jffs  !< fire fuel frac burnt start index y axis
+  integer,  intent(in   )  :: jffe  !< fire fuel frac burnt end   index y axis
+
+  real, intent(in   ),  dimension(ifms:ifme,jfms:jfme)  :: fgip             !< init mass from fuel model [kg m-2]
+  real, intent(in   ),  dimension(iffs:iffe,jffs:jffe)  :: fuel_frac_burnt  !< fraction burned this call [-]
+
+  real, intent(  out),  dimension(ifms:ifme, jfms:jfme)             :: grnhft !< surface sensible heat flux [W m-2]   
+  real, intent(  out),  dimension(ifms:ifme, jfms:jfme),  optional  :: grnqft !< latent sensible heat flux [W m-2]
+  
+  !*** local
+  integer :: i, j
+  real    :: dmass, bmst
+  
+  logical :: latent
+
   !*** executable        
   latent = present(grnqft)
-  ! flag for canopy flux computation
-  canopy_sensible = present(canhft)
-  canopy_latent = present(canqft)
 
   do j = jfts, jfte
     do i = ifts, ifte
-      ! fire area
-      if (present(fire_area)) then
-        loc_fire_area = fire_area(i, j)
-      else
-        loc_fire_area = 1.
-      endif
-
-      ! get tree class
-      i_tree_cat = itree(fp%nfuel_cat(i, j))
-      
-      ! init canopy fluxes
-      
-      ! compute mass loss rate for canopy
-      if (canopy_sensible .or. canopy_latent) then
-        if (i_tree_cat == 0) then
-          can_fuel_cons = 0.
-        else
-          can_fuel_cons = can_fuel_frac(i, j) / tree_burn_time(i_tree_cat)
-        endif
-
-        mlr_canopy = min(loc_fire_area * cfb(i, j) * can_fuel_cons, can_fuel_frac(i, j) / dt)
-
-        ! update canopy fuel fraction
-        can_fuel_frac(i, j) = can_fuel_frac(i, j) - dt * mlr_canopy
-
-      else
-        mlr_canopy = 0.
-      endif
-      
-      ! Canopy load loss rate (dot(sigma))
-      can_load_loss_rate = can_bulk_density(i, j) * (can_top(i, j) - can_bottom(i, j)) * mlr_canopy
-
-      ! save the load of fuel burnt 
-      can_fuel_burnt(i, j) = dt * can_load_loss_rate
-
-      ! compute canopy fluxes
-      if (canopy_sensible) canhft(i, j) = cmbcnst * can_load_loss_rate
-      if (canopy_latent)   canqft(i, j) = xlv * can_load_loss_rate * (.56 + fuelmc_c)
 
       ! Surface fluxes
       dmass = fgip(i, j) * fuel_frac_burnt(i, j) 
@@ -1539,11 +1568,100 @@ subroutine heat_fluxes(dt,fp,               &
     enddo
   enddo
 
-end subroutine heat_fluxes
+end subroutine heat_fluxes_surf
 
-!
-!**********************
-!            
+
+!------------------------------------------------------------------------------------------------------------------
+! SUBROUTINE: heat_fluxes_canopy
+!>   Compute heat fluxes on the fire grid for canopy only
+!!
+!!  Compute canopy sensible and latent heat fluxes  
+!------------------------------------------------------------------------------------------------------------------
+subroutine heat_fluxes_canopy(dt,fp,        &
+  ifms, ifme, jfms, jfme,                   &
+  ifts, ifte, jfts, jfte,                   &
+  iffs, iffe, jffs, jffe,                   &
+  fgip, fuel_frac_burnt,                    & 
+  fire_area, canhft, can_fuel_frac, canqft  )
+
+  use module_fr_sfire_fields, only: cfb, can_bulk_density, can_top, can_bottom, can_fuel_burnt
+
+  implicit none
+
+  ! 0. Declaration
+  !    ===========
+  
+  type(fire_params),  intent(in   )  :: fp !< fire params
+  real,               intent(in   )  :: dt !< the fire time step [s]
+
+  integer,  intent(in   )  :: ifts  !< fire tile start index x axis
+  integer,  intent(in   )  :: ifte  !< fire tile end   index x axis
+  integer,  intent(in   )  :: jfts  !< fire tile start index y axis
+  integer,  intent(in   )  :: jfte  !< fire tile end   index y axis
+
+  integer,  intent(in   )  :: ifms  !< fire mesh start index x axis
+  integer,  intent(in   )  :: ifme  !< fire mesh end   index x axis
+  integer,  intent(in   )  :: jfms  !< fire mesh start index y axis
+  integer,  intent(in   )  :: jfme  !< fire mesh end   index y axis
+
+  integer,  intent(in   )  :: iffs  !< fire fuel frac burnt start index x axis
+  integer,  intent(in   )  :: iffe  !< fire fuel frac burnt end   index x axis
+  integer,  intent(in   )  :: jffs  !< fire fuel frac burnt start index y axis
+  integer,  intent(in   )  :: jffe  !< fire fuel frac burnt end   index y axis
+
+  real, intent(in   ),  dimension(ifms:ifme,jfms:jfme)  :: fgip             !< init mass from fuel model [kg m-2]
+  real, intent(in   ),  dimension(iffs:iffe,jffs:jffe)  :: fuel_frac_burnt  !< fraction burned this call [-]
+
+  real, intent(in   ),  dimension(ifms:ifme, jfms:jfme)               :: fire_area      !< proportion of the fire cell burning [-]
+  real, intent(  out),  dimension(ifms:ifme, jfms:jfme)               :: canhft         !< canopy sensible heat flux [W m-2]
+  real, intent(inout),  dimension(ifms:ifme, jfms:jfme)               :: can_fuel_frac  !< canopy fuel fraction [-]
+  real, intent(  out),  dimension(ifms:ifme, jfms:jfme),  optional    :: canqft         !< canopy latent heat flux [W m-2]
+
+  !*** local
+  integer :: i, j
+  real    :: dmass, bmst
+
+  integer :: i_tree_cat !< tree class
+
+  logical :: canopy_latent
+
+  real    :: can_fuel_cons      !< Fuel consumption for canopy [s-1]
+  real    :: mlr_canopy         !< Mass Loss Rate for canopy [s-1]
+  real    :: can_load_loss_rate !< Load loss rate for canopy [kg m-2 s-1]
+
+  ! flag for canopy flux computation
+  canopy_latent = present(canqft)
+
+  do j = jfts, jfte
+    do i = ifts, ifte
+      ! get tree class
+      i_tree_cat = itree(fp%nfuel_cat(i, j))
+              
+      ! compute mass loss rate for canopy
+      if (i_tree_cat == 0) then
+        can_fuel_cons = 0.
+      else
+        can_fuel_cons = can_fuel_frac(i, j) / tree_burn_time(i_tree_cat)
+      endif
+
+      mlr_canopy = min(fire_area(i, j) * cfb(i, j) * can_fuel_cons, can_fuel_frac(i, j) / dt)
+
+      ! update canopy fuel fraction
+      can_fuel_frac(i, j) = can_fuel_frac(i, j) - dt * mlr_canopy
+
+      ! Canopy load loss rate (dot(sigma))
+      can_load_loss_rate = can_bulk_density(i, j) * (can_top(i, j) - can_bottom(i, j)) * mlr_canopy
+
+      ! save the load of fuel burnt 
+      can_fuel_burnt(i, j) = dt * can_load_loss_rate
+
+      ! compute canopy fluxes
+      canhft(i, j) = cmbcnst * can_load_loss_rate
+      if (canopy_latent)  canqft(i, j) = xlv * can_load_loss_rate * (.56 + fuelmc_c)
+    enddo
+  enddo
+
+end subroutine heat_fluxes_canopy    
 
 
 subroutine set_nfuel_cat(   &
