@@ -2795,7 +2795,7 @@ real::qig_1, qig_10, qig_100, qig_herba_dead, qig_herba, qig_woody
 real::fuelheat_dead, fuelheat_live, se_dead, se_live, rtemp1_dead, rtemp1_live
 real::etam_dead, etam_live, etas_dead, etas_live, heat_sink_dead, heat_sink_live
 real::epsilon_1, epsilon_10, epsilon_100, epsilon_herba_dead, epsilon_herba, epsilon_woody
-real::fueldepth, fuelload, savr, AT, W_prima, M_prima_f, heat_sink, fuelmce_live
+real::fueldepth, fuelload, savr_t, AT, W_prima, M_prima_f, heat_sink, fuelmce_live
 real::a, rhob, betafl, betaop, rtemp2, gammax, ratio, gamma
 real::xifr, ir, r_0, umid, c, bbb, e, phiwc, phiw, phis
 real::dzdxf, dzdyf, vx, vy, speed, tanphi, nfuel_cat
@@ -2807,10 +2807,10 @@ vx = fp%vx(i,j)
 vy = fp%vy(i,j)
 dzdxf = fp%dzdxf(i,j)
 dzdyf = fp%dzdyf(i,j)
-speed  = vx*nvx + vy*nvy            ! wind speed in the spread direction
+speed  = wind_speed                 ! wind speed in the spread direction
 tanphi = dzdxf*nvx + dzdyf*nvy      ! slope in spread the direction
 nfuel_cat = fp%nfuel_cat(i,j)       ! fuel categories
-k = int(nfuel_cat)                  ! fuel index
+k = surf_fuel_cat                  ! fuel index
 ! fuel moisture content (water / dry) classes
 fmc_1          = fp%fmc_gc_f(i,1,j)
 fmc_10         = fp%fmc_gc_f(i,2,j)
@@ -2913,7 +2913,7 @@ f_live        = A_live / AT
 ! fuel particle surface-to-volume ratio of the dead and live categories
 savr_dead     = f_1 * savr_1 + f_10 * savr_10 + f_100 * savr_100 + f_herba_dead * savr_herba_dead
 savr_live     = f_herba * savr_herba + f_woody * savr_woody
-savr          = f_dead * savr_dead + f_live * savr_live
+savr_t        = f_dead * savr_dead + f_live * savr_live
 ! net fuel loading of each size class within each category
 wn_1          = fuelload_1 * (1 - st(k))
 wn_10         = fuelload_10 * (1 - st(k))
@@ -2971,7 +2971,7 @@ end if
 ! packing ratio  jm: lb/ft**2/(ft * lb*ft**3) = 1
 betafl   = fuelload/(fueldepth * fueldens(k))
 ! optimum packing ratio
-betaop   = 3.348 * savr**(-0.8189)   
+betaop   = 3.348 * savr_t**(-0.8189)   
 ! heat of preignition, btu/lb 
 qig_1         = 250. + 1116.*fmc_1
 qig_10        = 250. + 1116.*fmc_10
@@ -3012,19 +3012,19 @@ else
 end if
 ! ovendry bulk density, lb/ft**3
 rhob     = fuelload/fueldepth
-if (savr.eq.0.) then
+if (savr_t.eq.0.) then
     a      = 0.
     rtemp2 = 0.
     c      = 7.47
     bbb    = 0.
 else
-    a      = 133. * savr**(-0.7913);
-    rtemp2 = savr**1.5
-    c      = 7.47 * exp(-0.133 * savr**0.55)
-    bbb    = 0.02526 * savr**0.54
+    a      = 133. * savr_t**(-0.7913);
+    rtemp2 = savr_t**1.5
+    c      = 7.47 * exp(-0.133 * savr_t**0.55)
+    bbb    = 0.02526 * savr_t**0.54
 end if
 !c        = c * windrf**bbb                 ! jm: wind reduction from 20ft per Baughman&Albini(1980)
-e        = 0.715 * exp(-3.59e-4 * savr)  ! const in wind coef
+e        = 0.715 * exp(-3.59e-4 * savr_t)  ! const in wind coef
 phiwc    = c * (betafl/betaop)**(-e) 
 ! maximum rxn vel, 1/min
 gammax   = rtemp2/(495. + 0.0594*rtemp2)
@@ -3039,11 +3039,11 @@ end if
 ir    = gamma * (wn_dead * fuelheat_dead * etam_dead * etas_dead + &
             wn_live * fuelheat_live * etam_live * etas_live);
 ! propagating flux ratio
-if (savr.eq.0.) then
+if (savr_t.eq.0.) then
     xifr = exp(0.792 * (betafl + 0.1)) / 192.;
 else
-    xifr = exp( (0.792 + 0.681*savr**0.5) &
-               * (betafl+0.1) ) /(192. + 0.2595*savr);
+    xifr = exp( (0.792 + 0.681*savr_t**0.5) &
+               * (betafl+0.1) ) /(192. + 0.2595*savr_t);
 end if
 ! heat sink of the dead and live categories
 heat_sink_dead = rhob * f_dead * ( &
