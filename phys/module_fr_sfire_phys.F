@@ -7,6 +7,7 @@ module module_fr_sfire_phys
 
 use module_model_constants, only: cp,xlv
 use module_fr_sfire_util
+use module_random_forest
 use, intrinsic :: iso_c_binding
 
 implicit none
@@ -39,6 +40,7 @@ real,pointer,dimension(:,:):: snowncf              ! accumulated total grid scal
 real,pointer,dimension(:,:):: psfcf                ! surface pressure (Pa) at the fire mesh
 real,pointer,dimension(:,:):: swdownf              ! downward short wave flux at ground surface (W/m^2) at the fire mesh
 real,pointer,dimension(:,:):: pblhf                ! planetary boundary layer height (m) at the fire mesh
+type(decision_tree),allocatable :: ros_model(:)    ! random forest ROS model
 end type fire_params
 
 ! verbosity and diagnostic switches, can be activated when this module is USEd
@@ -1044,6 +1046,8 @@ IF ( wrf_dm_on_monitor() .and. call_write_fuels_m) THEN
   call write_fuels_m(61,30.,1.)
 ENDIF
 
+! load random forest model (only once)
+call load_random_forest('ml_ros_model', fire_params%ros_model)
 
 end subroutine init_fuel_cats
 
@@ -2425,15 +2429,9 @@ subroutine fire_ros_ml(ros,nvx,nvy,i,j,fp,ierrx,msg)
 !
 ! ML-based fire spread model using SVM as ground truth data 
 
-!*** arguments
 implicit none
-interface 
-function ros_ml_predict(x) result(y) bind(c)
-    use iso_c_binding
-    real(c_double) :: x(47)
-    real(c_double) :: y
-end function ros_ml_predict
-end interface
+
+!*** arguments
 real, intent(out)::ros
 real, intent(in)::nvx,nvy
 integer, intent(in)::i,j
@@ -2508,7 +2506,7 @@ x(1:nfeatures-nfuelcats) = (/ zsf, dzdxf, dzdyf, nvx, nvy, u10, v10, ust, t2, ts
                               fmc_gc_0, fmc_gc_1, fmc_gc_2, fmc_gc_3, fmc_gc_4, &
                               rainnc, snownc, psfc, swdown, pblh /)
 x(nfeatures-nfuelcats+1:nfeatures) = nfuel_cat_dummy
-ros = ros_ml_predict(x)
+call random_forest_predict(x, fire_params%ros_model, ros)
 ! print the outputs
 if(ml_msglevel.ge.3)then
 !$OMP CRITICAL(SFIRE_PHYS_CRIT)
