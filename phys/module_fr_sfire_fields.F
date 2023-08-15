@@ -20,7 +20,8 @@ module module_fr_sfire_fields
   real, pointer,  public, dimension(:, :) :: surf_moisture_frac !< surface moisture fraction for each layer for heat fluxes computation [-]
   
   ! 2d fire grid + layers
-  real, pointer,  public, dimension(:, :, :)  :: surf_mass_frac !< surface mass fraction for each layer for heat fluxes computation [-]
+  real, pointer,  public, dimension(:, :, :)  :: surf_mass_frac_b !< surface biomass mass fraction for each layer for heat fluxes computation [-]
+  real, pointer,  public, dimension(:, :, :)  :: surf_mass_frac_c !< surface char mass fraction for each layer for heat fluxes computation [-]
   
   ! 2d atm grid
   real, pointer,  public, dimension(:, :) :: can_fx_z0          !< height of injection for canopy heat fluxes [m]

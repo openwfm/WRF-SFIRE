@@ -212,11 +212,14 @@ elseif(ifun.eq.2)then
             fp%zsf,nfuel_cat)            ! better not use the extrapolated zsf!!
         
         ! set default value for sfire fields
-        call initialize_sfire_fields()
+        call initialize_sfire_fields( &
+            ifms, ifme, jfms, jfme,   &
+            ifts, ifte, jfts, jfte,   &
+            nfuel_cat                 )
             
         ! Initialize canopy fuel data
         call set_canopy_data(               &
-            ifms,ifme,jfms,jfme,            &
+            ifms, ifme, jfms, jfme,         &
             ifts, ifte, jfts, jfte,         &
             i_fire_can_fuel_read, nfuel_cat )
 
