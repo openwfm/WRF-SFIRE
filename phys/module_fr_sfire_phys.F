@@ -2885,8 +2885,7 @@ subroutine fire_ros_wirc(ros, nvx, nvy, i, j, fp, ierrx, msg, surf_fuel_cat, win
   !    ====================
 
   ! View factor
-  
-  lambda_b = dph / fueldepthm(surf_fuel_cat)
+  lambda_b = fueldepthm(surf_fuel_cat) / dph
   F_bv = sqrt(1. + lambda_b**2) - lambda_b
 
   ! Extinction coefficient
