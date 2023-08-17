@@ -1824,7 +1824,7 @@ end subroutine set_fp_from_grid
 
 subroutine set_sfire_fields_from_grid(grid)
 
-    use module_fr_sfire_fields, only: cfb, can_top, can_bottom, can_bulk_density, can_fx_z0, can_fuel_burnt
+    use module_fr_sfire_fields, only: cfb, can_top, can_bottom, can_bulk_density, can_fx_z0, can_fuel_burnt, surf_mass_frac_b, surf_mass_frac_c, surf_moisture_frac
     
     implicit none
 
@@ -1837,6 +1837,9 @@ subroutine set_sfire_fields_from_grid(grid)
     can_bulk_density => grid%can_bulk_density
     can_fuel_burnt => grid%can_fuel_burnt
     can_fx_z0 => grid%can_fx_z0
+    surf_mass_frac_b => grid%surf_mass_frac_b
+    surf_mass_frac_c => grid%surf_mass_frac_c
+    surf_moisture_frac => grid%surf_moisture_frac
 
 end subroutine set_sfire_fields_from_grid
 
@@ -1955,6 +1958,9 @@ subroutine check_grid_alloc(grid,config_flags)
     call check_size(size(grid%can_bulk_density),'can_bulk_density')
     call check_size(size(grid%can_fuel_burnt),'can_fuel_burnt')
     call check_size(size(grid%can_fx_z0),'can_fx_z0')
+    call check_size(size(grid%surf_mass_frac_b),'surf_mass_frac_b')
+    call check_size(size(grid%surf_mass_frac_c),'surf_mass_frac_c')
+    call check_size(size(grid%surf_moisture_frac),'surf_moisture_frac')
     
 end subroutine check_grid_alloc
 
