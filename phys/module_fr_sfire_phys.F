@@ -776,7 +776,7 @@ REAL   , DIMENSION( mfuelcats ) :: fwh, fz0
 ! read 
 namelist /fuel_scalars/ cmbcnst,hfgl,fuelmc_g,fuelmc_c,nfuelcats,no_fuel_cat,no_fuel_cat2,fire_wind_height,ibeh, &
     ffwidth_thresh, balbi_msglevel, use_multilayer_hf
-namelist /fuel_categories_anderson_13/ fuel_name,windrf,fgi,fueldepthm,savr, &
+namelist /fuel_categories/ fuel_name,windrf,fgi,fueldepthm,savr, &
     fuelmce,fueldens,st,se,weight,fci_d,fct,ichap,itree,fwh,fz0,ffw,idynamic, &
     fmc_gl_ndwi_0,fmc_gl_ndwi_rate,fmc_gl_ndwi_stdev, fmc_gl_stdev, &
     adjr0,adjrw,adjrs,fmc_gw01,fmc_gw02,fmc_gw03,fmc_gw04,fmc_gw05,fmc_gw06, &
@@ -800,9 +800,9 @@ IF ( wrf_dm_on_monitor() ) THEN
     
     ! read the file
     iounit=open_text_file('namelist.fire','read')
-    read(iounit, nml=fuel_categories_anderson_13, iostat=ierr)
+    read(iounit, nml=fuel_categories, iostat=ierr)
     if(ierr.ne.0)then
-          call message('init_fuel_cats: error reading namelist fuel_categories_anderson_13 in file namelist.fire')
+          call message('init_fuel_cats: error reading namelist fuel_categories in file namelist.fire')
           call error_namelist(iounit)
     endif
     rewind(iounit)
