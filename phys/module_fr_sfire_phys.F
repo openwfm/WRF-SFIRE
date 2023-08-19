@@ -782,7 +782,7 @@ namelist /fuel_categories/ fuel_name,windrf,fgi,fueldepthm,savr, &
     adjr0,adjrw,adjrs,fmc_gw01,fmc_gw02,fmc_gw03,fmc_gw04,fmc_gw05,fmc_gw06, &
     savr_gc01,savr_gc02,savr_gc03,savr_gc04,savr_gc05,savr_gc06, &
     fuelload_gc01,fuelload_gc02,fuelload_gc03,fuelload_gc04,fuelload_gc05,fuelload_gc06, &
-    is_dead, k_tc, tree_z_min, tree_z_max, tree_burn_time
+    is_dead, k_tc, tree_z_min, tree_z_max, tree_burn_time, layer_burn_time_b, layer_burn_time_c, layer_char_fraction, fuel_load_layers_hf
 
 namelist /moisture/ moisture_classes,drying_lag,wetting_lag,saturation_moisture,saturation_rain,rain_threshold, &
     drying_model,wetting_model,moisture_class_name,fmc_gc_initialization,is_dead
