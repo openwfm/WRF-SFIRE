@@ -2057,9 +2057,12 @@ else
     k = int(fp%nfuel_cat(i, j))
 endif
 
-if (k >= no_fuel_cat .and. k <= no_fuel_cat2) then   ! no fuel 
-    call crash("fire_ros: fuel categories not available")
-else     
+if (k == no_fuel_cat) then
+  ! Unburnable fuel
+  ros = 0. 
+
+else if (k >= 1 .and. k < no_fuel_cat) then
+  ! available fuel category     
         ! make normal direction length 1 unless 0
         ! scale=sqrt(propx*propx+propy*propy)
         ! if(scale > 0.)then
@@ -2141,6 +2144,9 @@ else
                 endif
             endif
         endif
+else 
+  ! fuel category not supported
+  call crash("fire_ros: fuel categories not available")
 endif
 if(fire_grows_only.gt.0)then
 ros=max(ros,0.)
