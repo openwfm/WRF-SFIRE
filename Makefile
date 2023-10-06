@@ -1024,6 +1024,9 @@ chemics :
 
 physics :
 	@ echo '--------------------------------------'
+	@if [ -n "$(USE_STARFIRE)" ] ; then \
+		(cd phys &&  $(MAKE) starfire) \
+	fi
 	if [ $(WRF_CHEM) -eq 0 ] ; then \
 		( cd phys ; $(MAKE) submodules ; $(MAKE) CF2=" " ) ; \
 		if [ $(WRF_CMAQ) -eq 1 ] ; then \

@@ -17,3 +17,7 @@
 configure.wrf*
 *.backup
 *.f90
+phys/module_sf_noahmp*
+run/MPTABLE.TBL
+fseeko*
+namelist.input.backup*

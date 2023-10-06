@@ -1,3 +1,6 @@
 [submodule "phys/noahmp"]
 	path = phys/noahmp
 	url = https://github.com/NCAR/noahmp
+[submodule "phys/StarFIRE"]
+	path = phys/StarFIRE
+	url = git@github.com:wirc-sjsu/StarFIRE.git
