@@ -99,7 +99,7 @@ module module_random_forest
         tree_prediction = -999
         not_leaf = .TRUE.
         do while (not_leaf)
-            if (tree%feature(node) == -2) then
+            if (tree%feature(node) == -1) then
                 tree_prediction = tree%tvalue(node)
                 not_leaf = .FALSE.
             else

@@ -15,37 +15,36 @@ PRIVATE
 
 
 type fire_params
-real,pointer,dimension(:,:):: vx,vy                     ! wind velocity (m/s)
-real,pointer,dimension(:,:):: zsf                       ! terrain height (m)
-real,pointer,dimension(:,:):: dzdxf,dzdyf               ! terrain grad (1)
-real,pointer,dimension(:,:):: bbb,phisc,phiwc,r_0       ! spread formula coefficients
-real,pointer,dimension(:,:):: fgip                      ! init mass of surface fuel (kg/m^2)
-real,pointer,dimension(:,:):: ischap                    ! 1 if chapparal
-real,pointer,dimension(:,:):: fuel_time                 ! time to burn to 1/e (s)
-real,pointer,dimension(:,:):: fmc_g                     ! fuel moisture contents, ground (1)
-real,pointer,dimension(:,:):: nfuel_cat                 ! fuel category (integer values)
-real,pointer,dimension(:,:):: tempf                     ! air temperature (K) (Balbi model only)
-real,pointer,dimension(:,:):: rhof                      ! air pressure (Pa) (Balbi model only)
-real,pointer,dimension(:,:):: ffwidth                   ! fire front width (m) (Balbi model only)
-real,pointer,dimension(:,:,:):: fmc_gc_f                ! fuel moisture contents, ground by class (1)
-real,pointer,dimension(:,:):: u10f,v10f                 ! wind components at 10 meters (m/s) at the fire mesh
-real,pointer,dimension(:,:):: ustf                      ! U* in similarity theory (m/s) at the fire mesh
-real,pointer,dimension(:,:):: tskf                      ! surface skin temperature (K) at the fire mesh
-real,pointer,dimension(:,:,:):: tslbf                   ! soil temperature at different layers (K) at the fire mesh
-real,pointer,dimension(:,:):: q2f                       ! water vapor mixing ratio at 2 meters (kg/kg) at the fire mesh
-real,pointer,dimension(:,:):: qfxf                      ! upward moisture flux at the surface (kg/m^2/s) at the fire mesh
-real,pointer,dimension(:,:,:):: smoisf                  ! soil moisture at different layers (m^3/m^3) at the fire mesh
-real,pointer,dimension(:,:):: rainncf                   ! accumulated total grid scale precipitation (mm) at the fire mesh
-real,pointer,dimension(:,:):: snowncf                   ! accumulated total grid scale snow and ice (mm) at the fire mesh
-real,pointer,dimension(:,:):: psfcf                     ! surface pressure (Pa) at the fire mesh
-real,pointer,dimension(:,:):: swdownf                   ! downward short wave flux at ground surface (W/m^2) at the fire mesh
-real,pointer,dimension(:,:):: pblhf                     ! planetary boundary layer height (m) at the fire mesh
-type(decision_tree),allocatable:: ros_model(:)          ! random forest ROS model
-end type fire_params
+real,pointer,dimension(:,:):: vx,vy                   ! wind velocity (m/s)
+real,pointer,dimension(:,:):: zsf                     ! terrain height (m)
+real,pointer,dimension(:,:):: dzdxf,dzdyf             ! terrain grad (1)
+real,pointer,dimension(:,:):: bbb,phisc,phiwc,r_0     ! spread formula coefficients
+real,pointer,dimension(:,:):: fgip                    ! init mass of surface fuel (kg/m^2)
+real,pointer,dimension(:,:):: ischap                  ! 1 if chapparal
+real,pointer,dimension(:,:):: fuel_time               ! time to burn to 1/e (s)
+real,pointer,dimension(:,:):: fmc_g                   ! fuel moisture contents, ground (1)
+real,pointer,dimension(:,:):: nfuel_cat               ! fuel category (integer values)
+real,pointer,dimension(:,:):: tempf                   ! air temperature (K) (Balbi model only)
+real,pointer,dimension(:,:):: rhof                    ! air pressure (Pa) (Balbi model only)
+real,pointer,dimension(:,:):: ffwidth                 ! fire front width (m) (Balbi model only)
+real,pointer,dimension(:,:,:):: fmc_gc_f              ! fuel moisture contents, ground by class (1)
+real,pointer,dimension(:,:):: u10f,v10f               ! wind components at 10 meters (m/s) at the fire mesh
+real,pointer,dimension(:,:):: ustf                    ! U* in similarity theory (m/s) at the fire mesh
+real,pointer,dimension(:,:):: tskf                    ! surface skin temperature (K) at the fire mesh
+real,pointer,dimension(:,:,:):: tslbf                 ! soil temperature at different layers (K) at the fire mesh
+real,pointer,dimension(:,:):: q2f                     ! water vapor mixing ratio at 2 meters (kg/kg) at the fire mesh
+real,pointer,dimension(:,:):: qfxf                    ! upward moisture flux at the surface (kg/m^2/s) at the fire mesh
+real,pointer,dimension(:,:,:):: smoisf                ! soil moisture at different layers (m^3/m^3) at the fire mesh
+real,pointer,dimension(:,:):: rainncf                 ! accumulated total grid scale precipitation (mm) at the fire mesh
+real,pointer,dimension(:,:):: snowncf                 ! accumulated total grid scale snow and ice (mm) at the fire mesh
+real,pointer,dimension(:,:):: psfcf                   ! surface pressure (Pa) at the fire mesh
+real,pointer,dimension(:,:):: swdownf                 ! downward short wave flux at ground surface (W/m^2) at the fire mesh
+real,pointer,dimension(:,:):: pblhf                   ! planetary boundary layer height (m) at the fire mesh
+end type fire_params       
 
 ! verbosity and diagnostic switches, can be activated when this module is USEd
 logical, public:: compare_rothermel=.false.       ! run comparison in fire_ros
-logical, public:: call_write_fuels_m=.false.      ! create file fuels_m for graphics postprocessing 
+logical, public:: call_write_fuels_m=.false.       ! create file fuels_m for graphics postprocessing 
 integer, public:: balbi_msglevel=2                ! prints in fire_ros_balbi, 0=nothing 1=errors 2=warnings 3=diagnostics
 integer, public:: balbi_nc_max=10                 ! max number of balbi no convergence cases
 integer, public:: balbi_nc_count=0                ! counter of balbi no convergence cases
@@ -64,8 +63,10 @@ public:: fire_params
 PUBLIC:: fire_wind_height,fcz0,fcwh,have_fuel_cats,nfuelcats, &
   no_fuel_cat,no_fuel_cat2,windrf,moisture_classes,itree,fueldepthm,ibeh
 PUBLIC:: mfuelcats
-! NOTE: fcwh and fcz0 are called fwh and fz0 in read/write statements
+! NOTE: fcwh and fcz0 are called fwh and fz0 in read/write statements 
 
+! random forest ROS model
+type(decision_tree),allocatable,save:: ros_model(:) 
 
 ! moisture behavior, see Mandel et al EGU 2012
 
@@ -1421,7 +1422,7 @@ do j=jfts,jfte
 enddo
 
 ! load random forest model (only once)
-call load_random_forest('ros_ml_model/', fp%ros_model)
+call load_random_forest('ros_ml_model/', ros_model)
 
 if(nerr.gt.1)then
 !$OMP CRITICAL(SFIRE_PHYS_CRIT)
@@ -2482,8 +2483,8 @@ smois_5 = fp%smoisf(i,6,j)
 fmc_gc_0 = fp%fmc_gc_f(i,1,j)
 fmc_gc_1 = fp%fmc_gc_f(i,2,j)
 fmc_gc_2 = fp%fmc_gc_f(i,3,j)
-fmc_gc_3 = fp%fmc_gc_f(i,4,j)
-fmc_gc_4 = fp%fmc_gc_f(i,5,j)
+fmc_gc_3 = fp%fmc_gc_f(i,5,j)
+fmc_gc_4 = fp%fmc_gc_f(i,6,j)
 rainnc = fp%rainncf(i,j)
 snownc = fp%snowncf(i,j)
 psfc = fp%psfcf(i,j)
@@ -2507,8 +2508,6 @@ x(1, 1:nfeatures-nfuelcats) = (/ zsf, dzdxf, dzdyf, nvx, nvy, u10, v10, ust, t2,
                               fmc_gc_0, fmc_gc_1, fmc_gc_2, fmc_gc_3, fmc_gc_4, &
                               rainnc, snownc, psfc, swdown, pblh /)
 x(1, nfeatures-nfuelcats+1:nfeatures) = nfuel_cat_dummy
-call random_forest_predict(x, fp%ros_model, ros_)
-ros = ros_(1)
 ! print the outputs
 if(ml_msglevel.ge.3)then
 !$OMP CRITICAL(SFIRE_PHYS_CRIT)
@@ -2516,6 +2515,13 @@ do f=1,nfeatures
     write(msg,*)'x',f,'=',x(1, f)
     call message(msg)
 end do
+!$OMP END CRITICAL(SFIRE_PHYS_CRIT)
+endif
+call random_forest_predict(x, ros_model, ros_)
+ros = real(ros_(1), 4)
+! print the outputs
+if(ml_msglevel.ge.3)then
+!$OMP CRITICAL(SFIRE_PHYS_CRIT)
 write(msg,*)'y=',ros
 call message(msg)
 !$OMP END CRITICAL(SFIRE_PHYS_CRIT)
