@@ -2458,6 +2458,9 @@ integer:: k, f
 ! retrieve inputs
 nfuel_cat = fp%nfuel_cat(i,j)       ! fuel categories
 k = int(nfuel_cat)                  ! fuel index
+if (k.ge.no_fuel_cat.and.k.le.no_fuel_cat2) then
+ros = 0.
+else
 zsf = fp%zsf(i,j)
 dzdxf = fp%dzdxf(i,j)
 dzdyf = fp%dzdyf(i,j)
@@ -2525,6 +2528,7 @@ if(ml_msglevel.ge.3)then
 write(msg,*)'y=',ros
 call message(msg)
 !$OMP END CRITICAL(SFIRE_PHYS_CRIT)
+endif
 endif
 end subroutine fire_ros_ml
 
