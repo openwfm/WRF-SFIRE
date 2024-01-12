@@ -11,7 +11,10 @@ A mirror with a graphical log is at https://repo.or.cz/git-browser/by-commit.htm
 - [Regression Testing Introduction](#regression-testing-introduction)
 - [Code Quality](#code-quality)
 - [Version 1.0: Feature Highlights](#version-10-feature-highlights)
-- [WRF-ARW Modeling System](#wrf-arw-modeling-system)
+- [Branches](#branches)
+- [How to run](#how-to-run)
+- [Notes](#notes)
+- [Notes for developers](#notes-dev)
 
   
 # Current version <a name="current-version"></a>
@@ -27,7 +30,7 @@ The version of SFIRE is 0.1.
 We are excited to share a significant development in our project's versioning system. As we release the official 0.1 version of our code, we want to introduce you to an enhanced versioning approach that incorporates the relationship between SFIRE code and WRF code. Moving forward, our versioning system will consist of two components: the Weather Research and Forecasting (WRF) code version and the Wildfire Spread Simulation (SFIRE) code version.
 
 ## Understanding the Versioning Scheme
-The semantic versioning scheme we have adopted is designed to provide clarity and context about the interconnectedness of our code with the WRF and SFIRE codes. Each version will be represented in the following format: `Wx.y-Si.j`, where:
+The semantic versioning scheme (https://semver.org) we have adopted is designed to provide clarity and context about the interconnectedness of our code with the WRF and SFIRE codes. Each version will be represented in the following format: `Wx.y-Si.j`, where:
 
 - `Wx.y` denotes the version of the WRF code on which our codebase relies. For example, `W4.4` represents version 4.4 of the WRF code. This component indicates the underlying framework that drives our code's functionality.
 
@@ -164,7 +167,7 @@ Your contributions, such as code reviews, suggestions, and bug reports, are inva
 ## Miscellaneous
 - Write fuels data into fuels.m file (development feature)
 
-# Branches
+# Branches <a name="branches"></a>
 * master, develop - the merged code.
 * WRF-track/master, WRF-track/develop, etc. - tracking the official WRF repository including release tags
 * filtered/* - rebased commits from the original wrf-fire repository, directory wrfv2_fire mapped to root:
@@ -178,17 +181,9 @@ _  filtered/balbi
 * wrf-fire-track/* - the original wrf-fire
 -  wrf-fire-track/master
 -  wrf-fire-track/dvm_branch
-  
-# How to upgrade WRF version
-* git checkout WRF/master
-* git pull git@github.com:wrf-model/WRF.git master
-* git checkout develop
-* git merge WRF/master
-* test in case something got broken, when happy:
-* git checkout master
-* git merge develop
 
-# How to run
+
+# How to run <a name="how-to-run"></a>
 * In namelist input, ifire=1 is WRF-SFIRE, ifire=2  the fire code in WRF we put there in 2012 (see branch filtered/submitted-to-3.3) with changes at NCAR. Most namelist flags are the same but each version has some of its own. 
 * Test problems available in test/em_fire:
 - rain ifire=2
@@ -197,7 +192,20 @@ _ two_fires ifire=2
 * The problems with ifire=2 should give the same result in branch master (the merged code) and in branch WRF/develop (the WRF distribution)
 * It seems to run serial and MPI and so far passed some limited testing on cheyenne.
 
-# Notes
+# Notes <a name="notes"></a>
 Standalone is included but have not started on it yet.
 Branches balbi and dvm_branch were carried over but they are not merged into master or tested yet because they were not merged into master in wrf-fire. Also I do not know how to test dvm_branch. 
 I can't do real problems yet, that requires pushing data through current WPS, which Adam and Angel are working on.
+
+# Notes for developers <a name="notes-dev"></a>
+## How to upgrade WRF version 
+* git checkout WRF/master
+* git pull git@github.com:wrf-model/WRF.git master
+* git checkout develop
+* git merge WRF/master
+* resolve conflicts
+* copy README from wrf-model to README-WRF
+* Make sure that README.md softlink still points to README-SFIRE.md
+* run regression tests https://github.com/openwfm/regression
+* git checkout master
+* git merge develop
