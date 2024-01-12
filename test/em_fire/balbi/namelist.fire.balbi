@@ -9,6 +9,7 @@ nfuelcats = 13,                    ! number of fuel categories used
 no_fuel_cat = 14                   ! extra category for no fuel
 no_fuel_cat2= 100                  ! all categories up to here are no fuel
 ibeh =2                            ! ROS formula: 0 =  MacArthur, 1 = Rothermel, 2 = Balbi
+balbi_msglevel=4
 /
 
 &fuel_categories                 
