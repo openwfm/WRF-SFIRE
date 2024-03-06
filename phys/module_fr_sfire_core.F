@@ -1942,7 +1942,7 @@ elseif(ipart==2)then
                   ! tmp = max(tmp,abs(ts + dt * lfn_in(i,j) / (lfn_in(i,j) - lfn_out(i,j)) - tign(i,j)))
                endif  !  was already burning, leave ignition time unchanged
             else ! set the ignition time outside of burning region
-               tign(i,j)=time_future
+               tign(i,j)=max(time_future,tign(i,j))
             endif
             call check_lfn_tign_ij(i,j,'prop_ls after',time_now,lfn_out(i,j),tign(i,j))
             ! lfn_out(i,j) = max(lfn_out(i,j),-100.0)  ! stability fix
