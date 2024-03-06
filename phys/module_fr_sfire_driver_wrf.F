@@ -11,6 +11,7 @@ module module_fr_sfire_driver_wrf
 
 use module_fr_sfire_driver
 use module_fr_sfire_atm
+use module_fr_sfire_core, only: isubstep
 USE module_utility, only: WRFU_TimeInterval,WRFU_TimeIntervalGet, WRFU_SUCCESS
 implicit none
 
@@ -193,6 +194,26 @@ subroutine sfire_driver_em_step (grid , config_flags               &
             enddo
         enddo
 
+    if(grid%itimestep .eq. 10)then
+      do isubstep=1,1000
+        write(msg,*)'extending tign_g substep',isubstep
+        call message(msg)
+        call sfire_driver_em ( grid , config_flags               & 
+            ,time_step_start,dt                                 &
+            ,ifun_step,ifun_step+1,fire_test_steps                     &
+            ,ids,ide, kds,kde, jds,jde                              &
+            ,ims,ime, kms,kme, jms,jme                              &
+            ,ips,ipe, kps,kpe, jps,jpe                              &
+            ,ifds,ifde, jfds,jfde                                   &
+            ,ifms,ifme, jfms,jfme                                   &
+            ,ifps,ifpe, jfps,jfpe                                   &
+            ,rho,z_at_w,dz8w                                        &
+            ) 
+        write(msg,*)'substep',isubstep,' max tign_g lfn',maxval(grid%tign_g),maxval(grid%lfn)
+        call message(msg)
+ 
+      enddo
+    endif
    
    call print_chsum(0,ims,ime,kms,kme,jms,jme,ids,ide,kds,kde,jds,jde,ips,ipe1,kps,kpe1,jps,jpe1,0,0,0,z_at_w,'z_at_w')
    call print_chsum(0,ims,ime,kms,kme,jms,jme,ids,ide,kds,kde,jds,jde,ips,ipe1,kps,kpe1,jps,jpe1,0,0,0,dz8w,'dz8w')

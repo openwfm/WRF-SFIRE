@@ -19,6 +19,8 @@ implicit none
 ! subroutine fuel_left:  compute remaining fuel from time of ignition.
 ! subroutine prop_ls: propagation of curve in normal direction.
 
+integer::isubstep = 1
+
 
 contains
 
