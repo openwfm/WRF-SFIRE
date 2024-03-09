@@ -1935,6 +1935,7 @@ elseif(ipart==2)then
 
     time_now=ts+dt
     time_future=ts+2*dt
+    print *,'***prop_ls: ts=',ts,'time_now=',time_now,'time_future=',time_future
     do j=jts,jte
         do i=its,ite
             call check_lfn_tign_ij(i,j,'prop_ls before',ts,lfn_in(i,j),tign(i,j))

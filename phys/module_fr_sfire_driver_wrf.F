@@ -200,7 +200,7 @@ subroutine sfire_driver_em_step (grid , config_flags               &
         call message(msg)
         call sfire_driver_em ( grid , config_flags               & 
             ,time_step_start + dt*isubstep,dt                       &
-            ,ifun_step,ifun_step+1,fire_test_steps                     &
+            ,ifun_step+1,ifun_step+2,fire_test_steps                     &
             ,ids,ide, kds,kde, jds,jde                              &
             ,ims,ime, kms,kme, jms,jme                              &
             ,ips,ipe, kps,kpe, jps,jpe                              &
