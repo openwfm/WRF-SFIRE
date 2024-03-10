@@ -195,8 +195,8 @@ subroutine sfire_driver_em_step (grid , config_flags               &
         enddo
 
     if(grid%itimestep .eq. 10)then
-      do isubstep=1,1000
-        write(msg,*)'extending tign_g substep',isubstep
+      do isubstep=1,5000
+        write(msg,*)'extending tign_g substep',isubstep,' start'
         call message(msg)
         call sfire_driver_em ( grid , config_flags               & 
             ,time_step_start + dt*isubstep,dt                       &
@@ -209,7 +209,7 @@ subroutine sfire_driver_em_step (grid , config_flags               &
             ,ifps,ifpe, jfps,jfpe                                   &
             ,rho,z_at_w,dz8w                                        &
             ) 
-        write(msg,*)'substep',isubstep,' max tign_g lfn',maxval(grid%tign_g),maxval(grid%lfn)
+        write(msg,*)'substep',isubstep,' max tign_g',maxval(grid%tign_g),' max lfn',maxval(grid%lfn)
         call message(msg)
  
       enddo
