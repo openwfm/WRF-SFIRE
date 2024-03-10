@@ -842,11 +842,14 @@ else  ! one is on fire one is not
 !$OMP CRITICAL(SFIRE_CORE_CRIT)
        write(msg,*)'tign1,tign2,time_now ',tign1,tign2,time_now 
        call message(msg,level=0)
+       write(msg,*)'lfn1,lfn2 ',lfn1,lfn2 
+       call message(msg,level=0)
        write(msg,*)'tign1-time_now,lfn1 ',tign1-time_now,lfn1 
        call message(msg,level=0)
        write(msg,*)'tign2-time_now,lfn2 ',tign2-time_now,lfn2 
        call message(msg,level=0)
-       write(msg,*)'c ',c 
+       call message('must be the same sign: lfn < 0 <=> on fire <=> tign < time_now')
+       write(msg,*)'c=',c 
        call message(msg,level=0)
 !$OMP END CRITICAL(SFIRE_CORE_CRIT)
        call crash('tign_lfn_line_interp: bad ignition times, c<0')
