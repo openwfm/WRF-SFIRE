@@ -12,6 +12,7 @@ module module_fr_sfire_driver_wrf
 use module_fr_sfire_driver
 use module_fr_sfire_atm
 use module_fr_sfire_core, only: isubstep
+USE module_fr_sfire_util, only : crash 
 USE module_utility, only: WRFU_TimeInterval,WRFU_TimeIntervalGet, WRFU_SUCCESS
 implicit none
 
@@ -114,7 +115,7 @@ subroutine sfire_driver_em_step (grid , config_flags               &
              ifps,ifpe, kfps,kfpe, jfps,jfpe                              
     integer :: its,ite,jts,jte,kts,kte            ! atm tile
     integer:: ij, ipe1,jpe1,kpe1
-    real::time_step_start,dt
+    real::time_step_start,dt,time_substep_start,time_now
 
     integer::fire_time_step_ratio,itime_step,i,j
     real,dimension( ips:ipe , jps:jpe ) :: grnhfx_save, grnqfx_save,    &
@@ -136,6 +137,8 @@ subroutine sfire_driver_em_step (grid , config_flags               &
 
     time_step_start=TimeInterval2Sec(domain_get_time_since_sim_start(grid)) 
     dt=TimeInterval2Sec(domain_get_time_step(grid))/fire_time_step_ratio
+
+    time_now = time_step_start+dt
 
 
     ! get fire mesh dimensions
@@ -194,12 +197,17 @@ subroutine sfire_driver_em_step (grid , config_flags               &
             enddo
         enddo
 
-    if(grid%itimestep .eq. 10)then
-      do isubstep=1,5000
+    if(grid%itimestep .eq. config_flags%tign_extend_timestep)then
+
+      ! save the level set function, which will be overwritten in substeps
+      grid%lfn_save(ifps:ifpe, jfps:jfpe)=grid%lfn(ifps:ifpe, jfps:jfpe)
+
+      ! solve the eikonal equation for tign_g by the level set method itself
+      do isubstep=1,config_flags%nsubsteps
         write(msg,*)'extending tign_g substep',isubstep,' start'
         call message(msg)
         call sfire_driver_em ( grid , config_flags               & 
-            ,time_step_start + dt*isubstep,dt                       &
+            ,time_step_start ,dt                       &
             ,ifun_step+1,ifun_step+2,fire_test_steps                     &
             ,ids,ide, kds,kde, jds,jde                              &
             ,ims,ime, kms,kme, jms,jme                              &
@@ -212,7 +220,29 @@ subroutine sfire_driver_em_step (grid , config_flags               &
         write(msg,*)'substep',isubstep,' max tign_g',maxval(grid%tign_g),' max lfn',maxval(grid%lfn)
         call message(msg)
  
+        time_step_start=time_step_start+dt   ! update for the next
+
       enddo
+
+      ! save computed tign_g 
+      grid%tign_save(ifps:ifpe, jfps:jfpe)=grid%tign_g(ifps:ifpe, jfps:jfpe)
+
+      if(config_flags%use_extended_tign.eq.0)then
+
+          ! restore the level set function from saved
+          grid%lfn(ifps:ifpe, jfps:jfpe)=grid%lfn_save(ifps:ifpe, jfps:jfpe)
+
+      elseif(config_flags%use_extended_tign.eq.1)then
+
+          ! use tign as level set function
+          grid%lfn(ifps:ifpe, jfps:jfpe)=grid%tign_g(ifps:ifpe, jfps:jfpe)
+
+      else
+      
+          call crash('bad use_extended_tign')
+
+      endif
+
     endif
    
    call print_chsum(0,ims,ime,kms,kme,jms,jme,ids,ide,kds,kde,jds,jde,ips,ipe1,kps,kpe1,jps,jpe1,0,0,0,z_at_w,'z_at_w')

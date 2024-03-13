@@ -85,6 +85,8 @@ state    real     fire_area *i*j      fire        1         z    hr    "FIRE_ARE
 # (also using inputs: zs,z_at_w,dz8w,nfuel_cat,zsf)
 #
 state    real     tign_in   *i*j      fire        1         z  i102hr   "TIGN_IN"    "minimal ignition time on ground" "s"
+state    real     tign_save *i*j      fire        1         z  i102hr   "TIGN_SAVE"  "minimal ignition time on ground saved after extended" "s"
+state    real     lfn_save  *i*j      fire        1         z    hr "LFN_SAVE"       "level function saved while building TIGN by substeps "1"
 state    real     lfn_out   *i*j      fire        1         z    r "LFN_OUT"       "level function at time step end, for halo" "1"
 state    real     fuel_frac_burnt *i*j fire       1         z    hr    "FUEL_FRAC_BURNT" "fraction of fuel burnt in timestep" "1"
 state    real     uf        *i*j      fire        1         z    hr    "UF"        "fire wind" "m/s"
@@ -293,6 +295,9 @@ rconfig   integer fire_print_file        namelist,fire         max_domains      
 # ------------------------------------------------------------------------------------------------------------------------
 # method selection
 #
+rconfig   integer tign_extend_timestep   namelist,fire         max_domains           0       -      "tign_extend_timestep" "timestep when extend tign" "1"
+rconfig   integer nsubsteps              namelist,fire         max_domains           0       -      "nsubsteps" "level set method substep" "1"
+rconfig   integer use_extended_tign      namelist,fire         max_domains           0       -      "use_extended_tign" "0=no 1=as lfn" "1"
 rconfig   integer fire_fuel_left_method  namelist,fire         max_domains           1       -      "fire_fuel_left_method"   "1 or 2, compute fuel_left" ""
 rconfig   integer fire_fuel_left_irl     namelist,fire         max_domains           2       -      "fire_fuel_left_irl"   "submesh to compute fuel lwft, even, at least 2" ""
 rconfig   integer fire_fuel_left_jrl     namelist,fire         max_domains           2       -      "fire_fuel_left_jrl"   "submesh to compute fuel lwft, even, at least 2" ""
