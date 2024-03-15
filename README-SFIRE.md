@@ -172,7 +172,7 @@ Your contributions, such as code reviews, suggestions, and bug reports, are inva
 ## Linking issues
 Link to issues always using:
 organization/repository#number
-For instance: wirc-sjsu/WRF-SFIRE#4 or openwfm/WRF-SFIRE#86
+For instance: `wirc-sjsu/WRF-SFIRE#4` or `openwfm/WRF-SFIRE#86`
 This will prevent linking to different issues in both organizations with the same number.
 
 # Branches <a name="branches"></a>
