@@ -296,7 +296,7 @@ rconfig   integer fire_print_file        namelist,fire         max_domains      
 # method selection
 #
 rconfig   integer tign_extend_timestep   namelist,fire         max_domains           0       -      "tign_extend_timestep" "timestep when extend tign" "1"
-rconfig   integer nsubsteps              namelist,fire         max_domains           0       -      "nsubsteps" "level set method substep" "1"
+rconfig   integer tign_extend_nsubsteps  namelist,fire         max_domains           0       -      "tign_extend_nsubsteps" "level set method substep" "1"
 rconfig   integer use_extended_tign      namelist,fire         max_domains           0       -      "use_extended_tign" "0=no 1=as lfn" "1"
 rconfig   integer fire_fuel_left_method  namelist,fire         max_domains           1       -      "fire_fuel_left_method"   "1 or 2, compute fuel_left" ""
 rconfig   integer fire_fuel_left_irl     namelist,fire         max_domains           2       -      "fire_fuel_left_irl"   "submesh to compute fuel lwft, even, at least 2" ""

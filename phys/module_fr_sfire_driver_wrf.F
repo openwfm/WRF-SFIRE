@@ -203,7 +203,7 @@ subroutine sfire_driver_em_step (grid , config_flags               &
       grid%lfn_save(ifps:ifpe, jfps:jfpe)=grid%lfn(ifps:ifpe, jfps:jfpe)
 
       ! solve the eikonal equation for tign_g by the level set method itself
-      do isubstep=1,config_flags%nsubsteps
+      do isubstep=1,config_flags%tign_extend_nsubsteps
         write(msg,*)'extending tign_g substep',isubstep,' start'
         call message(msg)
         call sfire_driver_em ( grid , config_flags               & 
@@ -229,12 +229,12 @@ subroutine sfire_driver_em_step (grid , config_flags               &
 
       if(config_flags%use_extended_tign.eq.0)then
 
-          ! restore the level set function from saved
+          call message('restoring the level set function from saved')
           grid%lfn(ifps:ifpe, jfps:jfpe)=grid%lfn_save(ifps:ifpe, jfps:jfpe)
 
       elseif(config_flags%use_extended_tign.eq.1)then
 
-          ! use tign as level set function
+          call message('using extended tign as level set function')
           grid%lfn(ifps:ifpe, jfps:jfpe)=grid%tign_g(ifps:ifpe, jfps:jfpe)
 
       else
