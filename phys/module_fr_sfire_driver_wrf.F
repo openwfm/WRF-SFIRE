@@ -162,7 +162,7 @@ subroutine sfire_driver_em_step (grid , config_flags               &
     ! fire time step loop
     do itime_step = 1,fire_time_step_ratio
 
-    call sfire_driver_em ( grid , config_flags               & 
+        call sfire_driver_em ( grid , config_flags               & 
             ,time_step_start,dt                                 &
             ,ifun_step,ifun_end,fire_test_steps                     &
             ,ids,ide, kds,kde, jds,jde                              &
@@ -187,62 +187,62 @@ subroutine sfire_driver_em_step (grid , config_flags               &
         time_step_start=time_step_start+dt
     enddo
 
-        ! copy fluxes back to grid structure
-        do j=jps,jpe1
-            do i=ips,ipe1
-                grid%grnhfx(i,j)=grnhfx_save(i,j)/fire_time_step_ratio
-                grid%grnqfx(i,j)=grnqfx_save(i,j)/fire_time_step_ratio
-                grid%canhfx(i,j)=canhfx_save(i,j)/fire_time_step_ratio
-                grid%canqfx(i,j)=canqfx_save(i,j)/fire_time_step_ratio
-            enddo
+    ! copy fluxes back to grid structure
+    do j=jps,jpe1
+        do i=ips,ipe1
+            grid%grnhfx(i,j)=grnhfx_save(i,j)/fire_time_step_ratio
+            grid%grnqfx(i,j)=grnqfx_save(i,j)/fire_time_step_ratio
+            grid%canhfx(i,j)=canhfx_save(i,j)/fire_time_step_ratio
+            grid%canqfx(i,j)=canqfx_save(i,j)/fire_time_step_ratio
         enddo
+    enddo
 
     if(grid%itimestep .eq. config_flags%tign_extend_timestep)then
 
-      ! save the level set function, which will be overwritten in substeps
-      grid%lfn_save(ifps:ifpe, jfps:jfpe)=grid%lfn(ifps:ifpe, jfps:jfpe)
+        ! save the level set function, which will be overwritten in substeps
+        grid%lfn_save(ifps:ifpe, jfps:jfpe)=grid%lfn(ifps:ifpe, jfps:jfpe)
 
-      ! solve the eikonal equation for tign_g by the level set method itself
-      do isubstep=1,config_flags%tign_extend_nsubsteps
-        write(msg,*)'extending tign_g substep',isubstep,' start'
-        call message(msg)
-        call sfire_driver_em ( grid , config_flags               & 
-            ,time_step_start ,dt                       &
-            ,ifun_step+1,ifun_step+2,fire_test_steps                     &
-            ,ids,ide, kds,kde, jds,jde                              &
-            ,ims,ime, kms,kme, jms,jme                              &
-            ,ips,ipe, kps,kpe, jps,jpe                              &
-            ,ifds,ifde, jfds,jfde                                   &
-            ,ifms,ifme, jfms,jfme                                   &
-            ,ifps,ifpe, jfps,jfpe                                   &
-            ,rho,z_at_w,dz8w                                        &
-            ) 
-        write(msg,*)'substep',isubstep,' max tign_g',maxval(grid%tign_g),' max lfn',maxval(grid%lfn)
-        call message(msg)
- 
-        time_step_start=time_step_start+dt   ! update for the next
+        ! solve the eikonal equation for tign_g by the level set method itself
+        do isubstep=1,config_flags%tign_extend_nsubsteps
+            write(msg,*)'extending tign_g substep',isubstep,' start'
+            call message(msg)
+            call sfire_driver_em ( grid , config_flags               & 
+                ,time_step_start ,dt                       &
+                ,ifun_step+1,ifun_step+2,fire_test_steps                     &
+                ,ids,ide, kds,kde, jds,jde                              &
+                ,ims,ime, kms,kme, jms,jme                              &
+                ,ips,ipe, kps,kpe, jps,jpe                              &
+                ,ifds,ifde, jfds,jfde                                   &
+                ,ifms,ifme, jfms,jfme                                   &
+                ,ifps,ifpe, jfps,jfpe                                   &
+                ,rho,z_at_w,dz8w                                        &
+                ) 
+            write(msg,*)'substep',isubstep,' max tign_g',maxval(grid%tign_g),' max lfn',maxval(grid%lfn)
+            call message(msg)
+    
+            time_step_start=time_step_start+dt   ! update for the next
 
-      enddo
+        enddo
 
-      ! save computed tign_g and lfn 
-      grid%tign_ext(ifps:ifpe, jfps:jfpe)=grid%tign_g(ifps:ifpe, jfps:jfpe)
-      grid%lfn_ext(ifps:ifpe, jfps:jfpe)=grid%lfn(ifps:ifpe, jfps:jfpe)
+        ! save computed tign_g and lfn 
+        grid%tign_ext(ifps:ifpe, jfps:jfpe)=grid%tign_g(ifps:ifpe, jfps:jfpe)
+        grid%lfn_ext(ifps:ifpe, jfps:jfpe)=grid%lfn(ifps:ifpe, jfps:jfpe)
 
-      if(config_flags%use_extended_tign.eq.0)then
+        if(config_flags%use_extended_tign.eq.0)then
 
-          call message('restoring the level set function from saved')
-          grid%lfn(ifps:ifpe, jfps:jfpe)=grid%lfn_save(ifps:ifpe, jfps:jfpe)
+            call message('restoring the level set function from saved')
+            grid%lfn(ifps:ifpe, jfps:jfpe)=grid%lfn_save(ifps:ifpe, jfps:jfpe)
 
-      elseif(config_flags%use_extended_tign.eq.1)then
+        elseif(config_flags%use_extended_tign.eq.1)then
 
-          call message('using extended tign as level set function')
-          grid%lfn(ifps:ifpe, jfps:jfpe)=grid%tign_g(ifps:ifpe, jfps:jfpe) - time_now
+            call message('using extended tign as level set function')
+            grid%lfn(ifps:ifpe, jfps:jfpe)=grid%tign_g(ifps:ifpe, jfps:jfpe) - time_now
 
-      else
-      
-          call crash('bad use_extended_tign')
+        else
+        
+            call crash('bad use_extended_tign')
 
-      endif
+        endif
 
     endif
    
@@ -256,15 +256,15 @@ subroutine sfire_driver_em_step (grid , config_flags               &
 
     ! --- add heat and moisture fluxes to tendency variables by postulated decay
     do ij=1,grid%num_tiles
-       ! SFIRE works on domain by 1 smaller, in last row&col winds are not set properly
-       its = grid%i_start(ij)             ! start atmospheric tile in i
-       ite = min(grid%i_end(ij),ide-1)    ! end atmospheric tile in i
-       jts = grid%j_start(ij)             ! start atmospheric tile in j
-       jte = min(grid%j_end(ij),jde-1)    ! end atmospheric tile in j
-       kts=kds
-       kte=kde
+        ! SFIRE works on domain by 1 smaller, in last row&col winds are not set properly
+        its = grid%i_start(ij)             ! start atmospheric tile in i
+        ite = min(grid%i_end(ij),ide-1)    ! end atmospheric tile in i
+        jts = grid%j_start(ij)             ! start atmospheric tile in j
+        jte = min(grid%j_end(ij),jde-1)    ! end atmospheric tile in j
+        kts=kds
+        kte=kde
 
-       call fire_tendency(                 &
+        call fire_tendency(                 &
             ids,ide-1, kds,kde, jds,jde-1, & ! domain dimensions
             ims,ime, kms,kme, jms,jme,      &
             its,ite, kts,kte, jts,jte,      & ! 
@@ -273,30 +273,30 @@ subroutine sfire_driver_em_step (grid , config_flags               &
             grid%ht,z_at_w,dz8w,grid%mut,rho,          &
             grid%rthfrten,grid%rqvfrten)                ! out
 
-     enddo
+    enddo
    
 #ifdef WRF_CHEM
 
-     write(msg,991)lbound(grid%chem,4),ubound(grid%chem,4)
-991  format('chem array dimensions ',i3,':',i3)
-     call message(msg)
-     write(msg,992)num_chem, config_flags%chem_opt
-992  format('number of chem species:',i4,' chem_opt=',i3)
-     call message(msg)
+    write(msg,991)lbound(grid%chem,4),ubound(grid%chem,4)
+991     format('chem array dimensions ',i3,':',i3)
+    call message(msg)
+    write(msg,992)num_chem, config_flags%chem_opt
+992     format('number of chem species:',i4,' chem_opt=',i3)
+    call message(msg)
 
 #endif
 
-     write(msg,993)lbound(grid%tracer,4),ubound(grid%tracer,4)
-993  format('tracer array dimensions ',i3,':',i3)
-     call message(msg)
-     write(msg,994)num_tracer,config_flags%tracer_opt
-994  format('number of tracers:',i3,' tracer_opt=',i3)
-     call message(msg)
+    write(msg,993)lbound(grid%tracer,4),ubound(grid%tracer,4)
+993     format('tracer array dimensions ',i3,':',i3)
+        call message(msg)
+    write(msg,994)num_tracer,config_flags%tracer_opt
+994     format('number of tracers:',i3,' tracer_opt=',i3)
+    call message(msg)
 
-       ! debug print to compare
+    ! debug print to compare
 
-       call print_3d_stats(its,ite,kts,kte,jts,jte,ims,ime,kms,kme,jms,jme,grid%rthfrten,'fire_driver_phys:rthfrten')
-       call print_3d_stats(its,ite,kts,kte,jts,jte,ims,ime,kms,kme,jms,jme,grid%rqvfrten,'fire_driver_phys:rqvfrten')
+    call print_3d_stats(its,ite,kts,kte,jts,jte,ims,ime,kms,kme,jms,jme,grid%rthfrten,'fire_driver_phys:rthfrten')
+    call print_3d_stats(its,ite,kts,kte,jts,jte,ims,ime,kms,kme,jms,jme,grid%rqvfrten,'fire_driver_phys:rqvfrten')
 
     call message('sfire_driver_em_step: SFIRE step complete')
             
