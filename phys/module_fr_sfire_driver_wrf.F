@@ -199,8 +199,9 @@ subroutine sfire_driver_em_step (grid , config_flags               &
 
     if(grid%itimestep .eq. config_flags%tign_extend_timestep)then
 
-        ! save the level set function, which will be overwritten in substeps
+        ! save the level set function & tign, which will be overwritten in substeps
         grid%lfn_save(ifps:ifpe, jfps:jfpe)=grid%lfn(ifps:ifpe, jfps:jfpe)
+        grid%tign_save(ifps:ifpe, jfps:jfpe)=grid%tign_g(ifps:ifpe, jfps:jfpe)
 
         ! solve the eikonal equation for tign_g by the level set method itself
         do isubstep=1,config_flags%tign_extend_nsubsteps
