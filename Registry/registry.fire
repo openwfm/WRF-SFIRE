@@ -85,7 +85,9 @@ state    real     fire_area *i*j      fire        1         z    hr    "FIRE_ARE
 # (also using inputs: zs,z_at_w,dz8w,nfuel_cat,zsf)
 #
 state    real     tign_in   *i*j      fire        1         z  i102hr   "TIGN_IN"    "minimal ignition time on ground" "s"
-state    real     tign_save *i*j      fire        1         z  i102hr   "TIGN_SAVE"  "minimal ignition time on ground saved after extended" "s"
+state    real     tign_ext *i*j      fire        1          z  hr   "TIGN_EXT"  "minimal ignition time on ground saved after extended" "s"
+state    real     tign_save *i*j      fire        1         z  hr   "TIGN_SAVE"  "minimal ignition time on ground saved after extended" "s"
+state    real     lfn_ext  *i*j      fire        1          z    hr "LFN_EXT"       "level function saved after buuilding extended TIGN" "1"
 state    real     lfn_save  *i*j      fire        1         z    hr "LFN_SAVE"       "level function saved while building TIGN by substeps "1"
 state    real     lfn_out   *i*j      fire        1         z    r "LFN_OUT"       "level function at time step end, for halo" "1"
 state    real     fuel_frac_burnt *i*j fire       1         z    hr    "FUEL_FRAC_BURNT" "fraction of fuel burnt in timestep" "1"

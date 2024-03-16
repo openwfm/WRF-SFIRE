@@ -224,8 +224,9 @@ subroutine sfire_driver_em_step (grid , config_flags               &
 
       enddo
 
-      ! save computed tign_g 
-      grid%tign_save(ifps:ifpe, jfps:jfpe)=grid%tign_g(ifps:ifpe, jfps:jfpe)
+      ! save computed tign_g and lfn 
+      grid%tign_ext(ifps:ifpe, jfps:jfpe)=grid%tign_g(ifps:ifpe, jfps:jfpe)
+      grid%lfn_ext(ifps:ifpe, jfps:jfpe)=grid%lfn(ifps:ifpe, jfps:jfpe)
 
       if(config_flags%use_extended_tign.eq.0)then
 
@@ -235,7 +236,7 @@ subroutine sfire_driver_em_step (grid , config_flags               &
       elseif(config_flags%use_extended_tign.eq.1)then
 
           call message('using extended tign as level set function')
-          grid%lfn(ifps:ifpe, jfps:jfpe)=grid%tign_g(ifps:ifpe, jfps:jfpe)
+          grid%lfn(ifps:ifpe, jfps:jfpe)=grid%tign_g(ifps:ifpe, jfps:jfpe) - time_now
 
       else
       
