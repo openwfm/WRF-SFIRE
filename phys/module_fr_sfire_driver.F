@@ -418,12 +418,6 @@ call print_2d_stats(ifps,min(ifpe,ifde-ir),jfps,min(jfpe,jfde-jr),ifms,ifme,jfms
         elseif(fire_ifun.eq.5)then
 #include "HALO_FIRE_LFN_OUT.inc"
 
-        elseif(fire_ifun.eq.6)then
-!           computing fuel_left needs ignition time from neighbors
-            call message('halo exchange on lfn width 2 and tign')
-#include "HALO_FIRE_TIGN.inc"
-#include "HALO_FIRE_LFN1.inc"
-
         endif ! fire_ifun
        endif ! fire_run
 #endif
@@ -525,9 +519,14 @@ call print_2d_stats(ifps,min(ifpe,ifde-ir),jfps,min(jfpe,jfde-jr),ifms,ifme,jfms
 !           store mesh units computed in fire_ignition_convert in stage 2
             grid%unit_fxlong = ignition%unit_fxlong
             grid%unit_fxlat = ignition%unit_fxlat
-        endif  ! fire_ifun
 
-     if(fire_ifun.eq.6)then
+        elseif(fire_ifun.eq.5)then
+!           computing fuel_left needs ignition time from neighbors
+            call message('halo exchange on lfn width 2 and tign')
+#include "HALO_FIRE_TIGN.inc"
+#include "HALO_FIRE_LFN1.inc"
+
+        elseif(fire_ifun.eq.6)then
          if(config_flags%chem_opt>0 .or. config_flags%tracer_opt>0)then
              if(.not.(present(rho).and.present(dz8w)))then
                  call crash('sfire_driver_em: must have rho and dz8w to call add_fire_emissions')
