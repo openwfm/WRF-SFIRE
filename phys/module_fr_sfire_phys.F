@@ -183,7 +183,7 @@ PUBLIC:: mfuelcats
    REAL   , DIMENSION(n_tree_type), SAVE    :: tree_burn_time           !< canopy characteristic burn time
 
    ! LLNL fuel load data for 1h, 10h, 100h, live fuel and associated burn time
-  logical,  save      :: use_multilayer_hf = .true. !< flag to use multi layer scheme for surface fluxes
+  logical,  save      :: use_multilayer_hf = .false. !< flag to use multi layer scheme for surface fluxes
   integer,  parameter :: n_layer_hf_surf = 4        !< number of layers used for surface heat fluxes computation (for now fixed to 4)
   integer,  parameter :: n_fuel_cat_A13 = 13        !< number of fuel categories in Anderson fuel classification
   ! fuel_load_layers_hf is from: https://www.fs.usda.gov/Internet/FSE_DOCUMENTS/stelprdb5111790.pdf + conversion coef from [ton acre-1] to [kg m-2]
