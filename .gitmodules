@@ -4,3 +4,4 @@
 [submodule "phys/StarFIRE"]
 	path = phys/StarFIRE
 	url = git@github.com:wirc-sjsu/StarFIRE.git
+	branch = master
