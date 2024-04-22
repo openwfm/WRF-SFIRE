@@ -1,0 +1,44 @@
+site_name: WRF-SFIRE
+site_url: https://WRF-SFIRE.readthedocs.io/en/latest/ 
+repo_url: https://github.com/openwfm/WRF-SFIRE 
+edit_uri: edit/main/docs/
+site_description: Documentation for computing resources at the CCM
+theme:
+  name: readthedocs
+  highlightjs: true
+  features:
+    - navigation.instant
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        # See: https://mkdocstrings.github.io/python/usage/
+        python:
+          options:
+            docstring_style: sphinx
+markdown_extensions:
+  - markdown_include.include:
+      base_path: .
+  - admonition
+nav:
+    - Welcome: index.md
+    - Terms and Conditions: TermsandConditions.md
+    - Updates:  updates.md
+    - Workshop: workshop.md
+    - Training: training.md
+    - Overview: overview.md
+    - Clusters Guide: clusters_guide.md
+    - Examples: examples.md
+    - Accounts: accounts.md
+    - Environment modules: modules.md
+    - Globus file transfer: globus.md
+    - Python: python.md
+    - Alderaan Cluster: alderaan.md
+    - Colibri Cluster: colibri.md
+    - Score Cluster: score.md
+    - Research Storage: storage.md
+    - Singularity Containers: singularity.md
+    - Local network: local.md
+    - External Resources: external.md
+    - Facilities, Equipment, and Other Resources: facilities.md
+    - How to Edit: pull_request.md
