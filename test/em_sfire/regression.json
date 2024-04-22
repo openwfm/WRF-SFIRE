@@ -12,8 +12,50 @@
     "rebuild_ref": false,
     "rebuild_dev": false, 
     "test_cases": {
+        "two_fires": {
+            "path": "test/em_sfire/two_fires",
+            "n_cpu": [64],
+            "vars": [
+                "U", "V", "W", "QVAPOR", "tr17_1", "FIRE_AREA", "U10", "V10", 
+                "T2", "Q2", "UF", "VF", "RAINNC", "PSFC", "ROS", "ZSF", "NFUEL_CAT", "FGRNHFX"
+            ],
+            "configs":
+                [
+                    {
+                        "info": "Rothermel", 
+                        "namelist_fire_params": {
+                            "fuel_scalars": {
+                                "ibeh": 1
+                            }
+                        },
+                        "namelist_input_params": {},
+                        "input_files": {}
+                    }
+                ]
+        },
         "fireflux_small": {
             "path": "test/em_sfire/fireflux_small",
+            "n_cpu": [64],
+            "vars": [
+                "U", "V", "W", "QVAPOR", "tr17_1", "FIRE_AREA", "U10", "V10", 
+                "T2", "Q2", "UF", "VF", "RAINNC", "PSFC", "ROS", "ZSF", "NFUEL_CAT", "FGRNHFX"
+            ],
+            "configs":
+                [
+                    {
+                        "info": "Rothermel", 
+                        "namelist_fire_params": {
+                            "fuel_scalars": {
+                                "ibeh": 1
+                            }
+                        },
+                        "namelist_input_params": {},
+                        "input_files": {}
+                    }
+                ]
+        },
+        "fireflux_small_massman": {
+            "path": "test/em_sfire/fireflux_small_massman",
             "n_cpu": [64],
             "vars": [
                 "U", "V", "W", "QVAPOR", "tr17_1", "FIRE_AREA", "U10", "V10", 
