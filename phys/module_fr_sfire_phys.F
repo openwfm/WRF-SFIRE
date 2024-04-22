@@ -2523,14 +2523,6 @@ tanphi=max(tanphi,0.)
 
 k = nfuel_cat           ! converting fuel index to integer
 
-! ! Determine the dead fuel fraction from the moisture tables.
-! dead_fract = 0.0
-! do mc=1,max_moisture_classes
-!     if (is_dead(mc).ne.0)then
-!         dead_fract = dead_fract + fmc_gw(k,mc)
-!     endif
-! enddo
-
 ! --- Constants and model parameters (Balbi 20220622 slide 9) ---
 B_ = 5.670373e-8                ! Stefan-Boltzman constant              [W/m^2/K^4]
 chi_0 = 0.3                     ! Radiative factor
