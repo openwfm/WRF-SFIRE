@@ -210,34 +210,41 @@ FIRE_MODULES = \
 	module_fr_sfire_model.o \
 	module_fr_sfire_core.o \
 	module_fr_sfire_phys.o \
+	module_fr_sfire_fields.o \
 	module_fr_sfire_util.o \
-        module_fr_fire_driver.o \
-        module_fr_fire_driver_wrf.o \
-        module_fr_fire_atm.o \
-        module_fr_fire_model.o \
-        module_fr_fire_core.o \
-        module_fr_fire_phys.o \
-        module_fr_fire_util.o \
-        module_firebrand_spotting_mpi.o \
-        module_firebrand_spotting.o
+	module_fr_fire_driver.o \
+	module_fr_fire_driver_wrf.o \
+	module_fr_fire_atm.o \
+	module_fr_fire_model.o \
+	module_fr_fire_core.o \
+	module_fr_fire_phys.o \
+	module_fr_fire_util.o \
+	module_firebrand_spotting_mpi.o \
+	module_firebrand_spotting.o
+
+ifdef USE_STARFIRE
+FIRE_MODULES += module_fr_starfire_phys.o
+endif
 
 DIAGNOSTIC_MODULES_EM = \
 	module_diag_afwa.o \
 	module_diag_cl.o \
 	module_diag_functions.o \
-        module_diag_hailcast.o \
+    module_diag_hailcast.o \
 	module_diag_misc.o \
 	module_diag_nwp.o \
-        module_diag_rasm.o \
+    module_diag_rasm.o \
 	module_diag_pld.o \
 	module_diag_zld.o \
 	module_diag_trad_fields.o \
-        module_diag_solar.o
+    module_diag_solar.o
   
 OBJS    =
 
 LIBTARGET    =  physics
 TARGETDIR    =  ./
+
+STARFIRE_FILES = module_fr_starfire_phys.F
 
 $(LIBTARGET) :
 	$(MAKE) $(J) non_nmm ; \
@@ -245,6 +252,8 @@ $(LIBTARGET) :
 		$(FIRE_MODULES) $(DIAGNOSTIC_MODULES_EM)
 
 include ../configure.wrf
+
+
 
 non_nmm : $(MODULES) $(FIRE_MODULES) $(WIND_MODULES) $(OBJS) $(DIAGNOSTIC_MODULES_EM)
 
@@ -261,6 +270,12 @@ submodules :
 	else \
 		echo No action required for NoahMP submodule ; \
 	fi
+
+starfire:
+	@([ "$(ls -A StarFIRE)" ] || cd .. && git submodule update --init phys/StarFIRE || (echo "Failed to update StarFIRE submodule" && exit 1)) 
+	@for file in $(STARFIRE_FILES); do \
+		ln -sf StarFIRE/$$file $$file || (echo "Failed to make symlink to phys directory from StarFIRE submodule" && exit 1); \
+	done
 
 clean:
 	@ echo 'use the clean script'

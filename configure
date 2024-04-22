@@ -446,6 +446,15 @@ if [ "$os" = "AIX" ] ; then
       fi
 fi
 
+# compile options that come from the environment,
+# StarFIRE fire model
+# the "!" is removed by Config.pl
+if [ -n "$USE_STARFIRE" ] ; then
+  echo building WRF-STARFIRE
+  compileflags="${compileflags}!-DUSE_STARFIRE"
+  echo $compileflags
+fi
+
 # compile options that come from the environment, such as chemistry
 # the "!" is removed by Config.pl
 if [ -n "$WRF_HYDRO" ] ; then

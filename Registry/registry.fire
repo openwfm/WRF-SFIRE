@@ -13,7 +13,7 @@
 
 package   fire_sfire    ifire==2                    -             state:avg_fuel_frac,bbb,betafl,burnt_area_dt,canhfx,canqfx,dzdxf,dzdyf,fcanhfx,fcanqfx,fgip,fgrnhfx,fgrnqfx,fire_area,fire_smoke,flame_length,fmc_equi,fmc_g,fmc_gc,fmep,fmc_lag,fmoist_lasttime,fmoist_nexttime,fuel_frac,fuel_time,fxlat,fxlong,fz0,grnhfx,grnhfx_fu,grnqfx,grnqfx_fu,iboros,ischap,lfn,lfn_0,lfn_1,lfn_2,lfn_hist,lfn_s0,lfn_s1,lfn_s2,lfn_s3,lfn_time,nfuel_cat,phiwc,psfc_old,q2_old,r_0,rain_old,rh_fire,ros,ros_front,rqvfrten,rthfrten,t2_old,tign_g,uah,uf,vah,vf,zsf,fs_last_gen_dt,fs_gen_idmax,fs_count_reset,fs_fire_ROSdt,fs_fire_area,fs_fuel_spotting_risk,fs_count_landed_all,fs_count_landed_hist,fs_landing_mask,fs_gen_inst,fs_frac_landed,fs_spotting_lkhd 
 
-package   fire_sfire1    ifire==1                    -             state:avg_fuel_frac,nfuel_cat,zsf,tign_g,tign_in,fire_hfx,rthfrten,rqvfrten,grnhfx,grnqfx,canhfx,canqfx,dzdxf,dzdyf,lfn,lfn_out,fuel_frac,fire_area,uf,vf,fgrnhfx,fgrnqfx,fcanhfx,fcanhfx,fcanqfx,ros,fxlong,fxlat,fuel_time,bbb,phiwc,phisc,r_0,fgip,ischap,fz0,fwh,unit_fxlong,unit_fxlat,ndwi,ndvi,fmc_g,fmc_gc,fmc_gc_f,fndwi,flineint,flineint2,f_ros0,f_rosx,f_rosy,f_ros,f_int,f_lineint,f_lineint2,f_ros11,f_ros12,f_ros13,f_ros21,f_ros23,f_ros31,f_ros32,f_ros33,wz0,can_top,cuf,cvf,uah,vah,tempf,rhof,ffwidth
+package   fire_sfire1    ifire==1                    -             state:avg_fuel_frac,nfuel_cat,zsf,tign_g,tign_in,fire_hfx,rthfrten,rqvfrten,grnhfx,grnqfx,canhfx,canqfx,dzdxf,dzdyf,lfn,lfn_out,fuel_frac,fire_area,uf,vf,fgrnhfx,fgrnqfx,fcanhfx,fcanhfx,fcanqfx,ros,fxlong,fxlat,fuel_time,bbb,phiwc,phisc,r_0,fgip,ischap,fz0,fwh,unit_fxlong,unit_fxlat,ndwi,ndvi,fmc_g,fmc_gc,fmc_gc_f,fndwi,flineint,flineint2,f_ros0,f_rosx,f_rosy,f_ros,f_int,f_lineint,f_lineint2,f_ros11,f_ros12,f_ros13,f_ros21,f_ros23,f_ros31,f_ros32,f_ros33,wz0,can_top,can_bottom,can_bulk_density,cuf,cvf,uah,vah,tempf,rhof,ffwidth,cfb,can_fuel_frac,can_fuel_burnt,can_fx_z0,surf_mass_frac_b,surf_mass_frac_c
 
 package  fire_fmoist_run   fmoisti_run==1           -             state:fmc_gc,fmc_gc_f,fmep,fmc_equi,fmc_lag,t2_old,q2_old,rain_old,psfc_old,rh_fire
 package  fire_fmoist_interp fmoisti_interp==1       -             state:fmc_gc,fmc_gc_f
@@ -49,6 +49,7 @@ state    real     ndvi      ij      fire        1         z   i012hr    "NDVI"  
 # outputs to atm model
 state    real     rthfrten  ikj      fire        1         z     hr   "RTHFRTEN" "temperature tendency" "K/s"
 state    real     rqvfrten  ikj      fire        1         z     hr   "RQVFRTEN" "humidity tendency" 
+state    real     can_fx_z0 ij       fire        1         z     -    "CAN_FX_Z0"  "Minimal injection height for canopy heat fluxes" "m"
 
 # ------------------------------------------------------------------------------------------------------------------------
 # diagnostics only
@@ -102,6 +103,16 @@ state    real     ros_front     *i*j      fire        1         z    hr    "ROS_
 state    real     tempf     *i*j      fire        1         z    hr    "TEMPF"    "temperature at 2m"  "K"
 state    real     rhof      *i*j      fire        1         z    hr    "RHOFF"    "surface air density"  "Pa"
 state    real     ffwidth   *i*j      fire        1         z    hr    "FFWIDTH"  "fire front width"  "m"
+state    real     cfb       *i*j      fire        1         z    -    "CFB"  "canopy fraction burnt"  "1"
+state    real     can_fuel_frac *i*j  fire        1         z    hr    "CAN_FUEL_FRAC" "canopy fuel remaining" "1"
+state    real     can_fuel_burnt *i*j fire        1         z    -    "CAN_FUEL_BURNT" "burning mass in canopy" "kg/m^2"
+state    real   surf_moisture_frac *i*j fire      1         z    hr   "SURF_MOISTURE_FRAC" "surface fuel moisture fraction" "1"
+
+# multi layer heat flux variable
+dimspec  nlay   -           constant=4      z    surf_heat_flux_layer
+state    real   surf_mass_frac_b *i{nlay}*j fire      1         z    hr   "SURF_MASS_FRAC_B" "surface biomass fuel mass fraction" "1"
+state    real   surf_mass_frac_c *i{nlay}*j fire      1         z    hr   "SURF_MASS_FRAC_C" "surface char fuel mass fraction" "1"
+
 # 
 # ------------------------------------------------------------------------------------------------------------------------
 # fuel moisture variables
@@ -184,8 +195,9 @@ state    real     unit_fxlat  -         -         -         -    hr    "UNIT_FXL
 state    real     phisc     *i*j      fire        1         z    hr    "PHISC"     "fuel"
 state    real     wz0       *i*j      fire        1         z    hr    "WZ0"       "WRF roughness length"
 state    real     fwh       *i*j      fire        1         z    hr    "FWH"       "fuel fire wind height"
-state    real     can_top   *i*j      fire        1         z   i012hr   "CAN_TOP"   "Height of tree canopy"
-
+state    real     can_top   *i*j      fire        1         z    hr   "CAN_TOP"   "Height of tree canopy top"
+state    real     can_bottom    *i*j  fire        1         z    hr   "CAN_BOTTOM"   "Height of tree canopy base"
+state    real     can_bulk_density *i*j fire      1         z    hr   "CAN_BULK_DENSITY"   "canopy bulk density"
 
 #
 
@@ -281,6 +293,7 @@ rconfig   real    fire_ext_grnd          namelist,fire         max_domains      
 rconfig   real    fire_ext_crwn          namelist,fire         max_domains           50.     -      "fire_ext_crwn"    "extinction depth of crown fire heat" "m"
 rconfig   real    fire_wind_height       namelist,fire         max_domains           6.096   -      "fire_wind_height" "height of uah,vah wind in fire spread formula" "m"
 rconfig   integer fire_fuel_read         namelist,fire         max_domains           -1      -      "fire_fuel_read"   "fuel categories are set by: if 0, uniform; if 1, user-presc; if 2, read from file"   ""
+rconfig   integer fire_can_fuel_read     namelist,fire         max_domains           -1      -      "fire_can_fuel_read"    "Canopy data (top, bottom, fuel load) are set by: if -1: do not set canopy data, if 0: from fuel cat; if 1: read from file"   ""
 rconfig   integer fire_fuel_cat          namelist,fire         max_domains           1       -      "fire_fuel_cat"     "fuel category if ifuelread=0"              ""
 #
 # ------------------------------------------------------------------------------------------------------------------------
@@ -518,8 +531,8 @@ halo      HALO_FIRE_WIND_F dyn_em 12:uf,vf
 halo      HALO_FIRE_LONGLAT dyn_em 24:xlong,xlat
 halo      HALO_FIRE_WIND_A dyn_em 8:u_2,v_2
 halo      HALO_FIRE_ZSF dyn_em 24:zsf
-halo      HALO_FIRE_FUEL dyn_em 8:fuel_frac,fuel_time,bbb,betafl,phiwc,r_0,fgip,ischap,nfuel_cat,dzdxf,dzdyf
-halo      HALO_FIRE_FUEL1 dyn_em 8:fuel_frac,fuel_time,bbb,phiwc,phisc,r_0,fgip,ischap,nfuel_cat,dzdxf,dzdyf,fz0,fwh,wz0,can_top
+halo      HALO_FIRE_FUEL dyn_em 8:fuel_frac,can_fuel_frac,fuel_time,bbb,betafl,phiwc,r_0,fgip,ischap,nfuel_cat,dzdxf,dzdyf
+halo      HALO_FIRE_FUEL1 dyn_em 8:fuel_frac,can_fuel_frac,fuel_time,bbb,phiwc,phisc,r_0,fgip,ischap,nfuel_cat,dzdxf,dzdyf,fz0,fwh,wz0,can_top
 
 
 #

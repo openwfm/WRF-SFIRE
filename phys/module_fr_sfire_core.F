@@ -8,7 +8,7 @@
 
 module module_fr_sfire_core
 
-use module_fr_sfire_phys, only: fire_params , fire_ros
+use module_fr_sfire_phys, only: fire_params , fire_ros, fire_rate_of_spread
 use module_fr_sfire_util
 
 implicit none
@@ -31,7 +31,7 @@ subroutine init_no_fire(&
     ifms,ifme,jfms,jfme, &
     ifts,ifte,jfts,jfte, &
     fdx,fdy,time_start,dt,  & ! scalars in
-    fuel_frac,fire_area,lfn,tign_in, & !arrays out 
+    fuel_frac,can_fuel_frac,fire_area,lfn,tign_in, & !arrays out 
     tign)    ! arrays inout            
 implicit none
              
@@ -43,7 +43,7 @@ integer, intent(in):: ifts,ifte,jfts,jfte   ! fire tile bounds
 integer, intent(in):: ifms,ifme,jfms,jfme   ! array bounds
 real, intent(in) :: fdx,fdy,time_start,dt   ! mesh spacing, time
 real, intent(out), dimension (ifms:ifme,jfms:jfme) :: & 
-                   fuel_frac,fire_area,lfn,           &  !  model state
+                   fuel_frac,can_fuel_frac,fire_area,lfn,           &  !  model state
                    tign_in       
 real, intent(inout), dimension (ifms:ifme,jfms:jfme) :: & 
                    tign       ! model state, on input values tign_in
@@ -75,29 +75,32 @@ if(fire_perimeter_time > 0.)then
   do j=jfts,jfte
      do i=ifts,ifte
         fuel_frac(i,j)=1.          ! fuel at start is 1 by definition
+        can_fuel_frac(i, j) = 1.    ! canopy fuel fraction
         fire_area(i,j)=0.          ! nothing burning
         lfn(i,j) = tign(i,j)-time_now       ! use specified ignition time as level set function 
-     enddo
-  enddo
+    enddo
+enddo
 elseif(fire_tign_in_time > 0.)then
   call message('init_no_fire: using ignition from given max fire arrival time',level=1)
   do j=jfts,jfte
-     do i=ifts,ifte
+    do i=ifts,ifte
         tign_in(i,j)=tign(i,j)
         fuel_frac(i,j)=1.          ! fuel at start is 1 by definition
+        can_fuel_frac(i, j) = 1.    ! canopy fuel fraction
         fire_area(i,j)=0.          ! nothing burning
         lfn(i,j) = tign_in(i,j)-time_now    ! use specified ignition time as level set function 
-     enddo
-  enddo
-  call print_2d_stats(ifts,ifte,jfts,jfte,ifms,ifme,jfms,jfme, tign_in,'init_no_fire: tign_in')
+    enddo
+enddo
+call print_2d_stats(ifts,ifte,jfts,jfte,ifms,ifme,jfms,jfme, tign_in,'init_no_fire: tign_in')
 else
-  call message('init_no_fire: setting state to no fire',level=1)
-  do j=jfts,jfte
-     do i=ifts,ifte
-        fuel_frac(i,j)=1.          ! fuel at start is 1 by definition
-        fire_area(i,j)=0.          ! nothing burning
-        tign(i,j) = time_init      ! ignition in future
-        lfn(i,j) = lfn_init        ! no fire 
+    call message('init_no_fire: setting state to no fire',level=1)
+    do j=jfts,jfte
+        do i=ifts,ifte
+            fuel_frac(i,j)=1.          ! fuel at start is 1 by definition
+            can_fuel_frac(i, j) = 1.    ! canopy fuel fraction
+            fire_area(i,j)=0.          ! nothing burning
+            tign(i,j) = time_init      ! ignition in future
+            lfn(i,j) = lfn_init        ! no fire 
      enddo
   enddo
 endif
@@ -2159,9 +2162,8 @@ intrinsic max,min,sqrt,nint,tiny,huge
             end select
   
             ! get rate of spread from wind speed and slope
+            rr = fire_rate_of_spread(diffCx, diffCy, i, j, fp, save_cfb=.true.)
 
-            call fire_ros(rr, &
-            diffCx,diffCy,i,j,fp,ierrx,msg2)
             nerr = nerr + ierrx
 
             if(fire_grows_only.gt.0)rr=max(rr,0.)
@@ -2302,8 +2304,7 @@ real, parameter:: eps=epsilon(0.0)
             ! normal direction, from central differences
             ! get rate of spread from wind speed and slope
 
-            call fire_ros(r, &
-            diffCx,diffCy,i,j,fp,ierrx,msg)
+            r = fire_rate_of_spread(diffCx, diffCy, i, j, fp)
 
             if(fire_grows_only.gt.0)r=max(r,0.)
             speed_func=r

@@ -17,6 +17,7 @@ subroutine sfire_model (                    &
     restart,replay,                         & ! use existing state, prescribe spread
     run_fuel_moisture,                      & ! if need update fuel moisture in pass 4
     ifuelread,nfuel_cat0,                   & ! initialize fuel categories
+    i_fire_can_fuel_read,                   & ! initialize canopy fuel data
     ifds,ifde,jfds,jfde,                    & ! fire domain dims - the whole domain
     ifms,ifme,jfms,jfme,                    & ! fire memory dims - how declared
     ifps,ifpe,jfps,jfpe,                    & ! patch - nodes owned by this process
@@ -28,8 +29,10 @@ subroutine sfire_model (                    &
     fire_hfx,                               & ! input: given heat flux, or set inside
     tign_in,                                & ! ignition time, if given
     lfn,lfn_out,tign,fuel_frac,fire_area,   & ! state: level function, ign time, fuel left, area burning
-    fuel_frac_burnt,                        & ! output: fuel fraction burnt in this timestep
-    fgrnhfx,fgrnqfx,                          & ! output: heat fluxes
+    can_fuel_frac,                          & ! state: canopy fuel fraction
+    fuel_frac_burnt,         & ! output: fuel fraction burnt in this timestep
+    fgrnhfx,fgrnqfx,                        & ! output: heat fluxes total heat flux (ground + canopy)
+    fcanhfx,fcanqfx,                        & ! output: canopy heat fluxes
     ros,flineint,flineint2,                 & ! diagnostic variables
     f_ros0,f_rosx,f_rosy,f_ros,             & ! fire risk spread 
     f_int,f_lineint,f_lineint2,             & ! fire risk intensities 
@@ -90,6 +93,7 @@ logical, intent(in):: replay                ! if true, use tign_g for level set
 logical, intent(in)::run_fuel_moisture      ! 
 ! scalar data
 integer, intent(in) :: ifuelread,nfuel_cat0 ! for set_fire_params
+integer, intent(in) :: i_fire_can_fuel_read !< source of data for canopy data
 integer, intent(in) :: ifds,ifde,jfds,jfde,&  ! fire domain bounds
         ifps,ifpe,jfps,jfpe                ! patch - nodes owned by this process
 integer, intent(in) :: ifts,ifte,jfts,jfte  ! fire tile bounds
@@ -108,7 +112,8 @@ real, dimension(ifms:ifme, jfms:jfme), intent(inout):: tign_in ! given ignition 
 REAL, INTENT(inout), dimension(ifms:ifme,jfms:jfme):: &
     lfn   , &                               ! level function: fire is where lfn<0 (node)
     tign  , &                               ! absolute time of ignition (node)
-    fuel_frac                               ! fuel fraction (node), currently redundant
+    fuel_frac, &                            ! fuel fraction (node), currently redundant
+    can_fuel_frac                           ! Canopy fuel fraction
 
 REAL, INTENT(out), dimension(ifms:ifme,jfms:jfme):: &
     fire_area, &                            ! fraction of each cell burning
@@ -117,7 +122,8 @@ REAL, INTENT(out), dimension(ifms:ifme,jfms:jfme):: &
 ! output
 REAL, INTENT(out), dimension(ifms:ifme,jfms:jfme):: &
     lfn_out, &                              !                              
-    fgrnhfx,fgrnqfx, &                        ! heat fluxes J/m^2/s  (cell)             
+    fgrnhfx,fgrnqfx, &                        ! ground + canopy heat fluxes J/m^2/s  (cell)             
+    fcanhfx,fcanqfx, &                        ! canopy heat fluxes J/m^2/s  (cell)             
     ros,flineint,flineint2,                 & ! diagnostic variables
     f_ros0,f_rosx,f_rosy,f_ros,             & ! fire risk spread 
     f_int,f_lineint,f_lineint2                ! fire risk intensities 
@@ -204,6 +210,18 @@ elseif(ifun.eq.2)then
             ifts,ifte,jfts,jfte, &
             ifuelread,nfuel_cat0,&
             fp%zsf,nfuel_cat)            ! better not use the extrapolated zsf!!
+        
+        ! set default value for sfire fields
+        call initialize_sfire_fields( &
+            ifms, ifme, jfms, jfme,   &
+            ifts, ifte, jfts, jfte,   &
+            nfuel_cat                 )
+            
+        ! Initialize canopy fuel data
+        call set_canopy_data(               &
+            ifms, ifme, jfms, jfme,         &
+            ifts, ifte, jfts, jfte,         &
+            i_fire_can_fuel_read, nfuel_cat )
 
         ! uses nfuel_cat to set the other fuel data arrays
         ! needs zsf on halo width 1 to compute the terrain gradient
@@ -222,7 +240,7 @@ elseif(ifun.eq.2)then
             ifms,ifme,jfms,jfme, &
             ifts,ifte,jfts,jfte, &
             fdx,fdy,time_start,dt,  &
-            fuel_frac,fire_area,lfn,tign_in,tign)
+            fuel_frac,can_fuel_frac,fire_area,lfn,tign_in,tign)
             
         endif
 
@@ -406,12 +424,12 @@ elseif (ifun.eq.6) then ! timestep postprocessing
     ! have halo on lfn now
 
     ! diagnostics
-    call fire_intensity(fp,                   &  ! fuel properties
-        ifms,ifme,jfms,jfme,                      &  ! memory dims
-        ifts,ifte,jfts,jfte,                      &  ! tile dims
-        ifms,ifme,jfms,jfme,                      &  ! ros dims
-        ros,nfuel_cat,                            & !in
-        flineint,flineint2)                       ! fireline intensities out
+    ! call fire_intensity(fp,                   &  ! fuel properties
+    !     ifms,ifme,jfms,jfme,                      &  ! memory dims
+    !     ifts,ifte,jfts,jfte,                      &  ! tile dims
+    !     ifms,ifme,jfms,jfme,                      &  ! ros dims
+    !     ros,nfuel_cat,                            & !in
+    !     flineint,flineint2)                       ! fireline intensities out
 
     if(fireline_mask < 0.) then
       do j=jfts,jfte
@@ -430,12 +448,12 @@ elseif (ifun.eq.6) then ! timestep postprocessing
       enddo
     endif
     
-  call fire_risk(fp,                              &
-        ifms,ifme,jfms,jfme,                      &  ! memory dims
-        ifts,ifte,jfts,jfte,                      &  ! tile dims
-        nfuel_cat,                                &  !
-        f_ros0,f_rosx,f_rosy,f_ros,               &  ! fire spread 
-        f_int,f_lineint,f_lineint2)                  ! fire intensities for danger rating
+!   call fire_risk(fp,                              &
+!         ifms,ifme,jfms,jfme,                      &  ! memory dims
+!         ifts,ifte,jfts,jfte,                      &  ! tile dims
+!         nfuel_cat,                                &  !
+!         f_ros0,f_rosx,f_rosy,f_ros,               &  ! fire spread 
+!         f_int,f_lineint,f_lineint2)                  ! fire intensities for danger rating
 
 
   select case(fire_hfx_given)
@@ -494,7 +512,9 @@ elseif (ifun.eq.6) then ! timestep postprocessing
         ifms,ifme,jfms,jfme,                      &  ! fuel_frac_burned has standard memory dimensions
         fp%fgip,                                     &
         fuel_frac_burnt,                          & !
-        fgrnhfx,fgrnqfx)                              !out
+        fgrnhfx,fgrnqfx, &  ! out: surface + canopy heat fluxes
+        fire_area, &        ! in: fire area
+        fcanhfx, fcanqfx, can_fuel_frac)   ! out: canopy heat fluxes
 
     case (1, 2) 
 !$OMP CRITICAL(SFIRE_MODEL_CRIT)

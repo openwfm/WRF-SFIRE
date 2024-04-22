@@ -98,7 +98,7 @@ implicit none
 
 private
 public sfire_driver_em,use_atm_vars,set_flags, &
-       set_fp_from_grid, fire_ignition_convert
+       set_fp_from_grid, fire_ignition_convert, set_sfire_fields_from_grid
 public ifun_beg, ifun_step, ifun_end
 
 logical:: use_atm_vars=.true.   !  interpolate wind from atm mesh and average output fluxes back
@@ -172,6 +172,8 @@ subroutine sfire_driver_em ( grid , config_flags                    &
 ! populate our structures from wrf
 
     call set_fp_from_grid(grid,fp)
+
+    call set_sfire_fields_from_grid(grid)
 
 ! copy configuration flags to sfire internal structures
     call set_flags(config_flags)
@@ -401,13 +403,13 @@ call print_2d_stats(ifps,min(ifpe,ifde-ir),jfps,min(jfpe,jfde-jr),ifms,ifme,jfms
 !           halo exchange on atm winds and geopotential for interpolation
 #include "HALO_SFIRE_WIND_A.inc"
 #include "HALO_FIRE_PH.inc"
-            if(ibeh.eq.2)then
+            if(ibeh.eq.2 .or. ibeh == 3)then
 #include "HALO_SFIRE_RHO2FIRE_ATM.inc"
             endif
         elseif(fire_ifun.eq.4)then
 !           halo exchange on fire winds width 2 for a 2-step RK method
 #include "HALO_FIRE_WIND_F.inc"
-            if(ibeh.eq.2)then
+            if(ibeh.eq.2 .or. ibeh == 3)then
 #include "HALO_SFIRE_RHO2FIRE_SUB.inc"
             endif
             if(run_fuel_moisture)then
@@ -466,6 +468,7 @@ call print_2d_stats(ifps,min(ifpe,ifde-ir),jfps,min(jfpe,jfde-jr),ifms,ifme,jfms
             grid%tign_in,                                 &
             grid%lfn,grid%tign_g,grid%fuel_frac,          & ! state arrays, fire grid
             grid%fire_area,                               & ! redundant, for display, fire grid
+            grid%can_fuel_frac,                           & ! canopy fuel fraction
             grid%fuel_frac_burnt,                         &
             grid%lfn_out,                                 & ! work - one timestep    
             grid%avg_fuel_frac,                           & ! out redundant arrays, atm grid
@@ -484,6 +487,7 @@ call print_2d_stats(ifps,min(ifpe,ifde-ir),jfps,min(jfpe,jfde-jr),ifms,ifme,jfms
             grid%wz0,                            &          !wrf roughness length on fire mesh
             grid%fz0, grid%fwh,grid%can_top,grid%cuf,grid%cvf, &
             grid%tempf, grid%rhof,grid%ffwidth,             & ! variables for Balbi ROS model
+            grid%cfb, &                                       ! Crown fraction burnt variable
             fp,                                    & ! structure with pointers passed to spread rate calculation
             config_flags%nfmc,         & ! moisture model variables start
             run_advance_moisture,run_fuel_moisture,dt_moisture,     &    ! moisture model control
@@ -580,6 +584,7 @@ subroutine sfire_driver_phys (ifun,    &
     tign_in,                                      &
     lfn,tign,fuel_frac,                           & ! state arrays, fire grid
     fire_area,                                    & ! redundant state, fire grid
+    can_fuel_frac,                                & ! canopy fuel fracction
     fuel_frac_burnt,                              & 
     lfn_out,                                      & ! out level set function    
     avg_fuel_frac,                                &
@@ -598,6 +603,7 @@ subroutine sfire_driver_phys (ifun,    &
     wz0,                                          &
     fz0,fwh,can_top,cuf,cvf,                      & ! input fuel map/vegetation variables on fire mesh
     tempf,rhof,ffwidth,                           & ! variables for Balbi ROS model
+    cfb,                                          & ! crown fire model variables
     fp,                                           & ! fire params
     nfmc,                                     & ! number of fuel moisture classes
     run_advance_moisture,run_fuel_moisture,dt_moisture,& ! moisture model control
@@ -616,6 +622,7 @@ subroutine sfire_driver_phys (ifun,    &
     ndwi,                       &
     fndwi)                         ! ndwi on fire grid
 
+  use module_fr_sfire_fields, only: can_fx_z0, can_bottom
 
 implicit none
 
@@ -672,13 +679,15 @@ real, intent(inout), dimension(ifms:ifme,jfms:jfme):: & ! fuel data; can be also
 
 real, intent(inout), dimension(ifms:ifme, jfms:jfme)::     &
     tign_in,                                   &
-    lfn,tign,fuel_frac,                        &     ! state: level function, ign time, fuel left
-    lfn_out                                    ! fire wind velocities
+    lfn,tign,fuel_frac,                        & ! state: level function, ign time, fuel left
+    can_fuel_frac,                             & ! state: canopy fuel fraction
+    lfn_out,                                   & ! fire wind velocities
+    cfb                                          !< variable for crown fire model
 
 real, intent(out), dimension(ifms:ifme, jfms:jfme)::  &
-    fire_area, &                                 ! fraction of area of each cell burning
-    fuel_frac_burnt,                           & ! fraction of mass of fuel burnt
-    tempf,rhof,ffwidth                           ! variables for Balbi ROS model
+    fire_area, &                                  ! fraction of area of each cell burning
+    fuel_frac_burnt,                            & ! fraction of mass of fuel burnt
+    tempf,rhof,ffwidth                            ! variables for Balbi ROS model
 
 real, intent(out), dimension(ims:ime, jms:jme):: &  ! redundant arrays, for display purposes only (atm grid)
     avg_fuel_frac,                               &  ! average fuel fraction
@@ -959,10 +968,10 @@ do ij=1,num_tiles
 
     elseif(ifun.eq.3)then  ! interpolate atmosphere variables to the fire grid
   
-      for_balbi: if(ibeh.eq.2)then
+      for_balbi: if(ibeh.eq.2 .or. ibeh == 3)then
 
-         call message('ibeh=2: interpolating atmosphere input for Balbi rate of spread model')
-         if(.not.use_atm_vars)call crash('ibeh=2 Balbi model requires atmosphere but use_atm_vars=false')
+         call message('ibeh=2 or 3: interpolating atmosphere input for rate of spread model')
+         if(.not.use_atm_vars)call crash('ibeh=2 or 3, ros model requires atmosphere but use_atm_vars=false')
          
          ! balbi_msglevel = 4
 
@@ -995,6 +1004,7 @@ do ij=1,num_tiles
          !! halo on rhof,tempf after
 
          ffwidth(ifts:ifte,jfts:jfte)     = 100.     ! default for now
+         cfb(ifts:ifte,jfts:jfte)         = 0.       ! default for now
 
       end if for_balbi
  
@@ -1065,34 +1075,6 @@ do ij=1,num_tiles
           !parameterization to scale the winds down to the FWH.
 
           elseif(fire_use_windrf.eq.4)then wind_rf          ! massman interpolation below fwh
-          
-!$OMP CRITICAL(SFIRE_DRIVER_CRIT)
-            call message('fire_use_windrf option 4 has been selected....!')
-            write(msg, '(A20,I1)') 'fire_can_top_read = ', fire_can_top_read
-            call message(msg)
-!$OMP END CRITICAL(SFIRE_DRIVER_CRIT)
-
-            !Lets set the canopy height, using either a look up table, or just explictly setting it 
-            !using WRF input data from LANDFIRE.
-
-            if(fire_can_top_read == 0)then
-
-                can_top = 0                             ! Initialize canopy top array on fire mesh 
-
-                call find_trees_fmesh(id,             & ! to identify debugging prints and files if needed
-                ids,ide, kds,kde, jds,jde,                    & ! atm grid dimensions
-                ims,ime, kms,kme, jms,jme,                    &
-                ips,ipe,jps,jpe,                              &
-                its,ite,jts,jte,                              &
-                ifds, ifde, jfds, jfde,                       & ! fire grid dimensions
-                ifms, ifme, jfms, jfme,                       &
-                ifps, ifpe, jfps, jfpe,                       & ! fire patch bounds
-                ifts,ifte,jfts,jfte,                          &
-                ir,jr,                                        & ! atm/fire grid ratio
-                can_top, nfuel_cat)                             ! tree canopy height info 
-            
-            end if 
-
 
             !Compute canopy top winds. Save this variable to cuf and cvf, which is like
             !vf and uf in terms of dimensionality, except that its canopy top winds.
@@ -1170,6 +1152,7 @@ do ij=1,num_tiles
     call sfire_model (id,ifun,restart,replay,  &
         run_fuel_moisture,                      & ! if fuel moisture needs to be updated
         ifuelread,nfuel_cat0,                   & ! initialize fuel categories
+        config_flags%fire_can_fuel_read,        & ! initialize canopy fuel data
         ifds,ifde,jfds,jfde,                    & ! fire domain dims
         ifms,ifme,jfms,jfme,                    & ! fire memory dims
         ifps,ifpe,jfps,jfpe,                    &
@@ -1182,8 +1165,10 @@ do ij=1,num_tiles
         tign_in,                                & ! given igntion time
         lfn,lfn_out,tign,fuel_frac,             & ! state: level function, ign time, fuel left
         fire_area,                              & ! output: fraction of cell burning
+        can_fuel_frac,                          & ! state: canopy fuel fraction
         fuel_frac_burnt,                        & ! output: fuel fraction burned in this step
-        fgrnhfx,fgrnqfx,                        & ! output: heat fluxes
+        fgrnhfx,fgrnqfx,                        & ! output: surface + canopy heat fluxes
+        fcanhfx, fcanqfx,                       & ! output: canopy heat fluxes
         ros,flineint,flineint2,                 & ! diagnostic variables
         f_ros0,f_rosx,f_rosy,f_ros,             & ! fire risk spread 
         f_int,f_lineint,f_lineint2,             & ! fire risk intensities 
@@ -1254,6 +1239,20 @@ do ij=1,num_tiles
             ims, ime, jms, jme,   &
             its,ite,jts,jte,      &
             grnhfx)
+            call sum_2d_cells(        &
+            ifms,ifme,jfms,jfme,  &
+            ifts,ifte,jfts,jfte,  &
+            fcanhfx,              &
+            ims, ime, jms, jme,   &
+            its,ite,jts,jte,      &
+            canhfx)
+            call sum_2d_cells(        &
+            ifms,ifme,jfms,jfme,  &
+            ifts,ifte,jfts,jfte,  &
+            fcanqfx,              &
+            ims, ime, jms, jme,   &
+            its,ite,jts,jte,      &
+            canqfx)
 !comment out the next call to get results as before commit 55fd92051196b796891b60cb7ec1c4bdb8800078
           call sum_2d_cells(        &
             ifms,ifme,jfms,jfme,  &
@@ -1262,6 +1261,13 @@ do ij=1,num_tiles
             ims, ime, jms, jme,   &
             its,ite,jts,jte,      &
             grnqfx)
+
+          call mean_2d_cells_non_zero(       &
+          ifms, ifme, jfms, jfme,           &
+          ifts, ifte, jfts, jfte,           &
+          ims,  ime,  jms,  jme,            &
+          its,  ite,  jts,  jte,            &
+          can_bottom, can_fx_z0              )
 
 !$OMP CRITICAL(SFIRE_DRIVER_CRIT)
           write(msg,'(a,f6.3)')'fire-atmosphere feedback scaling ',fire_atm_feedback
@@ -1275,8 +1281,8 @@ do ij=1,num_tiles
                 grnhfx(i,j)=fire_atm_feedback*grnhfx(i,j)*s
                 grnqfx(i,j)=fire_atm_feedback*grnqfx(i,j)*s
                 ! we do not have canopy fluxes yet...
-                canhfx(i,j)=0
-                canqfx(i,j)=0
+                canhfx(i,j)=fire_atm_feedback*canhfx(i,j)*s
+                canqfx(i,j)=fire_atm_feedback*canqfx(i,j)*s
             enddo
           enddo
 
@@ -1365,6 +1371,7 @@ if(ifun.eq.6)then
         call write_array_m(ips,ipe,jps,jpe,ims,ime,jms,jme,grnhfx,'grnhfx',pid)
         call write_array_m(ips,ipe,jps,jpe,ims,ime,jms,jme,grnqfx,'grnqfx',pid)
         call write_array_m(ifps,ifpe,jfps,jfpe,ifms,ifme,jfms,jfme,fuel_frac,'fuel_frac',pid)
+        call write_array_m(ifps,ifpe,jfps,jfpe,ifms,ifme,jfms,jfme,can_fuel_frac,'can_fuel_frac',pid)
         call write_array_m(ifps,ifpe,jfps,jfpe,ifms,ifme,jfms,jfme,fgrnhfx,'fgrnhfx',pid)
         call write_array_m(ifps,ifpe,jfps,jfpe,ifms,ifme,jfms,jfme,fgrnqfx,'fgrnqfx',pid)
     endif
@@ -1815,6 +1822,27 @@ subroutine set_fp_from_grid(grid,fp)
 
 end subroutine set_fp_from_grid
 
+subroutine set_sfire_fields_from_grid(grid)
+
+    use module_fr_sfire_fields, only: cfb, can_top, can_bottom, can_bulk_density, can_fx_z0, can_fuel_burnt, surf_mass_frac_b, surf_mass_frac_c, surf_moisture_frac
+    
+    implicit none
+
+    type(domain),   intent(in)  :: grid
+
+    ! pointer to grid variable
+    cfb => grid%cfb
+    can_top => grid%can_top
+    can_bottom => grid%can_bottom
+    can_bulk_density => grid%can_bulk_density
+    can_fuel_burnt => grid%can_fuel_burnt
+    can_fx_z0 => grid%can_fx_z0
+    surf_mass_frac_b => grid%surf_mass_frac_b
+    surf_mass_frac_c => grid%surf_mass_frac_c
+    surf_moisture_frac => grid%surf_moisture_frac
+
+end subroutine set_sfire_fields_from_grid
+
 subroutine check_grid_alloc(grid,config_flags)
 
 ! check if needed arrays in grid are fully allocated
@@ -1837,6 +1865,7 @@ subroutine check_grid_alloc(grid,config_flags)
     call check_size(size(grid%tign_g),'tign_g')
     call check_size(size(grid%fire_area),'fire_area')
     call check_size(size(grid%fuel_frac),'fuel_frac')
+    call check_size(size(grid%can_fuel_frac),'can_fuel_frac')
     call check_size(size(grid%fuel_frac_burnt),'fuel_frac_burnt')
     call check_size(size(grid%lfn_out),'lfn_out')
     call check_size(size(grid%avg_fuel_frac),'avg_fuel_frac')
@@ -1923,11 +1952,20 @@ subroutine check_grid_alloc(grid,config_flags)
         call check_size(size(grid%rhof),'rhof')
         call check_size(size(grid%ffwidth),'ffwidth')
     endif
-
+    call check_size(size(grid%cfb),'cfb')
+    call check_size(size(grid%can_top),'can_top')
+    call check_size(size(grid%can_bottom),'can_bottom')
+    call check_size(size(grid%can_bulk_density),'can_bulk_density')
+    call check_size(size(grid%can_fuel_burnt),'can_fuel_burnt')
+    call check_size(size(grid%can_fx_z0),'can_fx_z0')
+    call check_size(size(grid%surf_mass_frac_b),'surf_mass_frac_b')
+    call check_size(size(grid%surf_mass_frac_c),'surf_mass_frac_c')
+    call check_size(size(grid%surf_moisture_frac),'surf_moisture_frac')
+    
 end subroutine check_grid_alloc
 
 subroutine check_size(sz,name,req)
-integer, intent(in)::sz
+    integer, intent(in)::sz
 integer, optional::req
 character(len=*), intent(in)::name
 character(len=128)::msg
