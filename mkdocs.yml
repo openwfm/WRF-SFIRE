@@ -1,7 +1,7 @@
 site_name: WRF-SFIRE
 site_url: https://WRF-SFIRE.readthedocs.io/en/latest/ 
-repo_url: https://github.com/openwfm/WRF-SFIRE 
-edit_uri: edit/master/docs/
+# repo_url: https://github.com/openwfm/WRF-SFIRE 
+# edit_uri: edit/master/docs/
 site_description: WRF-SFIRE Documentation
 theme:
   name: readthedocs
