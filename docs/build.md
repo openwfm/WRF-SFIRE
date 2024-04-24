@@ -1,27 +1,36 @@
-# For Contributors to the Docs
+# For Editors of the Docs
 
-## Build and view the docs locally 
-
-### Install mkdocs
-
-     conda create -n mkdocs -c conda-forge mkdocs mkdocstrings 
-     conda activate mkdocs
-     pip install markdown_include
-
-### Clone this repo and build the docs
+## Files
 
     git clone https://github.com/openwfm/WRF-SFIRE
     cd WRF-SFIRE
+
+* `.readthedocs.yaml` - configuration, do not change
+*  mkdocs.yml - configuration, do not change except for the last `nav` section 
+*  docs/requirements.in and docs/requirements.txt - configuration, do not change
+*  docs/*.md - Markdown files to edit 
+
+## View the docs
+
+The docs in the `master` branch of 
+[https://github.com/openwfm/WRF-SFIRE](https://github.com/openwfm/WRF-SFIRE)
+are displayed at [https://wrf-sfire.readthedocs.io](https://wrf-sfire.readthedocs.io) 
+
+You can preview the docs in your own copy or in other branches locally as follows. First install mkdocs (once):
+
+     conda create -n mkdocs python=3.12
+     conda activate mkdocs
+     pip install -r docs/requirements.txt
+
+Then, every time:
+
     conda activate mkdocs
     mkdocs build
 
-** All files paths below are relative to the directory WRF-SFIRE **
+and open the file site/index.html. This is far from perfect, though; if clicking on a link gives you a directory,
+open file index.html in that directory.
 
-### View the site
-
-Open the file `docs/index.html` in a web browser.
-
-##  How to write the docs
+##  How to edit 
 
 ### Make your own branch
 
@@ -34,32 +43,26 @@ branch and give it a name indicating this is a documentation change, such as `do
 
 ### Edit the docs
 
-Chapters are Markdown files in directory `docs`. Please stay close to the style of the files already there.
+Chapters are Markdown files in directory `docs`.
 The navigation bar on the left (or a pancake when viewing the site on a small screen) is created from the
-`nav:` section at the bottom of file `mkdocs.yml`. When you add a new Markdown file, add also a corresponding line there.
-
+`nav:` section at the bottom of file `mkdocs.yml`. When you add a new Markdown file, you need to add also a corresponding line there.
 
 ### Graphics
 
-You can link to graphics staged elsewhere. If you *must* have graphics files, you can put *small* graphics files only 
-in `docs/resources` and link to them locally.  Reduce the resolution of images and do not commit any high-resolution large files.
-Binary files like images  bloat the repository  size forever, even of they are replaced or deleted in later commits.
+Please reduce the resolution of images and do not commit any large files.
+Large binary files like images bloat the repository size forever, 
+even of they are replaced or deleted in later commits.
 
 ### Submit your changes
 
-Merge the branch you started from into your branch and resolve any conflicts. Then test the result. Merge again in case anything 
-changed in the meantime. If nothing changed, you can make a Github pull request to merge your changes in.
-
-
-
-
-
+Merge the branch you started from into your branch and resolve any conflicts. 
+Then test the result. Merge again in case anything 
+changed in the meantime. If nothing changed, you can make a pull request 
+on Github.
 
 ## Resources
 
 https://www.markdownguide.org
-
-
 
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
