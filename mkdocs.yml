@@ -22,4 +22,4 @@ markdown_extensions:
   - admonition
 nav:
     - Welcome: index.md
-    - Contributors: build.md
+    - For Editors: build.md
