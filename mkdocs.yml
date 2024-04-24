@@ -1,5 +1,6 @@
 site_name: WRF-SFIRE
 site_url: https://WRF-SFIRE.readthedocs.io/en/latest/ 
+# these lines make the "edit on Github button"
 # repo_url: https://github.com/openwfm/WRF-SFIRE 
 # edit_uri: edit/master/docs/
 site_description: WRF-SFIRE Documentation
