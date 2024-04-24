@@ -11,6 +11,7 @@ A mirror with a graphical log is at https://repo.or.cz/git-browser/by-commit.htm
 - [Regression Testing Introduction](#regression-testing-introduction)
 - [Code Quality](#code-quality)
 - [Version 1.0: Feature Highlights](#version-10-feature-highlights)
+- [Issues](#issues)
 - [Branches](#branches)
 - [How to run](#how-to-run)
 - [Notes](#notes)
@@ -166,6 +167,13 @@ Your contributions, such as code reviews, suggestions, and bug reports, are inva
 
 ## Miscellaneous
 - Write fuels data into fuels.m file (development feature)
+
+# Issues <a name="issues"></a>
+## Linking issues
+Link to issues always using:
+organization/repository#number
+For instance: `wirc-sjsu/WRF-SFIRE#4` or `openwfm/WRF-SFIRE#86`
+This will prevent linking to different issues in both organizations with the same number. Links created for commits dated before the issue seems to not cause a problem.
 
 # Branches <a name="branches"></a>
 * master, develop - the merged code.
