@@ -5,12 +5,15 @@
     git clone https://github.com/openwfm/WRF-SFIRE
     cd WRF-SFIRE
 
-* `.readthedocs.yaml` - configuration, do not change
-*  mkdocs.yml - configuration, do not change except for the last `nav` section 
-*  docs/requirements.in and docs/requirements.txt - configuration, do not change
-*  docs/*.md - Markdown files to edit 
+    .readthedocs.yaml`    # ReadTheDocs configuration file
+    mkdocs.yml            # MkDocs configuration file.
+    docs/
+         requirements.in  # PIP configuration file.
+         requirements.txt # PIP configuration file.
+         index.md         # The documentation homepage.
+         ...              # Other markdown pages, images and other files.
 
-## View the docs
+## Build the software 
 
 The docs in the `master` branch of 
 [https://github.com/openwfm/WRF-SFIRE](https://github.com/openwfm/WRF-SFIRE)
@@ -22,13 +25,22 @@ You can preview the docs in your own copy or in other branches locally as follow
      conda activate mkdocs
      pip install -r docs/requirements.txt
 
-Then, every time:
+## Commands
 
-    conda activate mkdocs
-    mkdocs build
+Every time:
+
+   conda activate mkdocs
+   mkdocs build  #  Build the documentation site.
 
 and open the file site/index.html. This is far from perfect, though; if clicking on a link gives you a directory,
 open file index.html in that directory.
+
+Other commands available:
+
+  mkdocs serve # Start the live-reloading docs server.
+  mkdocs -h    #  Print help message and exit.
+
+For full documentation visit [mkdocs.org](https://www.mkdocs.org).
 
 ##  How to edit 
 
