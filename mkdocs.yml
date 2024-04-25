@@ -23,4 +23,5 @@ markdown_extensions:
   - admonition
 nav:
     - Welcome: index.md
+    - How to get WRF-SFIRE: how_to_get.md
     - For Editors: build.md
