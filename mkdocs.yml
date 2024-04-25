@@ -22,6 +22,9 @@ markdown_extensions:
       base_path: .
   - admonition
 nav:
-    - Welcome: index.md
-    - How to get WRF-SFIRE: how_to_get.md
+    - WRF-SFIRE: index.md
+    - Overview: 01-overview.md
+    - Getting started: 
+        - Downloading the software: 02-downloading.md
+        - Building the software and running an ideal case: 03-building-ideal.md
     - For Editors: build.md
