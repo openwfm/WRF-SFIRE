@@ -739,33 +739,33 @@ do j=max(jds+1,jts),min(jte,jde-1)          ! safe distance from domain boundary
                  conv = avgw*1e3*mw_air/(rho(i,k1,j)*dz8w(i,k1,j))
 #ifdef WRF_CHEM
 
-               emis=co  (cat)*fuel_burnt + co(can_fuel_cat) * can_fuel_burnt(i, j)                                    ! emission from fire cell in g/m^2
+               emis=co  (cat)*fuel_burnt + co(can_fuel_cat) * can_fuel_burnt(i_f, j_f)                                    ! emission from fire cell in g/m^2
                t_chem(p_co) = t_chem(p_co) + emis                           ! add to total
                ! if(isnan(chem(i,k1,j,p_co  )))call crash('NaN before')
                chem(i,k1,j,p_co  )=chem(i,k1,j,p_co  ) + emis*conv*imw_co   ! add to chem
                ! if(isnan(chem(i,k1,j,p_co  )))call crash('NaN after')
 
-               emis=ch4  (cat)*fuel_burnt + ch4(can_fuel_cat) * can_fuel_burnt(i, j)                                   ! emission from fire cell in g/m^2
+               emis=ch4  (cat)*fuel_burnt + ch4(can_fuel_cat) * can_fuel_burnt(i_f, j_f)                                   ! emission from fire cell in g/m^2
                t_chem(p_ch4) = t_chem(p_ch4) + emis                           ! add to total
                chem(i,k1,j,p_ch4  )=chem(i,k1,j,p_ch4  ) + emis*conv*imw_ch4   ! add to chem
 
-               emis=h2  (cat)*fuel_burnt  + h2(can_fuel_cat) * can_fuel_burnt(i, j)                                  ! emission from fire cell in g/m^2
+               emis=h2  (cat)*fuel_burnt  + h2(can_fuel_cat) * can_fuel_burnt(i_f, j_f)                                  ! emission from fire cell in g/m^2
                t_chem(p_h2) = t_chem(p_h2) + emis                           ! add to total
                chem(i,k1,j,p_h2  )=chem(i,k1,j,p_h2  ) + emis*conv*imw_h2   ! add to chem
 
-               emis=no  (cat)*fuel_burnt + no(can_fuel_cat) * can_fuel_burnt(i, j)                                   ! emission from fire cell in g/m^2
+               emis=no  (cat)*fuel_burnt + no(can_fuel_cat) * can_fuel_burnt(i_f, j_f)                                   ! emission from fire cell in g/m^2
                t_chem(p_no) = t_chem(p_no) + emis                           ! add to total
                chem(i,k1,j,p_no  )=chem(i,k1,j,p_no  ) + emis*conv*imw_no   ! add to chem
 
-               emis=no2 (cat)*fuel_burnt + no2(can_fuel_cat) * can_fuel_burnt(i, j)                                   ! emission from fire cell in g/m^2
+               emis=no2 (cat)*fuel_burnt + no2(can_fuel_cat) * can_fuel_burnt(i_f, j_f)                                   ! emission from fire cell in g/m^2
                t_chem(p_no2) = t_chem(p_no2) + emis                         ! add to total
                chem(i,k1,j,p_no2 )=chem(i,k1,j,p_no2 ) + emis*conv*imw_no2  ! add to chem
 
-               emis=so2 (cat)*fuel_burnt + so2(can_fuel_cat) * can_fuel_burnt(i, j)                                   ! emission from fire cell in g/m^2
+               emis=so2 (cat)*fuel_burnt + so2(can_fuel_cat) * can_fuel_burnt(i_f, j_f)                                   ! emission from fire cell in g/m^2
                t_chem(p_so2) = t_chem(p_so2) + emis                         ! ads to total
                chem(i,k1,j,p_so2 )=chem(i,k1,j,p_so2 ) + emis*conv*imw_so2  ! add to chem
 
-               emis=nh3 (cat)*fuel_burnt + nh3(can_fuel_cat) * can_fuel_burnt(i, j)                                   ! emission from fire cell in g/m^2
+               emis=nh3 (cat)*fuel_burnt + nh3(can_fuel_cat) * can_fuel_burnt(i_f, j_f)                                   ! emission from fire cell in g/m^2
                t_chem(p_nh3) = t_chem(p_nh3) + emis                         ! add to total
                chem(i,k1,j,p_nh3 )=chem(i,k1,j,p_nh3 ) + emis*conv*imw_nh3  ! add to chem
 
@@ -776,127 +776,127 @@ do j=max(jds+1,jts),min(jte,jde-1)          ! safe distance from domain boundary
                ! same conversion factor but we will not divide by the molecular weight of the compound
                ! conv = avgw*1e6*mw_air/(rho(i,kds,j)*dz8w(i,kds,j)) 
 
-               emis=ald (cat)*fuel_burnt + ald(can_fuel_cat) * can_fuel_burnt(i, j)                                   ! emission from fire cell
+               emis=ald (cat)*fuel_burnt + ald(can_fuel_cat) * can_fuel_burnt(i_f, j_f)                                   ! emission from fire cell
                t_chem(p_ald) = t_chem(p_ald) + emis                         ! add to total
                chem(i,k1,j,p_ald )=chem(i,k1,j,p_ald )+emis*conv
 
-               emis=csl (cat)*fuel_burnt + csl(can_fuel_cat) * can_fuel_burnt(i, j)                                   ! emission from fire cell
+               emis=csl (cat)*fuel_burnt + csl(can_fuel_cat) * can_fuel_burnt(i_f, j_f)                                   ! emission from fire cell
                t_chem(p_csl) = t_chem(p_csl) + emis                         ! add to total
                chem(i,k1,j,p_csl )=chem(i,k1,j,p_csl )+emis*conv
 
-               emis=eth (cat)*fuel_burnt + eth(can_fuel_cat) * can_fuel_burnt(i, j)                                   ! emission from fire cell
+               emis=eth (cat)*fuel_burnt + eth(can_fuel_cat) * can_fuel_burnt(i_f, j_f)                                   ! emission from fire cell
                t_chem(p_eth) = t_chem(p_eth) + emis                         ! add to total
                chem(i,k1,j,p_eth )=chem(i,k1,j,p_eth )+emis*conv
 
-               emis=hc3 (cat)*fuel_burnt  + hc3(can_fuel_cat) * can_fuel_burnt(i, j)                                  ! emission from fire cell
+               emis=hc3 (cat)*fuel_burnt  + hc3(can_fuel_cat) * can_fuel_burnt(i_f, j_f)                                  ! emission from fire cell
                t_chem(p_hc3) = t_chem(p_hc3) + emis                         ! add to total
                chem(i,k1,j,p_hc3 )=chem(i,k1,j,p_hc3 )+emis*conv
 
-               emis=hc5 (cat)*fuel_burnt + hc5(can_fuel_cat) * can_fuel_burnt(i, j)                                   ! emission from fire cell
+               emis=hc5 (cat)*fuel_burnt + hc5(can_fuel_cat) * can_fuel_burnt(i_f, j_f)                                   ! emission from fire cell
                t_chem(p_hc5) = t_chem(p_hc5) + emis                         ! add to total
                chem(i,k1,j,p_hc5 )=chem(i,k1,j,p_hc5 )+emis*conv
 
-               emis=hcho (cat)*fuel_burnt + hcho(can_fuel_cat) * can_fuel_burnt(i, j)                                   ! emission from fire cell
+               emis=hcho (cat)*fuel_burnt + hcho(can_fuel_cat) * can_fuel_burnt(i_f, j_f)                                   ! emission from fire cell
                t_chem(p_hcho) = t_chem(p_hcho) + emis                         ! add to total
                chem(i,k1,j,p_hcho)=chem(i,k1,j,p_hcho)+emis*conv
 
-               emis=iso (cat)*fuel_burnt + iso(can_fuel_cat) * can_fuel_burnt(i, j)                                   ! emission from fire cell
+               emis=iso (cat)*fuel_burnt + iso(can_fuel_cat) * can_fuel_burnt(i_f, j_f)                                   ! emission from fire cell
                t_chem(p_iso) = t_chem(p_iso) + emis                         ! add to total
                chem(i,k1,j,p_iso )=chem(i,k1,j,p_iso )+emis*conv
 
-               emis=ket (cat)*fuel_burnt  + ket(can_fuel_cat) * can_fuel_burnt(i, j)                                  ! emission from fire cell
+               emis=ket (cat)*fuel_burnt  + ket(can_fuel_cat) * can_fuel_burnt(i_f, j_f)                                  ! emission from fire cell
                t_chem(p_ket) = t_chem(p_ket) + emis                         ! add to total
                chem(i,k1,j,p_ket )=chem(i,k1,j,p_ket )+emis*conv
 
-               emis=mgly (cat)*fuel_burnt + mgly(can_fuel_cat) * can_fuel_burnt(i, j)                                   ! emission from fire cell
+               emis=mgly (cat)*fuel_burnt + mgly(can_fuel_cat) * can_fuel_burnt(i_f, j_f)                                   ! emission from fire cell
                t_chem(p_mgly) = t_chem(p_mgly) + emis                         ! add to total
                chem(i,k1,j,p_mgly)=chem(i,k1,j,p_mgly)+emis*conv
 
-               emis=ol2 (cat)*fuel_burnt + ol2(can_fuel_cat) * can_fuel_burnt(i, j)                                   ! emission from fire cell
+               emis=ol2 (cat)*fuel_burnt + ol2(can_fuel_cat) * can_fuel_burnt(i_f, j_f)                                   ! emission from fire cell
                t_chem(p_ol2) = t_chem(p_ol2) + emis                         ! add to total
                chem(i,k1,j,p_ol2 )=chem(i,k1,j,p_ol2 )+emis*conv
 
-               emis=olt (cat)*fuel_burnt + olt(can_fuel_cat) * can_fuel_burnt(i, j)                                   ! emission from fire cell
+               emis=olt (cat)*fuel_burnt + olt(can_fuel_cat) * can_fuel_burnt(i_f, j_f)                                   ! emission from fire cell
                t_chem(p_olt) = t_chem(p_olt) + emis                         ! add to total
                chem(i,k1,j,p_olt )=chem(i,k1,j,p_olt )+emis*conv
 
-               emis=oli (cat)*fuel_burnt + oli(can_fuel_cat) * can_fuel_burnt(i, j)                                   ! emission from fire cell
+               emis=oli (cat)*fuel_burnt + oli(can_fuel_cat) * can_fuel_burnt(i_f, j_f)                                   ! emission from fire cell
                t_chem(p_oli) = t_chem(p_oli) + emis                         ! add to total
                chem(i,k1,j,p_oli )=chem(i,k1,j,p_oli )+emis*conv
 
-               emis=ora2 (cat)*fuel_burnt + ora2(can_fuel_cat) * can_fuel_burnt(i, j)                                   ! emission from fire cell
+               emis=ora2 (cat)*fuel_burnt + ora2(can_fuel_cat) * can_fuel_burnt(i_f, j_f)                                   ! emission from fire cell
                t_chem(p_ora2) = t_chem(p_ora2) + emis                         ! add to total
                chem(i,k1,j,p_ora2)=chem(i,k1,j,p_ora2)+emis*conv
 
-               emis=tol (cat)*fuel_burnt  + tol(can_fuel_cat) * can_fuel_burnt(i, j)                                  ! emission from fire cell
+               emis=tol (cat)*fuel_burnt  + tol(can_fuel_cat) * can_fuel_burnt(i_f, j_f)                                  ! emission from fire cell
                t_chem(p_tol) = t_chem(p_tol) + emis                         ! add to total
                chem(i,k1,j,p_tol )=chem(i,k1,j,p_tol )+emis*conv
 
-               emis=xyl (cat)*fuel_burnt  + xyl(can_fuel_cat) * can_fuel_burnt(i, j)                                  ! emission from fire cell
+               emis=xyl (cat)*fuel_burnt  + xyl(can_fuel_cat) * can_fuel_burnt(i_f, j_f)                                  ! emission from fire cell
                t_chem(p_xyl) = t_chem(p_xyl) + emis                         ! add to total
                chem(i,k1,j,p_xyl )=chem(i,k1,j,p_xyl )+emis*conv
 
-               emis=bigalk (cat)*fuel_burnt  + bigalk(can_fuel_cat) * can_fuel_burnt(i, j)                                  ! emission from fire cell
+               emis=bigalk (cat)*fuel_burnt  + bigalk(can_fuel_cat) * can_fuel_burnt(i_f, j_f)                                  ! emission from fire cell
                t_chem(p_bigalk) = t_chem(p_bigalk) + emis                         ! add to total
                chem(i,k1,j,p_bigalk )=chem(i,k1,j,p_bigalk )+emis*conv
 
-               emis=bigene (cat)*fuel_burnt + bigene(can_fuel_cat) * can_fuel_burnt(i, j)                                   ! emission from fire cell
+               emis=bigene (cat)*fuel_burnt + bigene(can_fuel_cat) * can_fuel_burnt(i_f, j_f)                                   ! emission from fire cell
                t_chem(p_bigene) = t_chem(p_bigene) + emis                         ! add to total
                chem(i,k1,j,p_bigene )=chem(i,k1,j,p_bigene )+emis*conv
 
-               emis=c10h16 (cat)*fuel_burnt + c10h16(can_fuel_cat) * can_fuel_burnt(i, j)                                   ! emission from fire cell
+               emis=c10h16 (cat)*fuel_burnt + c10h16(can_fuel_cat) * can_fuel_burnt(i_f, j_f)                                   ! emission from fire cell
                t_chem(p_c10h16) = t_chem(p_c10h16) + emis                         ! add to total
                chem(i,k1,j,p_c10h16 )=chem(i,k1,j,p_c10h16 )+emis*conv
 
-               emis=c2h4 (cat)*fuel_burnt + c2h4(can_fuel_cat) * can_fuel_burnt(i, j)                                   ! emission from fire cell
+               emis=c2h4 (cat)*fuel_burnt + c2h4(can_fuel_cat) * can_fuel_burnt(i_f, j_f)                                   ! emission from fire cell
                t_chem(p_c2h4) = t_chem(p_c2h4) + emis                         ! add to total
                chem(i,k1,j,p_c2h4 )=chem(i,k1,j,p_c2h4 )+emis*conv
 
-               emis=c2h5oh (cat)*fuel_burnt + c2h5oh(can_fuel_cat) * can_fuel_burnt(i, j)                                   ! emission from fire cell
+               emis=c2h5oh (cat)*fuel_burnt + c2h5oh(can_fuel_cat) * can_fuel_burnt(i_f, j_f)                                   ! emission from fire cell
                t_chem(p_c2h5oh) = t_chem(p_c2h5oh) + emis                         ! add to total
                chem(i,k1,j,p_c2h5oh )=chem(i,k1,j,p_c2h5oh )+emis*conv
 
-               emis=c2h6 (cat)*fuel_burnt + c2h6(can_fuel_cat) * can_fuel_burnt(i, j)                                   ! emission from fire cell
+               emis=c2h6 (cat)*fuel_burnt + c2h6(can_fuel_cat) * can_fuel_burnt(i_f, j_f)                                   ! emission from fire cell
                t_chem(p_c2h6) = t_chem(p_c2h6) + emis                         ! add to total
                chem(i,k1,j,p_c2h6 )=chem(i,k1,j,p_c2h6 )+emis*conv
 
-               emis=c3h6 (cat)*fuel_burnt + c3h6(can_fuel_cat) * can_fuel_burnt(i, j)                                   ! emission from fire cell
+               emis=c3h6 (cat)*fuel_burnt + c3h6(can_fuel_cat) * can_fuel_burnt(i_f, j_f)                                   ! emission from fire cell
                t_chem(p_c3h6) = t_chem(p_c3h6) + emis                         ! add to total
                chem(i,k1,j,p_c3h6 )=chem(i,k1,j,p_c3h6 )+emis*conv
 
-               emis=c3h8 (cat)*fuel_burnt + c3h8(can_fuel_cat) * can_fuel_burnt(i, j)                                   ! emission from fire cell
+               emis=c3h8 (cat)*fuel_burnt + c3h8(can_fuel_cat) * can_fuel_burnt(i_f, j_f)                                   ! emission from fire cell
                t_chem(p_c3h8) = t_chem(p_c3h8) + emis                         ! add to total
                chem(i,k1,j,p_c3h8 )=chem(i,k1,j,p_c3h8 )+emis*conv
 
-               emis=ch3cooh (cat)*fuel_burnt  + ch3cooh(can_fuel_cat) * can_fuel_burnt(i, j)                                  ! emission from fire cell
+               emis=ch3cooh (cat)*fuel_burnt  + ch3cooh(can_fuel_cat) * can_fuel_burnt(i_f, j_f)                                  ! emission from fire cell
                t_chem(p_ch3cooh) = t_chem(p_ch3cooh) + emis                         ! add to total
                chem(i,k1,j,p_ch3cooh )=chem(i,k1,j,p_ch3cooh )+emis*conv
 
-               emis=ch3oh (cat)*fuel_burnt+ ch3oh(can_fuel_cat) * can_fuel_burnt(i, j)                                    ! emission from fire cell
+               emis=ch3oh (cat)*fuel_burnt+ ch3oh(can_fuel_cat) * can_fuel_burnt(i_f, j_f)                                    ! emission from fire cell
                t_chem(p_ch3oh) = t_chem(p_ch3oh) + emis                         ! add to total
                chem(i,k1,j,p_ch3oh )=chem(i,k1,j,p_ch3oh )+emis*conv
 
-               emis=cres (cat)*fuel_burnt + cres(can_fuel_cat) * can_fuel_burnt(i, j)                                   ! emission from fire cell
+               emis=cres (cat)*fuel_burnt + cres(can_fuel_cat) * can_fuel_burnt(i_f, j_f)                                   ! emission from fire cell
                t_chem(p_cres) = t_chem(p_cres) + emis                         ! add to total
                chem(i,k1,j,p_cres )=chem(i,k1,j,p_cres )+emis*conv
 
-               emis=glyald (cat)*fuel_burnt + glyald(can_fuel_cat) * can_fuel_burnt(i, j)                                   ! emission from fire cell
+               emis=glyald (cat)*fuel_burnt + glyald(can_fuel_cat) * can_fuel_burnt(i_f, j_f)                                   ! emission from fire cell
                t_chem(p_glyald) = t_chem(p_glyald) + emis                         ! add to total
                chem(i,k1,j,p_glyald )=chem(i,k1,j,p_glyald )+emis*conv
 
-               emis=isopr (cat)*fuel_burnt  + isopr(can_fuel_cat) * can_fuel_burnt(i, j)                                  ! emission from fire cell
+               emis=isopr (cat)*fuel_burnt  + isopr(can_fuel_cat) * can_fuel_burnt(i_f, j_f)                                  ! emission from fire cell
                t_chem(p_isopr) = t_chem(p_isopr) + emis                         ! add to total
                chem(i,k1,j,p_isopr )=chem(i,k1,j,p_isopr )+emis*conv
 
-               emis=macr (cat)*fuel_burnt + macr(can_fuel_cat) * can_fuel_burnt(i, j)                                   ! emission from fire cell
+               emis=macr (cat)*fuel_burnt + macr(can_fuel_cat) * can_fuel_burnt(i_f, j_f)                                   ! emission from fire cell
                t_chem(p_macr) = t_chem(p_macr) + emis                         ! add to total
                chem(i,k1,j,p_macr )=chem(i,k1,j,p_macr )+emis*conv
 
-               emis=mek (cat)*fuel_burnt + mek(can_fuel_cat) * can_fuel_burnt(i, j)                                   ! emission from fire cell
+               emis=mek (cat)*fuel_burnt + mek(can_fuel_cat) * can_fuel_burnt(i_f, j_f)                                   ! emission from fire cell
                t_chem(p_mek) = t_chem(p_mek) + emis                         ! add to total
                chem(i,k1,j,p_mek )=chem(i,k1,j,p_mek )+emis*conv
 
-               emis=mvk (cat)*fuel_burnt + mvk(can_fuel_cat) * can_fuel_burnt(i, j)                                   ! emission from fire cell
+               emis=mvk (cat)*fuel_burnt + mvk(can_fuel_cat) * can_fuel_burnt(i_f, j_f)                                   ! emission from fire cell
                t_chem(p_mvk) = t_chem(p_mvk) + emis                         ! add to total
                chem(i,k1,j,p_mvk )=chem(i,k1,j,p_mvk )+emis*conv
 
@@ -907,83 +907,83 @@ do j=max(jds+1,jts),min(jte,jde-1)          ! safe distance from domain boundary
 
                conv = avgw*1e6/(rho(i,k1,j)*dz8w(i,k1,j))
 
-               emis=p25 (cat)*fuel_burnt + p25(can_fuel_cat) * can_fuel_burnt(i, j)                                   ! emission from fire cell
+               emis=p25 (cat)*fuel_burnt + p25(can_fuel_cat) * can_fuel_burnt(i_f, j_f)                                   ! emission from fire cell
                t_chem(p_p25) = t_chem(p_p25) + emis                         ! add to total
                chem(i,k1,j,p_p25 )=chem(i,k1,j,p_p25 )+emis*conv
 
-               emis=p25i (cat)*fuel_burnt + p25i(can_fuel_cat) * can_fuel_burnt(i, j)                                   ! emission from fire cell
+               emis=p25i (cat)*fuel_burnt + p25i(can_fuel_cat) * can_fuel_burnt(i_f, j_f)                                   ! emission from fire cell
                t_chem(p_p25i) = t_chem(p_p25i) + emis                         ! add to total
                chem(i,k1,j,p_p25i )=chem(i,k1,j,p_p25i )+emis*conv
 
-               emis=p25j (cat)*fuel_burnt  + p25j(can_fuel_cat) * can_fuel_burnt(i, j)                                  ! emission from fire cell
+               emis=p25j (cat)*fuel_burnt  + p25j(can_fuel_cat) * can_fuel_burnt(i_f, j_f)                                  ! emission from fire cell
                t_chem(p_p25j) = t_chem(p_p25j) + emis                         ! add to total
                chem(i,k1,j,p_p25j )=chem(i,k1,j,p_p25j )+emis*conv
 
-               emis=oc1  (cat)*fuel_burnt + oc1(can_fuel_cat) * can_fuel_burnt(i, j)                                   ! emission from fire cell
+               emis=oc1  (cat)*fuel_burnt + oc1(can_fuel_cat) * can_fuel_burnt(i_f, j_f)                                   ! emission from fire cell
                t_chem(p_oc1 ) = t_chem(p_oc1 ) + emis                         ! add to total
                chem(i,k1,j,p_oc1  )=chem(i,k1,j,p_oc1  )+emis*conv
 
-               emis=oc2  (cat)*fuel_burnt + oc2(can_fuel_cat) * can_fuel_burnt(i, j)                                   ! emission from fire cell
+               emis=oc2  (cat)*fuel_burnt + oc2(can_fuel_cat) * can_fuel_burnt(i_f, j_f)                                   ! emission from fire cell
                t_chem(p_oc2 ) = t_chem(p_oc2 ) + emis                         ! add to total
                chem(i,k1,j,p_oc2  )=chem(i,k1,j,p_oc2  )+emis*conv
 
-               emis=bc1  (cat)*fuel_burnt  + bc1(can_fuel_cat) * can_fuel_burnt(i, j)                                  ! emission from fire cell
+               emis=bc1  (cat)*fuel_burnt  + bc1(can_fuel_cat) * can_fuel_burnt(i_f, j_f)                                  ! emission from fire cell
                t_chem(p_bc1 ) = t_chem(p_bc1 ) + emis                         ! add to total
                chem(i,k1,j,p_bc1  )=chem(i,k1,j,p_bc1  )+emis*conv
 
-               emis=bc2  (cat)*fuel_burnt + bc2(can_fuel_cat) * can_fuel_burnt(i, j)                                   ! emission from fire cell
+               emis=bc2  (cat)*fuel_burnt + bc2(can_fuel_cat) * can_fuel_burnt(i_f, j_f)                                   ! emission from fire cell
                t_chem(p_bc2 ) = t_chem(p_bc2 ) + emis                         ! add to total
                chem(i,k1,j,p_bc2  )=chem(i,k1,j,p_bc2  )+emis*conv
 
-               emis=sulf  (cat)*fuel_burnt  + sulf(can_fuel_cat) * can_fuel_burnt(i, j)                                  ! emission from fire cell
+               emis=sulf  (cat)*fuel_burnt  + sulf(can_fuel_cat) * can_fuel_burnt(i_f, j_f)                                  ! emission from fire cell
                t_chem(p_sulf ) = t_chem(p_sulf ) + emis                         ! add to total
                chem(i,k1,j,p_sulf  )=chem(i,k1,j,p_sulf  )+emis*conv
 
-               emis=dms  (cat)*fuel_burnt  + dms(can_fuel_cat) * can_fuel_burnt(i, j)                                  ! emission from fire cell
+               emis=dms  (cat)*fuel_burnt  + dms(can_fuel_cat) * can_fuel_burnt(i_f, j_f)                                  ! emission from fire cell
                t_chem(p_dms ) = t_chem(p_dms ) + emis                         ! add to total
                chem(i,k1,j,p_dms  )=chem(i,k1,j,p_dms  )+emis*conv
 
-               emis=msa  (cat)*fuel_burnt + msa(can_fuel_cat) * can_fuel_burnt(i, j)                                   ! emission from fire cell
+               emis=msa  (cat)*fuel_burnt + msa(can_fuel_cat) * can_fuel_burnt(i_f, j_f)                                   ! emission from fire cell
                t_chem(p_msa ) = t_chem(p_msa ) + emis                         ! add to total
                chem(i,k1,j,p_msa  )=chem(i,k1,j,p_msa  )+emis*conv
 
-               emis=dust_1  (cat)*fuel_burnt  + dust_1(can_fuel_cat) * can_fuel_burnt(i, j)                                  ! emission from fire cell
+               emis=dust_1  (cat)*fuel_burnt  + dust_1(can_fuel_cat) * can_fuel_burnt(i_f, j_f)                                  ! emission from fire cell
                t_chem(p_dust_1 ) = t_chem(p_dust_1 ) + emis                         ! add to total
                chem(i,k1,j,p_dust_1  )=chem(i,k1,j,p_dust_1  )+emis*conv
 
-               emis=dust_2  (cat)*fuel_burnt + dust_2(can_fuel_cat) * can_fuel_burnt(i, j)                                   ! emission from fire cell
+               emis=dust_2  (cat)*fuel_burnt + dust_2(can_fuel_cat) * can_fuel_burnt(i_f, j_f)                                   ! emission from fire cell
                t_chem(p_dust_2 ) = t_chem(p_dust_2 ) + emis                         ! add to total
                chem(i,k1,j,p_dust_2  )=chem(i,k1,j,p_dust_2  )+emis*conv
 
-               emis=dust_3  (cat)*fuel_burnt  + dust_3(can_fuel_cat) * can_fuel_burnt(i, j)                                  ! emission from fire cell
+               emis=dust_3  (cat)*fuel_burnt  + dust_3(can_fuel_cat) * can_fuel_burnt(i_f, j_f)                                  ! emission from fire cell
                t_chem(p_dust_3 ) = t_chem(p_dust_3 ) + emis                         ! add to total
                chem(i,k1,j,p_dust_3  )=chem(i,k1,j,p_dust_3  )+emis*conv
 
-               emis=dust_4 (cat)*fuel_burnt + dust_4(can_fuel_cat) * can_fuel_burnt(i, j)                                   ! emission from fire cell
+               emis=dust_4 (cat)*fuel_burnt + dust_4(can_fuel_cat) * can_fuel_burnt(i_f, j_f)                                   ! emission from fire cell
                t_chem(p_dust_4 ) = t_chem(p_dust_4 ) + emis                         ! add to total
                chem(i,k1,j,p_dust_4  )=chem(i,k1,j,p_dust_4  )+emis*conv
 
-               emis=dust_5  (cat)*fuel_burnt + dust_5(can_fuel_cat) * can_fuel_burnt(i, j)                                   ! emission from fire cell
+               emis=dust_5  (cat)*fuel_burnt + dust_5(can_fuel_cat) * can_fuel_burnt(i_f, j_f)                                   ! emission from fire cell
                t_chem(p_dust_5 ) = t_chem(p_dust_5 ) + emis                         ! add to total
                chem(i,k1,j,p_dust_5  )=chem(i,k1,j,p_dust_5  )+emis*conv
 
-               emis=seas_1  (cat)*fuel_burnt + seas_1(can_fuel_cat) * can_fuel_burnt(i, j)                                   ! emission from fire cell
+               emis=seas_1  (cat)*fuel_burnt + seas_1(can_fuel_cat) * can_fuel_burnt(i_f, j_f)                                   ! emission from fire cell
                t_chem(p_seas_1 ) = t_chem(p_seas_1 ) + emis                         ! add to total
                chem(i,k1,j,p_seas_1  )=chem(i,k1,j,p_seas_1  )+emis*conv
 
-               emis=seas_2  (cat)*fuel_burnt + seas_2(can_fuel_cat) * can_fuel_burnt(i, j)                                   ! emission from fire cell
+               emis=seas_2  (cat)*fuel_burnt + seas_2(can_fuel_cat) * can_fuel_burnt(i_f, j_f)                                   ! emission from fire cell
                t_chem(p_seas_2 ) = t_chem(p_seas_2 ) + emis                         ! add to total
                chem(i,k1,j,p_seas_2  )=chem(i,k1,j,p_seas_2  )+emis*conv
 
-               emis=seas_3  (cat)*fuel_burnt + seas_3(can_fuel_cat) * can_fuel_burnt(i, j)                                   ! emission from fire cell
+               emis=seas_3  (cat)*fuel_burnt + seas_3(can_fuel_cat) * can_fuel_burnt(i_f, j_f)                                   ! emission from fire cell
                t_chem(p_seas_3 ) = t_chem(p_seas_3 ) + emis                         ! add to total
                chem(i,k1,j,p_seas_3  )=chem(i,k1,j,p_seas_3  )+emis*conv
 
-               emis=seas_4  (cat)*fuel_burnt + seas_4(can_fuel_cat) * can_fuel_burnt(i, j)                                   ! emission from fire cell
+               emis=seas_4  (cat)*fuel_burnt + seas_4(can_fuel_cat) * can_fuel_burnt(i_f, j_f)                                   ! emission from fire cell
                t_chem(p_seas_4 ) = t_chem(p_seas_4 ) + emis                         ! add to total
                chem(i,k1,j,p_seas_4  )=chem(i,k1,j,p_seas_4  )+emis*conv
 
-               emis=p10  (cat)*fuel_burnt  + p10(can_fuel_cat) * can_fuel_burnt(i, j)                                  ! emission from fire cell
+               emis=p10  (cat)*fuel_burnt  + p10(can_fuel_cat) * can_fuel_burnt(i_f, j_f)                                  ! emission from fire cell
                t_chem(p_p10 ) = t_chem(p_p10 ) + emis                         ! add to total
                chem(i,k1,j,p_p10  )=chem(i,k1,j,p_p10  )+emis*conv
 
@@ -996,41 +996,41 @@ do j=max(jds+1,jts),min(jte,jde-1)          ! safe distance from domain boundary
 
 #ifdef WRF_CHEM
                if (tracer_opt == 1) then
-                     emis=smoke (cat)*fuel_burnt + smoke(can_fuel_cat) * can_fuel_burnt(i, j)                                   ! emission from fire cell
+                     emis=smoke (cat)*fuel_burnt + smoke(can_fuel_cat) * can_fuel_burnt(i_f, j_f)                                   ! emission from fire cell
                      t_tracer(p_smoke) = t_tracer(p_smoke) + emis                         ! add to total
                      tracer(i,k1,j,p_smoke )=tracer(i,k1,j,p_smoke )+emis*conv
                endif
 #endif
                if (tracer_opt == 2) then
-                     emis=tr17_1 (cat)*fuel_burnt + tr17_1(can_fuel_cat) * can_fuel_burnt(i, j)                                   ! emission from fire cell
+                     emis=tr17_1 (cat)*fuel_burnt + tr17_1(can_fuel_cat) * can_fuel_burnt(i_f, j_f)                                   ! emission from fire cell
                      t_tracer(p_tr17_1) = t_tracer(p_tr17_1) + emis                         ! add to total
                      tracer(i,k1,j,p_tr17_1 )=tracer(i,k1,j,p_tr17_1 )+emis*conv
 
-                     emis=tr17_2 (cat)*fuel_burnt + tr17_2(can_fuel_cat) * can_fuel_burnt(i, j)                                   ! emission from fire cell
+                     emis=tr17_2 (cat)*fuel_burnt + tr17_2(can_fuel_cat) * can_fuel_burnt(i_f, j_f)                                   ! emission from fire cell
                      t_tracer(p_tr17_2) = t_tracer(p_tr17_2) + emis                         ! add to total
                      tracer(i,k1,j,p_tr17_2 )=tracer(i,k1,j,p_tr17_2 )+emis*conv
 
-                     emis=tr17_3 (cat)*fuel_burnt + tr17_3(can_fuel_cat) * can_fuel_burnt(i, j)                                   ! emission from fire cell
+                     emis=tr17_3 (cat)*fuel_burnt + tr17_3(can_fuel_cat) * can_fuel_burnt(i_f, j_f)                                   ! emission from fire cell
                      t_tracer(p_tr17_3) = t_tracer(p_tr17_3) + emis                         ! add to total
                      tracer(i,k1,j,p_tr17_3 )=tracer(i,k1,j,p_tr17_3 )+emis*conv
 
-                     emis=tr17_4 (cat)*fuel_burnt + tr17_4(can_fuel_cat) * can_fuel_burnt(i, j)                                   ! emission from fire cell
+                     emis=tr17_4 (cat)*fuel_burnt + tr17_4(can_fuel_cat) * can_fuel_burnt(i_f, j_f)                                   ! emission from fire cell
                      t_tracer(p_tr17_4) = t_tracer(p_tr17_4) + emis                         ! add to total
                      tracer(i,k1,j,p_tr17_4 )=tracer(i,k1,j,p_tr17_4 )+emis*conv
 
-                     emis=tr17_5 (cat)*fuel_burnt  + tr17_5(can_fuel_cat) * can_fuel_burnt(i, j)                                  ! emission from fire cell
+                     emis=tr17_5 (cat)*fuel_burnt  + tr17_5(can_fuel_cat) * can_fuel_burnt(i_f, j_f)                                  ! emission from fire cell
                      t_tracer(p_tr17_5) = t_tracer(p_tr17_5) + emis                         ! add to total
                      tracer(i,k1,j,p_tr17_5 )=tracer(i,k1,j,p_tr17_5 )+emis*conv
 
-                     emis=tr17_6 (cat)*fuel_burnt  + tr17_6(can_fuel_cat) * can_fuel_burnt(i, j)                                  ! emission from fire cell
+                     emis=tr17_6 (cat)*fuel_burnt  + tr17_6(can_fuel_cat) * can_fuel_burnt(i_f, j_f)                                  ! emission from fire cell
                      t_tracer(p_tr17_6) = t_tracer(p_tr17_6) + emis                         ! add to total
                      tracer(i,k1,j,p_tr17_6 )=tracer(i,k1,j,p_tr17_6 )+emis*conv
 
-                     emis=tr17_7 (cat)*fuel_burnt  + tr17_7(can_fuel_cat) * can_fuel_burnt(i, j)                                  ! emission from fire cell
+                     emis=tr17_7 (cat)*fuel_burnt  + tr17_7(can_fuel_cat) * can_fuel_burnt(i_f, j_f)                                  ! emission from fire cell
                      t_tracer(p_tr17_7) = t_tracer(p_tr17_7) + emis                         ! add to total
                      tracer(i,k1,j,p_tr17_7 )=tracer(i,k1,j,p_tr17_7 )+emis*conv
 
-                     emis=tr17_8 (cat)*fuel_burnt  + tr17_8(can_fuel_cat) * can_fuel_burnt(i, j)                                  ! emission from fire cell
+                     emis=tr17_8 (cat)*fuel_burnt  + tr17_8(can_fuel_cat) * can_fuel_burnt(i_f, j_f)                                  ! emission from fire cell
                      t_tracer(p_tr17_8) = t_tracer(p_tr17_8) + emis                         ! add to total
                      tracer(i,k1,j,p_tr17_8 )=tracer(i,k1,j,p_tr17_8 )+emis*conv
                 endif
