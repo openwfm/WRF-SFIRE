@@ -144,6 +144,10 @@ character(len=128)::msg
 logical:: freeze_fire
 real::fireline_mask=0.
 
+real:: te,diffLx,diffLy,diffRx,diffRy, & 
+   diffCx,diffCy,diff2x,diff2y,rr, &
+   advx,advy,scale,nvx,nvy,speed
+integer::upwind_err=0
 !*** executable
 
 call check_mesh_2dim(ifts-1,ifte+1,jfts-1,jfte+1,ifms,ifme,jfms,jfme)
@@ -255,6 +259,46 @@ elseif(ifun.eq.2)then
             ifms,ifme,jfms,jfme, &
             lfn,tign,fuel_time,time_start,fuel_frac,fire_area) !fuel_frac is global
           call check_lfn_tign('recomputed fuel fraction',time_start,ifts,ifte,jfts,jfte,ifms,ifme,jfms,jfme,lfn,tign)
+
+          ! Compute dummy ROS to get CFB for crown consumption in replay mode
+          do j=jfms,jfme
+            do i=ifms,ifme
+                ! one sided differences
+                diffRx = (lfn(i+1,j)-lfn(i,j))/fdx
+                diffLx = (lfn(i,j)-lfn(i-1,j))/fdx
+                diffRy = (lfn(i,j+1)-lfn(i,j))/fdy
+                diffLy = (lfn(i,j)-lfn(i,j-1))/fdy
+                diffCx = diffLx+diffRx   ! 	TWICE CENTRAL DIFFERENCE
+                diffCy = diffLy+diffRy
+        
+                !upwinding - select right or left derivative
+                select case(fire_upwinding)
+                case(0)  ! none
+                    grad=sqrt(diffCx**2 + diffCy**2)
+                case(1) ! standard
+                    diff2x=select_upwind(diffLx,diffRx)
+                    diff2y=select_upwind(diffLy,diffRy)
+                    grad=sqrt(diff2x*diff2x + diff2y*diff2y)
+                case(2) ! godunov per osher/fedkiw
+                    diff2x=select_godunov(diffLx,diffRx)
+                    diff2y=select_godunov(diffLy,diffRy)
+                    grad=sqrt(diff2x*diff2x + diff2y*diff2y)
+                case(3) ! eno
+                    diff2x=select_eno(diffLx,diffRx)
+                    diff2y=select_eno(diffLy,diffRy)
+                    grad=sqrt(diff2x*diff2x + diff2y*diff2y)
+                case(4) ! Sethian - twice stronger pushdown of bumps
+                    grad=sqrt(max(diffLx,0.)**2+min(diffRx,0.)**2   &
+                            + max(diffLy,0.)**2+min(diffRy,0.)**2)
+                case default
+                    grad=0.
+                    upwind_err=1
+                end select
+      
+                ! get rate of spread from wind speed and slope
+                rr = fire_rate_of_spread(diffCx, diffCy, i, j, fp, save_cfb=.true.)
+            enddo
+          enddo
         endif
 
 elseif(ifun.eq.3)then   ! ignition if so specified
