@@ -104,9 +104,9 @@ state    real     tempf     *i*j      fire        1         z    hr    "TEMPF"  
 state    real     rhof      *i*j      fire        1         z    hr    "RHOFF"    "surface air density"  "Pa"
 state    real     ffwidth   *i*j      fire        1         z    hr    "FFWIDTH"  "fire front width"  "m"
 state    real     cfb       *i*j      fire        1         z    hr    "CFB"  "canopy fraction burnt"  "1"
-state    real     can_fuel_frac *i*j  fire        1         z    hr    "CAN_FUEL_FRAC" "canopy fuel remaining" "1"
-state    real     can_fuel_burnt *i*j fire        1         z    hr    "CAN_FUEL_BURNT" "burning mass in canopy" "kg/m^2"
-state    real   surf_moisture_frac *i*j fire      1         z    hr   "SURF_MOISTURE_FRAC" "surface fuel moisture fraction" "1"
+state    real     can_fuel_frac *i*j  fire        1         z    i012hr    "CAN_FUEL_FRAC" "canopy fuel remaining" "1"
+state    real     can_fuel_burnt *i*j fire        1         z    i012hr    "CAN_FUEL_BURNT" "burning mass in canopy" "kg/m^2"
+state    real   surf_moisture_frac *i*j fire      1         z    i012hr   "SURF_MOISTURE_FRAC" "surface fuel moisture fraction" "1"
 
 # multi layer heat flux variable
 dimspec  nlay   -           constant=4      z    surf_heat_flux_layer
