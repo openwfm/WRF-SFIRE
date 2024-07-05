@@ -1302,7 +1302,7 @@ do j=jfts,jfte
    do i=ifts,ifte
      ! fuel category 
      k=int( nfuel_cat(i,j) )
-     if(k.ge.no_fuel_cat.and.k.le.no_fuel_cat2)then   ! no fuel 
+     if(k <= 0)then   ! no fuel 
         fp%fgip(i,j)=0.            ! no mass 
         fp%ischap(i,j)=0.
         fp%phisc(i,j)=0.          ! 
@@ -1317,7 +1317,8 @@ do j=jfts,jfte
         !     nerr=nerr+1
         ! endif
    
-        if(k.lt.1.or.k.gt.nfuelcats)then
+        ! crash if fuel_cat >= no_fuel_cat (ie max_fuel_cat)
+        if(k >= no_fuel_cat)then
 !$OMP CRITICAL(SFIRE_PHYS_CRIT)
             write(msg,'(3(a,i5))')'nfuel_cat(', i ,',',j,')=',k
             call message(msg,level=0)
@@ -1326,11 +1327,12 @@ do j=jfts,jfte
             endif
             write(msg,'(a,i5)')'nfuel_cat must between 1 and nfuel_cat=',nfuelcats
             call message(msg,level=0)
-            write(msg,'(a,i5,a,i10,a)')' or ',no_fuel_cat,' and',no_fuel_cat2,' for no fuel'
+            write(msg,'(a,i5,a,i10,a)')'or set it to 0 for no fuel'
             call message(msg,level=0)
 !$OMP END CRITICAL(SFIRE_PHYS_CRIT)
             call crash('set_fire_params: fuel category out of bounds')
         endif
+        
 
         fuel_time(i,j)=weight(k)/0.85 ! cell based
         
@@ -2136,7 +2138,8 @@ else if (k >= 1 .and. k < no_fuel_cat) then
         endif
 else 
   ! fuel category not supported
-  call crash("fire_ros: fuel categories not available")
+  write(msg,*) "fire_ros: fuel categories ", k, " at ", i, j, " not available"
+  call crash(msg)
 endif
 if(fire_grows_only.gt.0)then
 ros=max(ros,0.)
