@@ -2043,7 +2043,7 @@ else
     k = int(fp%nfuel_cat(i, j))
 endif
 
-if (k == no_fuel_cat) then
+if (k == 0) then
   ! Unburnable fuel
   ros = 0. 
 
