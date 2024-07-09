@@ -727,7 +727,7 @@ do j=max(jds+1,jts),min(jte,jde-1)          ! safe distance from domain boundary
                fuel_burnt = fgip(i_f,j_f) * fuel_frac_burnt(i_f,j_f) ! kg/m^2 
                cat = nfuel_cat(i_f, j_f)                       ! usually 1 to 13
 
-               if(cat.lt.no_fuel_cat)t_fuel(cat)=t_fuel(cat) + fuel_burnt
+               if(cat > 0 .and. cat <= nfuelcats) t_fuel(cat) = t_fuel(cat) + fuel_burnt
 
 
                !*** chem compounds emissions given in g/kg
@@ -1863,7 +1863,7 @@ real,intent(inout),dimension(ifms:ifme,jfms:jfme)::uf,vf
     do j = jfts,jfte
       do i = ifts,ifte
           k=int( nfuel_cat(i,j) )
-          if(k.lt.no_fuel_cat)then 
+          if(k <= nfuelcats) then 
               uf(i,j)=uf(i,j)*windrf(k)
               vf(i,j)=vf(i,j)*windrf(k)
           else
@@ -1923,10 +1923,10 @@ real::r
        do j=jfts,jfte
           do i=ifts,ifte
             k = int(nfuel_cat(i,j))
-            if(k.ge.no_fuel_cat.and.k.le.no_fuel_cat2)then ! no fuel
+            if(k == 0)then ! no fuel
                 fz0(i,j)=-1.
                 fwh(i,j)=-1.
-            elseif(k < 1 .or. k  > nfuelcats) then
+            elseif(k < 0 .or. k  > nfuelcats) then
 !$OMP CRITICAL(SFIRE_ATM_CRIT)
                  write(msg,*)'i,j,nfuel_cat,nfuelcats=',i,j,k,nfuelcats
 !$OMP END CRITICAL(SFIRE_ATM_CRIT)
@@ -1963,7 +1963,7 @@ real::r
        do j=jfts,jfte
           do i=ifts,ifte
             k = int(nfuel_cat(i,j))
-            if(k.lt.no_fuel_cat)then ! no fuel, interpolation does not matter
+            if(k > 0 .and. k <= nfuelcats) then ! no fuel, interpolation does not matter
                 fwh(i,j)=fcwh(k)
             else
                 fz0(i,j)=-1.
@@ -1989,7 +1989,7 @@ real::r
        do j=jfts,jfte
           do i=ifts,ifte
             k = int(nfuel_cat(i,j))
-            if(k.ne.no_fuel_cat)then ! no fuel, interpolation does not matter
+            if(k > 0 .and. k <= nfuelcats) then ! no fuel, interpolation does not matter
                 fwh(i,j)=fcwh(k)
             else
                 fz0(i,j)=-1.
@@ -2025,7 +2025,7 @@ real::r
        do j=jfts,jfte
           do i=ifts,ifte
             k = int(nfuel_cat(i,j))
-            if(k.ne.no_fuel_cat)then 
+            if(k > 0 .and. k <= nfuelcats)then 
                 fwh(i,j) = fz0(i,j) ** (1.-windrf(k)) * fire_wind_height ** windrf(k) ! GMD paper eq. (26)
 
                 if (.not. fz0(i,j) > 0. .or. .not. fwh(i,j) > fz0(i,j))then
@@ -2048,7 +2048,7 @@ real::r
        do j=jfts,jfte
           do i=ifts,ifte
             k = int(nfuel_cat(i,j))
-            if(k.lt.no_fuel_cat)then 
+            if(k > 0 .and. k <= nfuelcats)then 
                 r = log(fcwh(k)/fcz0(k))/log(fire_wind_height/fcz0(k))! GMD paper eq. (25)
                 fwh(i,j) = fz0(i,j) ** (1.-r) * fire_wind_height ** r ! GMD paper eq. (26)
 
@@ -2076,7 +2076,7 @@ real::r
       do j=jfts,jfte
          do i=ifts,ifte
            k = int(nfuel_cat(i,j))
-           if(k.ne.no_fuel_cat)then 
+           if(k > 0 .and. k <= nfuelcats)then 
                fwh(i,j) = fz0(i,j) ** (1.-windrf(k)) * fire_wind_height ** windrf(k) ! GMD paper eq. (26)
 
                if (.not. fz0(i,j) > 0. .or. .not. fwh(i,j) > fz0(i,j))then
@@ -2105,7 +2105,7 @@ real::r
        do j=jfts,jfte
           do i=ifts,ifte
             k = int(nfuel_cat(i,j))
-            if(k.lt.no_fuel_cat)then 
+            if(k > 0 .and. k <= nfuelcats)then 
               if (.not. fz0(i,j) > 0. .or. .not. fwh(i,j) > fz0(i,j))then
 !$OMP CRITICAL(SFIRE_ATM_CRIT)
                  write(msg,*)'i=',i,' j=',j,' fz0(i,j)=',fz0(i,j),' fwh(i,j)=',fwh(i,j)

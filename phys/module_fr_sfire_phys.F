@@ -1318,7 +1318,7 @@ do j=jfts,jfte
         ! endif
    
         ! crash if fuel_cat >= no_fuel_cat (ie max_fuel_cat)
-        if(k >= no_fuel_cat)then
+        if(k > nfuelcats)then
 !$OMP CRITICAL(SFIRE_PHYS_CRIT)
             write(msg,'(3(a,i5))')'nfuel_cat(', i ,',',j,')=',k
             call message(msg,level=0)
@@ -2049,7 +2049,7 @@ if (k == 0) then
   ! Unburnable fuel
   ros = 0. 
 
-else if (k >= 1 .and. k < no_fuel_cat) then
+else if (k > 0 .and. k <= nfuelcats) then
   ! available fuel category     
         ! make normal direction length 1 unless 0
         ! scale=sqrt(propx*propx+propy*propy)
