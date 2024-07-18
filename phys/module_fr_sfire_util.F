@@ -46,7 +46,8 @@ integer,save::          &
  fire_update_fuel_frac=1,& ! 1 normal, 2 burner
  fndwi_from_ndwi=1,     &  ! interpolate ndwi from atmosphere resolution
  kfmc_ndwi=0,           &   ! if>0 , number of the fuel moisture class to update from ndwi
- fire_can_top_read=1        ! canopy top height : 0 from wrfinput, 1 from namelist.fire (CAN_TOP)
+ fire_can_top_read=1,   &   ! canopy top height : 0 from wrfinput, 1 from namelist.fire (CAN_TOP)
+ fire_heat_flux_scheme=0    ! HF scheme selection : 0 BURNUP, 1 Multilayer BioSmoke, (todo: 2 FOFEM)
 
 real, save::            &
  fire_perimeter_time=0.,&  ! if >0, set lfn from tign until this time, and read tign_g in ideal

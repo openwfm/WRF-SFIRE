@@ -327,6 +327,7 @@ rconfig   real    fire_viscosity         namelist,fire         max_domains      
 rconfig   real    fire_lfn_ext_up        namelist,fire         max_domains           1.0     -      "fire_lfn_ext_up"   "0.=extend level set function at boundary by reflection, 1.=always up" "1"
 rconfig   integer fire_topo_from_atm     namelist,fire         max_domains            1      -      "fire_topo_from_atm" "0 = do nothing, 1 = populate ZSF by interpolating from atmosphere" "1"
 rconfig   integer fire_advection         namelist,fire         max_domains            1      -      "fire_advection" "0 = fire spread computed from normal wind speed/slope, 1 = fireline particle speed projected on normal" "0"
+rconfig   integer fire_heat_flux_scheme  namelist,fire         max_domains            0      -      "fire_heat_flux_scheme"    "HF scheme: 0 BURNUP, 1 Multilayer Biosmoke"   ""
 # canopy wind parameterization switches
 rconfig   integer fire_can_top_read      namelist,fire         max_domains            0      -      "fire_can_top_read"    "canopy top height: 1 use wrfinput, 0 from namelist.fire"   ""
 #

@@ -1152,6 +1152,7 @@ do ij=1,num_tiles
     call sfire_model (id,ifun,restart,replay,  &
         run_fuel_moisture,                      & ! if fuel moisture needs to be updated
         ifuelread,nfuel_cat0,                   & ! initialize fuel categories
+        config_flags%fire_heat_flux_scheme,     & ! heat flux scheme
         config_flags%fire_can_fuel_read,        & ! initialize canopy fuel data
         ifds,ifde,jfds,jfde,                    & ! fire domain dims
         ifms,ifme,jfms,jfme,                    & ! fire memory dims
@@ -1788,6 +1789,7 @@ fire_ignition_clamp     = config_flags%fire_ignition_clamp
 kfmc_ndwi               = config_flags%kfmc_ndwi
 fndwi_from_ndwi         = config_flags%fndwi_from_ndwi 
 fire_can_top_read       = config_flags%fire_can_top_read
+fire_heat_flux_scheme       = config_flags%fire_heat_flux_scheme
 end subroutine set_flags
 
 !

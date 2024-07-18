@@ -17,6 +17,7 @@ subroutine sfire_model (                    &
     restart,replay,                         & ! use existing state, prescribe spread
     run_fuel_moisture,                      & ! if need update fuel moisture in pass 4
     ifuelread,nfuel_cat0,                   & ! initialize fuel categories
+    hf_scheme_selection,                    & ! heat flux scheme
     i_fire_can_fuel_read,                   & ! initialize canopy fuel data
     ifds,ifde,jfds,jfde,                    & ! fire domain dims - the whole domain
     ifms,ifme,jfms,jfme,                    & ! fire memory dims - how declared
@@ -93,6 +94,7 @@ logical, intent(in):: replay                ! if true, use tign_g for level set
 logical, intent(in)::run_fuel_moisture      ! 
 ! scalar data
 integer, intent(in) :: ifuelread,nfuel_cat0 ! for set_fire_params
+integer, intent(in) :: hf_scheme_selection !< heat flux scheme selection flag
 integer, intent(in) :: i_fire_can_fuel_read !< source of data for canopy data
 integer, intent(in) :: ifds,ifde,jfds,jfde,&  ! fire domain bounds
         ifps,ifpe,jfps,jfpe                ! patch - nodes owned by this process
@@ -554,7 +556,8 @@ elseif (ifun.eq.6) then ! timestep postprocessing
         ifms,ifme,jfms,jfme,                      &
         ifts,ifte,jfts,jfte,                      &
         ifms,ifme,jfms,jfme,                      &  ! fuel_frac_burned has standard memory dimensions
-        fp%fgip,                                     &
+        hf_scheme_selection,       &
+        fp%fgip,                                  &
         fuel_frac_burnt,                          & !
         fgrnhfx,fgrnqfx, &  ! out: surface + canopy heat fluxes
         fire_area, &        ! in: fire area
