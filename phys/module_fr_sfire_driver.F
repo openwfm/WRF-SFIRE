@@ -98,7 +98,7 @@ implicit none
 
 private
 public sfire_driver_em,use_atm_vars,set_flags, &
-       set_fp_from_grid, fire_ignition_convert, set_sfire_fields_from_grid
+       set_fp_from_grid, fire_ignition_convert
 public ifun_beg, ifun_step, ifun_end
 
 logical:: use_atm_vars=.true.   !  interpolate wind from atm mesh and average output fluxes back
@@ -129,7 +129,7 @@ subroutine sfire_driver_em ( grid , config_flags                    &
 
 !*** purpose: driver from grid structure
 
-
+    use module_fr_sfire_fields, only: set_sfire_fields_from_grid
 
     implicit none
 !*** arguments
@@ -1152,7 +1152,7 @@ do ij=1,num_tiles
     call sfire_model (id,ifun,restart,replay,  &
         run_fuel_moisture,                      & ! if fuel moisture needs to be updated
         ifuelread,nfuel_cat0,                   & ! initialize fuel categories
-        config_flags%fire_heat_flux_scheme,     & ! heat flux scheme
+        config_flags%hfx_scheme,                & ! heat flux scheme
         config_flags%fire_can_fuel_read,        & ! initialize canopy fuel data
         ifds,ifde,jfds,jfde,                    & ! fire domain dims
         ifms,ifme,jfms,jfme,                    & ! fire memory dims
@@ -1789,7 +1789,8 @@ fire_ignition_clamp     = config_flags%fire_ignition_clamp
 kfmc_ndwi               = config_flags%kfmc_ndwi
 fndwi_from_ndwi         = config_flags%fndwi_from_ndwi 
 fire_can_top_read       = config_flags%fire_can_top_read
-fire_heat_flux_scheme       = config_flags%fire_heat_flux_scheme
+hfx_scheme              = config_flags%hfx_scheme
+mlhfx_dim                = config_flags%mlhfx_dim
 end subroutine set_flags
 
 !
@@ -1823,27 +1824,6 @@ subroutine set_fp_from_grid(grid,fp)
     fp%ffwidth => grid%ffwidth     ! fire front width 
 
 end subroutine set_fp_from_grid
-
-subroutine set_sfire_fields_from_grid(grid)
-
-    use module_fr_sfire_fields, only: cfb, can_top, can_bottom, can_bulk_density, can_fx_z0, can_fuel_burnt, surf_mass_frac_b, surf_mass_frac_c, surf_moisture_frac
-    
-    implicit none
-
-    type(domain),   intent(in)  :: grid
-
-    ! pointer to grid variable
-    cfb => grid%cfb
-    can_top => grid%can_top
-    can_bottom => grid%can_bottom
-    can_bulk_density => grid%can_bulk_density
-    can_fuel_burnt => grid%can_fuel_burnt
-    can_fx_z0 => grid%can_fx_z0
-    surf_mass_frac_b => grid%surf_mass_frac_b
-    surf_mass_frac_c => grid%surf_mass_frac_c
-    surf_moisture_frac => grid%surf_moisture_frac
-
-end subroutine set_sfire_fields_from_grid
 
 subroutine check_grid_alloc(grid,config_flags)
 
@@ -1963,6 +1943,7 @@ subroutine check_grid_alloc(grid,config_flags)
     call check_size(size(grid%surf_mass_frac_b),'surf_mass_frac_b')
     call check_size(size(grid%surf_mass_frac_c),'surf_mass_frac_c')
     call check_size(size(grid%surf_moisture_frac),'surf_moisture_frac')
+    call check_size(size(grid%mlhfx_consum_rate),'mlhfx_consum_rate')
     
 end subroutine check_grid_alloc
 

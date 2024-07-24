@@ -77,6 +77,8 @@ subroutine sfire_model (                    &
 !    
 ! enddo
 
+use module_fr_sfire_fields, only: read_mlhf_data
+
 implicit none
 
 !*** arguments
@@ -238,6 +240,12 @@ elseif(ifun.eq.2)then
             fdx,fdy,nfuel_cat0,  &
             nfuel_cat,fuel_time, &
             fp) 
+        
+        ! Import data for heat flux scheme if necessary
+        select case(hf_scheme_selection)
+        case(1) ! MLHF Biosmoke
+            call read_mlhf_data()
+        end select
 
         ! initialize model state to no fire / set tign_in
         if(.not.restart)then

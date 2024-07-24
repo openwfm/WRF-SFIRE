@@ -8,14 +8,12 @@
 module module_fr_sfire_atm
 
 use module_model_constants, only: cp,xlv,g
-use module_fr_sfire_phys, only: fire_wind_height,have_fuel_cats,fcz0,fcwh,nfuelcats,no_fuel_cat,no_fuel_cat2,windrf,itree,fueldepthm,mfuelcats
+use module_fr_sfire_phys, only: fire_wind_height,have_fuel_cats,fcz0,fcwh,nfuelcats,no_fuel_cat,no_fuel_cat2,windrf,itree,fueldepthm,mfuelcats,fuel_name
 use module_fr_sfire_util
 USE module_dm , only : wrf_dm_sum_reals
 
 
-use module_fr_sfire_phys, only:  mfuelcats, nfuelcats    ! for emissions
 USE module_state_description, only: num_tracer
-use module_fr_sfire_phys, only: fuel_name
 
 #ifdef WRF_CHEM
 USE module_state_description, only: num_chem

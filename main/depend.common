@@ -918,16 +918,17 @@ module_fr_sfire_driver_wrf.o: \
 
 module_fr_sfire_atm.o: \
 		../share/module_model_constants.o  \
-		module_fr_sfire_util.o 
+		module_fr_sfire_util.o \
+		module_fr_sfire_phys.o
 
 module_fr_sfire_model.o: \
-	        module_fr_sfire_core.o \
-                module_fr_sfire_phys.o \
+		module_fr_sfire_core.o \
+		module_fr_sfire_phys.o \
 		module_fr_sfire_util.o 
 
 module_fr_sfire_core.o: \
 		module_fr_sfire_util.o \
-	        module_fr_sfire_phys.o 
+		module_fr_sfire_phys.o 
 
 module_fr_sfire_phys.o: \
 		../share/module_model_constants.o  \
@@ -937,11 +938,13 @@ module_fr_sfire_phys.o: \
 ifdef USE_STARFIRE
 module_fr_sfire_phys.o: \
 	module_fr_starfire_phys.o
-module_fr_starfire_phys.o: \
+	module_fr_starfire_phys.o: \
 	module_fr_sfire_fields.o
 endif
 
-module_fr_sfire_fields.o: 
+module_fr_sfire_fields.o: \
+	module_fr_sfire_util.o 
+
 
 module_fire_debug_output.o: \
 	        ../frame/module_domain.o \

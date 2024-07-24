@@ -25,39 +25,40 @@ module module_fr_sfire_util
 !                                  pi2            ! 2*pi
 implicit none
 
-integer,save::          &
- fire_print_msg=1,      &  ! print SFIRE progress 
- fire_print_file=1,     &  ! write many files by write_array_m; compile with DEBUG_OUT, do not run in parallel
- fuel_left_method=1,    &  ! 1=simple, 2=exact in linear case
- fuel_left_irl=2,       &  ! refinement for fuel calculation, must be even
- fuel_left_jrl=2,       &  ! currently, 2 only supported
- boundary_guard=-1,     &  ! crash if fire gets this many cells to domain boundary, -1=off
- fire_grows_only=1,     &  ! fire can spread out only (level set functions may not increase)
- fire_upwinding=3,      &  ! upwind normal spread: 1=standard, 2=godunov, 3=eno, 4=sethian 
- fire_test_steps=0,     &  ! 0=no fire, 1=normal, >1 = do specified number of steps and terminate (testing only)
- fire_topo_from_atm=1,  &  ! 0 = expect ZSF set correctly on entry, 1 = populate by interploating from atmosphere
- fire_advection=0,      &  ! 0 = fire spread from normal wind/slope (CAWFE), 1 = full speed projected
- fire_wind_log_interp=4,&  ! kind of vertical log layer wind interpolation, see driver
- fire_use_windrf=0,     &  ! if fire_wind_log_interp.ne.4: 0=ignore wind reduction factors, 1=multiply, 2=use to set fwh
- fire_fmc_read=1,       &  ! fuel moisture: 0 from wrfinput, 1 from namelist.fire, 2 read from file in ideal 
- fire_ignition_clamp=0, &  ! if 1, clamp ignition to grid points
- fire_hfx_given=0,      &  ! "0=no, run normally, 1=from wrfinput, 2=from file input_hfx in ideal, 4=by parameters" ""
- fire_hfx_num_lines=1,  &     ! number of heatflux parameter sets defining the heaflux lines (must be 1) 
- fire_update_fuel_frac=1,& ! 1 normal, 2 burner
- fndwi_from_ndwi=1,     &  ! interpolate ndwi from atmosphere resolution
- kfmc_ndwi=0,           &   ! if>0 , number of the fuel moisture class to update from ndwi
- fire_can_top_read=1,   &   ! canopy top height : 0 from wrfinput, 1 from namelist.fire (CAN_TOP)
- fire_heat_flux_scheme=0    ! HF scheme selection : 0 BURNUP, 1 Multilayer BioSmoke, (todo: 2 FOFEM)
+integer,save::              &
+ fire_print_msg=1,          &   ! print SFIRE progress 
+ fire_print_file=1,         &   ! write many files by write_array_m; compile with DEBUG_OUT, do not run in parallel
+ fuel_left_method=1,        &   ! 1=simple, 2=exact in linear case
+ fuel_left_irl=2,           &   ! refinement for fuel calculation, must be even
+ fuel_left_jrl=2,           &   ! currently, 2 only supported
+ boundary_guard=-1,         &   ! crash if fire gets this many cells to domain boundary, -1=off
+ fire_grows_only=1,         &   ! fire can spread out only (level set functions may not increase)
+ fire_upwinding=3,          &   ! upwind normal spread: 1=standard, 2=godunov, 3=eno, 4=sethian 
+ fire_test_steps=0,         &   ! 0=no fire, 1=normal, >1 = do specified number of steps and terminate (testing only)
+ fire_topo_from_atm=1,      &   ! 0 = expect ZSF set correctly on entry, 1 = populate by interploating from atmosphere
+ fire_advection=0,          &   ! 0 = fire spread from normal wind/slope (CAWFE), 1 = full speed projected
+ fire_wind_log_interp=4,    &   ! kind of vertical log layer wind interpolation, see driver
+ fire_use_windrf=0,         &   ! if fire_wind_log_interp.ne.4: 0=ignore wind reduction factors, 1=multiply, 2=use to set fwh
+ fire_fmc_read=1,           &   ! fuel moisture: 0 from wrfinput, 1 from namelist.fire, 2 read from file in ideal 
+ fire_ignition_clamp=0,     &   ! if 1, clamp ignition to grid points
+ fire_hfx_given=0,          &   ! "0=no, run normally, 1=from wrfinput, 2=from file input_hfx in ideal, 4=by parameters" ""
+ fire_hfx_num_lines=1,      &   ! number of heatflux parameter sets defining the heaflux lines (must be 1) 
+ fire_update_fuel_frac=1,   &   ! 1 normal, 2 burner
+ fndwi_from_ndwi=1,         &   ! interpolate ndwi from atmosphere resolution
+ kfmc_ndwi=0,               &   ! if>0 , number of the fuel moisture class to update from ndwi
+ fire_can_top_read=1,       &   ! canopy top height : 0 from wrfinput, 1 from namelist.fire (CAN_TOP)
+ hfx_scheme=0,              &   !> HFX scheme selection : 0 BURNUP, 1 Multilayer BioSmoke (MLHFX), (todo: 2 FOFEM)
+ mlhfx_dim=384                  !> Max dimension of MLHFX fuel consumption data
 
-real, save::            &
- fire_perimeter_time=0.,&  ! if >0, set lfn from tign until this time, and read tign_g in ideal
- fire_tign_in_time=0.,  &  ! if >0, set ignition time from tign_in until this time, and read tign_in in ideal
- fire_atm_feedback=1. , &  ! 1 = normal, 0. = one way coupling atmosphere -> fire only
- fire_back_weight=0.5,  &  ! RK parameter, 0 = Euler method, 0.5 = Heun, 1 = fake backward Euler
- fire_viscosity=0.4,    &  ! artificial viscosity
- fire_lfn_ext_up=1,     &  ! 0.=extend level set function at boundary by reflection, 1.=always up
- fire_hfx_value=0.,     &  ! heat flux value specified when given by parameterst flux value specified when given by parameters:w
- fire_hfx_latent_part=0.084   ! proportion of the given heat flux released as latent, the rest is sensible
+real, save::                &
+ fire_perimeter_time=0.,    &   ! if >0, set lfn from tign until this time, and read tign_g in ideal
+ fire_tign_in_time=0.,      &   ! if >0, set ignition time from tign_in until this time, and read tign_in in ideal
+ fire_atm_feedback=1. ,     &   ! 1 = normal, 0. = one way coupling atmosphere -> fire only
+ fire_back_weight=0.5,      &   ! RK parameter, 0 = Euler method, 0.5 = Heun, 1 = fake backward Euler
+ fire_viscosity=0.4,        &   ! artificial viscosity
+ fire_lfn_ext_up=1,         &   ! 0.=extend level set function at boundary by reflection, 1.=always up
+ fire_hfx_value=0.,         &   ! heat flux value specified when given by parameterst flux value specified when given by parameters:w
+ fire_hfx_latent_part=0.084 ! proportion of the given heat flux released as latent, the rest is sensible
 
 
 integer, parameter:: REAL_SUM=10, REAL_MAX=20, REAL_MIN=21, REAL_AMAX=22, RNRM_SUM=30, RNRM_MAX=40
