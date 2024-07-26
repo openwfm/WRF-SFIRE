@@ -8,8 +8,9 @@
 
 module module_fr_sfire_core
 
-use module_fr_sfire_phys, only: fire_params , fire_ros, fire_rate_of_spread
+use module_fr_sfire_phys, only: fire_ros, fire_rate_of_spread
 use module_fr_sfire_util
+use module_fr_sfire_fields, only: fire_params
 
 implicit none
 

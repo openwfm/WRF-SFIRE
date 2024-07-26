@@ -1914,6 +1914,54 @@ enddo
 #endif
 end subroutine sfire_debug_hook
 
+
+!------------------------------------------------------------------------------------------------------------------
+! FUNCTION: interpolate_linear_1d
+!>   Linear interpolation of 1D data
+!!
+!! Interpolation for MLHFX scheme
+!------------------------------------------------------------------------------------------------------------------
+real function interpolate_linear_1d(data_array, t_interp, n_max)
+
+  implicit none
+
+  ! 0. Declaration
+  !    ===========
+  
+  ! 0.1 Arguments
+  real, dimension(:, :),  intent(in   )  :: data_array  !< array of size (N, 2) containing time and data
+  real,                   intent(in   )  :: t_interp    !< interpolation time [s]
+  integer,                intent(in   )  :: n_max       !< max index for interpolation (n_max <= N)
+
+  ! 0.2 Locals
+  integer :: i
+  real :: t1, t2, y1, y2
+
+  ! Check if t_interp is out of bounds
+  if (t_interp <= 0.0 .or. t_interp > data_array(n_max, 1)) then
+    interpolate_linear_1d = 0.0
+      return
+  end if
+
+  ! Find the interval [t1, t2] that contains t_inter
+  do i = 1, n_max-1
+    t1 = data_array(i, 1)
+    t2 = data_array(i+1, 1)
+    if (t_interp >= t1 .and. t_interp <= t2) then
+      y1 = data_array(i, 2)
+      y2 = data_array(i+1, 2)
+      ! Perform linear interpolation
+      interpolate_linear_1d = y1 + (t_interp - t1) * (y2 - y1) / (t2 - t1)
+      return
+    end if
+  end do
+
+  ! If no interval is found (shouldn't happen), return 0
+  interpolate_linear_1d = 0.0
+
+end function interpolate_linear_1d
+
+
 end module module_fr_sfire_util
 
 ! this subroutine is outside of any module and f77 style because some debuggers

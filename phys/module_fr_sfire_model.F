@@ -77,7 +77,7 @@ subroutine sfire_model (                    &
 !    
 ! enddo
 
-use module_fr_sfire_fields, only: read_mlhf_data
+use module_fr_sfire_fields, only: read_mlhf_data, initialize_sfire_fields
 
 implicit none
 
@@ -220,10 +220,7 @@ elseif(ifun.eq.2)then
             fp%zsf,nfuel_cat)            ! better not use the extrapolated zsf!!
         
         ! set default value for sfire fields
-        call initialize_sfire_fields( &
-            ifms, ifme, jfms, jfme,   &
-            ifts, ifte, jfts, jfte,   &
-            nfuel_cat                 )
+        call initialize_sfire_fields()
             
         ! Initialize canopy fuel data
         call set_canopy_data(               &

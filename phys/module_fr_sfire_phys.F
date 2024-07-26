@@ -26,10 +26,7 @@ integer, public:: behave_msglevel=2               ! prints in fire_ros_behave, 0
 ! subroutines and functions 
 PUBLIC:: init_fuel_cats,fire_ros,heat_fluxes,set_nfuel_cat,set_fire_params, &
 write_fuels_m,fire_risk,fire_intensity,fuel_moisture,advance_moisture,fuel_name,&
-fire_rate_of_spread, set_canopy_data, initialize_sfire_fields
-
-! types
-public:: fire_params
+fire_rate_of_spread, set_canopy_data
 
 ! variables
 PUBLIC:: fire_wind_height,fcz0,fcwh,have_fuel_cats,nfuelcats, &
@@ -201,9 +198,6 @@ PUBLIC:: mfuelcats
       0.8989217, 3.1451051, 3.7055301, 0.       , &
       1.5714317, 5.1648768, 6.2879685, 0.        /), &
       shape(fuel_load_layers_hf), order=(/2, 1/)) !< fuel load for each fuel class and for each size class [kg m-2]
-  real, dimension(n_layer_hf_surf), save  :: layer_burn_time_b  !< biomass burn time for 1h, 10h, 100h, and live fuel [s]
-  real, dimension(n_layer_hf_surf), save  :: layer_burn_time_c  !< char burn time for 1h, 10h, 100h, and live fuel [s]
-  real, dimension(n_layer_hf_surf), save  :: layer_char_fraction  !< char fraction for 1h, 10h, 100h, and live fuel [-] 
 ! =============================================================================
 ! Standard 13 fire behavior fuel models (for surface fires), along with some
 !          estimated canopy properties (for crown fire).
@@ -292,10 +286,6 @@ PUBLIC:: mfuelcats
    DATA tree_z_max / 10., 20., 15., 24., 22.5, 10., 2.2, 0.73 /         ! canopy top height as function of tree type [m]
    DATA tree_z_min / 3. , 6. , 5. , 12., 10. , 5. , 1.,  0.73 /         ! canopy bottom height as function of tree type [m]
    DATA tree_burn_time / 10. , 10. , 10. , 10., 10. , 10. , 10., 10. /  ! canopy burning time function of tree type [m]
-   
-   DATA layer_burn_time_b / 7., 500., 3600., 900. /   ! burn time for biomass [s]
-   DATA layer_burn_time_c / 7., 500., 3600., 900. /   ! burn time for char [s]
-   DATA layer_char_fraction / 0.2, 0.3, 0.4, 0.5 / ! char fraction [-]
    ! =========================================================================
 
   logical, save :: have_fuel_cats=.false.
@@ -767,7 +757,7 @@ namelist /fuel_categories/ fuel_name,windrf,fgi,fueldepthm,savr, &
     adjr0,adjrw,adjrs,fmc_gw01,fmc_gw02,fmc_gw03,fmc_gw04,fmc_gw05,fmc_gw06, &
     savr_gc01,savr_gc02,savr_gc03,savr_gc04,savr_gc05,savr_gc06, &
     fuelload_gc01,fuelload_gc02,fuelload_gc03,fuelload_gc04,fuelload_gc05,fuelload_gc06, &
-    is_dead, k_tc, tree_z_min, tree_z_max, tree_burn_time, layer_burn_time_b, layer_burn_time_c, layer_char_fraction, fuel_load_layers_hf
+    is_dead, k_tc, tree_z_min, tree_z_max, tree_burn_time, fuel_load_layers_hf
 
 namelist /moisture/ moisture_classes,drying_lag,wetting_lag,saturation_moisture,saturation_rain,rain_threshold, &
     drying_model,wetting_model,moisture_class_name,fmc_gc_initialization,is_dead
@@ -901,9 +891,6 @@ call wrf_dm_bcast_integer(fmc_gc_initialization,     max_moisture_classes)
 call wrf_dm_bcast_integer(is_dead,     max_moisture_classes)
 call wrf_dm_bcast_real(fmc_gw,     mfuelcats*max_moisture_classes)
 call wrf_dm_bcast_real(fuel_load_layers_hf, n_fuel_cat_A13*n_layer_hf_surf)
-call wrf_dm_bcast_real(layer_burn_time_b, n_layer_hf_surf)
-call wrf_dm_bcast_real(layer_burn_time_c, n_layer_hf_surf)
-call wrf_dm_bcast_real(layer_char_fraction, n_layer_hf_surf)
 
 ! moisture model derived scalars
 do i=1,moisture_classes
@@ -1529,66 +1516,65 @@ end subroutine heat_fluxes
 !!  Compute ground sensible and latent heat fluxes  
 !------------------------------------------------------------------------------------------------------------------
 subroutine heat_fluxes_surf(dt,fp,          &
-    ifms, ifme, jfms, jfme,                   &
-    ifts, ifte, jfts, jfte,                   &
-    iffs, iffe, jffs, jffe,                   &
-    hf_scheme_selection,                      &
-    fgip, fuel_frac_burnt,                    & 
-    grnhft, grnqft, fire_area                 )
-    
-    use module_fr_sfire_fields, only: surf_mass_frac_b, surf_mass_frac_c, surf_moisture_frac
-    
-    implicit none
-    
-    ! 0. Declaration
-    !    ===========
-    
-    type(fire_params),  intent(in   )  :: fp !< fire params
-    real,               intent(in   )  :: dt !< the fire time step [s]
-    
-    integer,  intent(in   )  :: ifts  !< fire tile start index x axis
-    integer,  intent(in   )  :: ifte  !< fire tile end   index x axis
-    integer,  intent(in   )  :: jfts  !< fire tile start index y axis
-    integer,  intent(in   )  :: jfte  !< fire tile end   index y axis
-    
-    integer,  intent(in   )  :: ifms  !< fire mesh start index x axis
-    integer,  intent(in   )  :: ifme  !< fire mesh end   index x axis
-    integer,  intent(in   )  :: jfms  !< fire mesh start index y axis
-    integer,  intent(in   )  :: jfme  !< fire mesh end   index y axis
-    
-    integer,  intent(in   )  :: iffs  !< fire fuel frac burnt start index x axis
-    integer,  intent(in   )  :: iffe  !< fire fuel frac burnt end   index x axis
-    integer,  intent(in   )  :: jffs  !< fire fuel frac burnt start index y axis
-    integer,  intent(in   )  :: jffe  !< fire fuel frac burnt end   index y axis
-    
-    integer,  intent(in   )  :: hf_scheme_selection   !< Choice of HF scheme (0: BURNUP, 1: Multilayers BioSmoke, 2: FOFEM)
-
-    real, intent(in   ),  dimension(ifms:ifme,jfms:jfme)  :: fgip             !< init mass from fuel model [kg m-2]
-    real, intent(in   ),  dimension(iffs:iffe,jffs:jffe)  :: fuel_frac_burnt  !< fraction burned this call [-]
-    
-    real, intent(  out),  dimension(ifms:ifme, jfms:jfme)             :: grnhft     !< surface sensible heat flux [W m-2]   
-    real, intent(  out),  dimension(ifms:ifme, jfms:jfme),  optional  :: grnqft     !< latent sensible heat flux [W m-2]
-  real, intent(in   ),  dimension(ifms:ifme, jfms:jfme),  optional  :: fire_area  !< proportion of the fire cell burning [-]
+  ifms, ifme, jfms, jfme,                   &
+  ifts, ifte, jfts, jfte,                   &
+  iffs, iffe, jffs, jffe,                   &
+  hf_scheme_selection,                      &
+  fgip, fuel_frac_burnt,                    & 
+  grnhft, grnqft, fire_area                 )
   
+  use module_fr_sfire_fields, only: mlhfx_fuel_mass_frac, mlhfx_eff_time, surf_moisture_frac, mlhfx_consum_rate, mlhfx_len_data
+  use module_fr_sfire_util, only: interpolate_linear_1d
+
+  implicit none
+  
+  ! 0. Declaration
+  !    ===========
+  
+  type(fire_params),  intent(in   )  :: fp !< fire params
+  real,               intent(in   )  :: dt !< the fire time step [s]
+  
+  integer,  intent(in   )  :: ifts  !< fire tile start index x axis
+  integer,  intent(in   )  :: ifte  !< fire tile end   index x axis
+  integer,  intent(in   )  :: jfts  !< fire tile start index y axis
+  integer,  intent(in   )  :: jfte  !< fire tile end   index y axis
+  
+  integer,  intent(in   )  :: ifms  !< fire mesh start index x axis
+  integer,  intent(in   )  :: ifme  !< fire mesh end   index x axis
+  integer,  intent(in   )  :: jfms  !< fire mesh start index y axis
+  integer,  intent(in   )  :: jfme  !< fire mesh end   index y axis
+  
+  integer,  intent(in   )  :: iffs  !< fire fuel frac burnt start index x axis
+  integer,  intent(in   )  :: iffe  !< fire fuel frac burnt end   index x axis
+  integer,  intent(in   )  :: jffs  !< fire fuel frac burnt start index y axis
+  integer,  intent(in   )  :: jffe  !< fire fuel frac burnt end   index y axis
+  
+  integer,  intent(in   )  :: hf_scheme_selection   !< Choice of HF scheme (0: BURNUP, 1: Multilayers BioSmoke, 2: FOFEM)
+
+  real, intent(in   ),  dimension(ifms:ifme,jfms:jfme)  :: fgip             !< init mass from fuel model [kg m-2]
+  real, intent(in   ),  dimension(iffs:iffe,jffs:jffe)  :: fuel_frac_burnt  !< fraction burned this call [-]
+  
+  real, intent(  out),  dimension(ifms:ifme, jfms:jfme)             :: grnhft     !< surface sensible heat flux [W m-2]   
+  real, intent(  out),  dimension(ifms:ifme, jfms:jfme),  optional  :: grnqft     !< latent sensible heat flux [W m-2]
+  real, intent(in   ),  dimension(ifms:ifme, jfms:jfme),  optional  :: fire_area  !< proportion of the fire cell burning [-]
+
   !*** local
   integer :: i, j, k, l
   real    :: dmass, bmst
   
   logical :: latent
-  real, parameter :: water_from_combustion_prop_b = 0.56 !< water fraction produced by combustion from biomass [-]
-  real, parameter :: water_from_combustion_prop_c = 0.56 !< water fraction produced by combustion from char[-]
+  real, parameter :: water_from_combustion_ratio = 0.56 !< water fraction produced by combustion from biomass [-]
   
   ! multi layer constants
-  real, parameter :: delta_H_comb_b = 17.433e+06  !< biomass combustion enthalpy [J kg-1]
-  real, parameter :: delta_H_comb_c = 17.433e+06  !< char combustion enthalpy [J kg-1]
-  real, parameter :: moisture_evap_rate = 0.05    !< evaporation rate [s-1]
+  real, parameter :: delta_H_comb = 17.433e+06  !< biomass combustion enthalpy [J kg-1]
+  real, parameter :: moisture_evap_rate = 0.1   !< evaporation rate [s-1]
   
   ! multi layer local variables
-  real :: mflr_b      !< biomass mass fraction loss rate [s-1]
-  real :: mflr_c      !< char mass fraction loss rate [s-1]
+  real :: mflr        !< mass fraction loss rate [s-1]
   real :: moflr       !< moisture fraction loss rate [s-1]
   real :: tmp_flux_h  !< local sensible heat flux [W m-2]
   real :: tmp_flux_w  !< local latent heat flux [W m-2]
+  real :: dt_incr     !< time increment [s]
 
   !*** executable        
   latent = present(grnqft)
@@ -1611,10 +1597,10 @@ subroutine heat_fluxes_surf(dt,fp,          &
         ! xlv is  defined in module_model_constants 
       enddo
     enddo
-  case(1) ! MLHF
+  case(1) ! MLHFX
     ! Crash if fire area not in inputs
     if (.not. present(fire_area)) then
-      call crash("heat_fluxes_surf: fire_area not in inputs for MLHF scheme. Check call of heat_fluxes")
+      call crash("heat_fluxes_surf: fire_area not in inputs for MLHFX scheme. Check call of heat_fluxes")
     end if
 
     do j = jfts, jfte
@@ -1627,6 +1613,14 @@ subroutine heat_fluxes_surf(dt,fp,          &
         tmp_flux_h = 0.
         tmp_flux_w = 0.
 
+        ! set time increment
+        dt_incr = dt * fire_area(i, j)
+
+        ! update effective time after ignition
+        if (fire_area(i, j) > 0) then
+          mlhfx_eff_time(i, j) = mlhfx_eff_time(i, j) + dt_incr
+        endif
+
         if (latent) then
           ! compute moisture evaporation rate (constant for now)
           moflr = min(fire_area(i, j) * moisture_evap_rate, surf_moisture_frac(i, j) / dt)
@@ -1636,21 +1630,18 @@ subroutine heat_fluxes_surf(dt,fp,          &
 
           tmp_flux_w = fgip(i, j) * fp%fmc_g(i, j) * moflr * xlv
         endif
-
+        
         ! loop over layers
-        do l = 1, n_layer_hf_surf
-          ! compute mass fraction loss rate
-          mflr_b = min(fire_area(i, j) * surf_mass_frac_b(i, l, j) / layer_burn_time_b(l), surf_mass_frac_b(i, l, j) / dt)
-          mflr_c = min(fire_area(i, j) * surf_mass_frac_c(i, l, j) / layer_burn_time_c(l), surf_mass_frac_c(i, l, j) / dt)
-
+        do l = 1, n_layer_hf_surf        
+          mflr = min(interpolate_linear_1d(mlhfx_consum_rate(l, :, :), mlhfx_eff_time(i, j), mlhfx_len_data(l)), mlhfx_fuel_mass_frac(i, l, j) / dt)
+          
           ! update fuel fraction
-          surf_mass_frac_b(i, l, j) = surf_mass_frac_b(i, l, j) - mflr_b * dt
-          surf_mass_frac_c(i, l, j) = surf_mass_frac_c(i, l, j) - mflr_c * dt
-
+          mlhfx_fuel_mass_frac(i, l, j) = mlhfx_fuel_mass_frac(i, l, j) - mflr * dt_incr
+          
           ! compute fluxes
-          tmp_flux_h = tmp_flux_h + fgip(i, j) * (mflr_b * delta_H_comb_b + mflr_c * delta_H_comb_c)
+          tmp_flux_h = tmp_flux_h + fuel_load_layers_hf(k, l) * mflr * delta_H_comb
           ! add fuel burning contribution to latent HF
-          if(latent) tmp_flux_w = tmp_flux_w + fgip(i, j) * (mflr_b * water_from_combustion_prop_b + mflr_c * water_from_combustion_prop_c) * xlv
+          if(latent) tmp_flux_w = tmp_flux_w + fuel_load_layers_hf(k, l) * mflr * water_from_combustion_ratio * xlv
         enddo
 
         ! save fluxes
@@ -1919,70 +1910,6 @@ subroutine set_canopy_data(       &
   end select
 
 end subroutine set_canopy_data
-
-
-!------------------------------------------------------------------------------------------------------------------
-! SUBROUTINE: initialize_sfire_fields
-!>   Initialize fields defined in sfire_fields module
-!!
-!!  Set a default value for each field in the module  
-!------------------------------------------------------------------------------------------------------------------
-subroutine initialize_sfire_fields( &
-    ifms, ifme, jfms, jfme,         &
-    ifts, ifte, jfts, jfte,         &
-    nfuel_cat                       )
-
-  use module_fr_sfire_fields, only:                                         &
-    cfb, can_top, can_bottom, can_bulk_density, can_fx_z0, can_fuel_burnt,  &
-    surf_mass_frac_b, surf_mass_frac_c, surf_moisture_frac
-  
-  implicit none
-
-  ! 0. Declarations
-  !    ============
-
-  ! 0.1 Arguments
-  integer,  intent(in   ) :: ifms                 !< fire mesh index start on x axis
-  integer,  intent(in   ) :: ifme                 !< fire mesh index end   on x axis
-  integer,  intent(in   ) :: jfms                 !< fire mesh index start on y axis
-  integer,  intent(in   ) :: jfme                 !< fire mesh index end   on y axis
-  integer,  intent(in   ) :: ifts                 !< fire tile index start on x axis
-  integer,  intent(in   ) :: ifte                 !< fire tile index end   on x axis
-  integer,  intent(in   ) :: jfts                 !< fire tile index start on y axis
-  integer,  intent(in   ) :: jfte                 !< fire tile index end   on y axis
-
-  real, dimension(ifms:ifme, jfms:jfme),  intent(in   )  :: nfuel_cat            !< surface fuel class
-
-  ! 0.2 Locals
-  integer :: surf_fuel_cat  !< local fuel category
-  integer :: i, j, l        !< loop indexes
-
-  ! 1. Initialize value on array
-  !    =========================
-
-  cfb(:, :)                 = 0.
-  can_top(:, :)             = 0.
-  can_bottom(:, :)          = 0.
-  can_bulk_density(:, :)    = 0.
-  can_fuel_burnt(:, :)      = 0.
-  can_fx_z0(:, :)           = 0.
-  surf_moisture_frac(:, :)  = 1.
-
-  ! Initialize mass fraction for biomass and char
-  do j = jfts, jfte
-    do l = 1, n_layer_hf_surf
-      do  i = ifts, ifte
-        ! get local fuel cat and convert to integer
-        surf_fuel_cat = int(nfuel_cat(i, j))
-        
-        ! ash fraction is considered to be effective mineral content se
-        surf_mass_frac_b(i, l, j)   = 1. - layer_char_fraction(l) - se(surf_fuel_cat)
-        surf_mass_frac_c(i, l, j)   = layer_char_fraction(l)
-      enddo
-    enddo
-  enddo
-
-end subroutine initialize_sfire_fields
 
 
 !

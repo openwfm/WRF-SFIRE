@@ -13,7 +13,7 @@
 
 package   fire_sfire    ifire==2                    -             state:avg_fuel_frac,bbb,betafl,burnt_area_dt,canhfx,canqfx,dzdxf,dzdyf,fcanhfx,fcanqfx,fgip,fgrnhfx,fgrnqfx,fire_area,fire_smoke,flame_length,fmc_equi,fmc_g,fmc_gc,fmep,fmc_lag,fmoist_lasttime,fmoist_nexttime,fuel_frac,fuel_time,fxlat,fxlong,fz0,grnhfx,grnhfx_fu,grnqfx,grnqfx_fu,iboros,ischap,lfn,lfn_0,lfn_1,lfn_2,lfn_hist,lfn_s0,lfn_s1,lfn_s2,lfn_s3,lfn_time,nfuel_cat,phiwc,psfc_old,q2_old,r_0,rain_old,rh_fire,ros,ros_front,rqvfrten,rthfrten,t2_old,tign_g,uah,uf,vah,vf,zsf,fs_last_gen_dt,fs_gen_idmax,fs_count_reset,fs_fire_ROSdt,fs_fire_area,fs_fuel_spotting_risk,fs_count_landed_all,fs_count_landed_hist,fs_landing_mask,fs_gen_inst,fs_frac_landed,fs_spotting_lkhd 
 
-package   fire_sfire1    ifire==1                    -             state:avg_fuel_frac,nfuel_cat,zsf,tign_g,tign_in,fire_hfx,rthfrten,rqvfrten,grnhfx,grnqfx,canhfx,canqfx,dzdxf,dzdyf,lfn,lfn_out,fuel_frac,fire_area,uf,vf,fgrnhfx,fgrnqfx,fcanhfx,fcanhfx,fcanqfx,ros,fxlong,fxlat,fuel_time,bbb,phiwc,phisc,r_0,fgip,ischap,fz0,fwh,unit_fxlong,unit_fxlat,ndwi,ndvi,fmc_g,fmc_gc,fmc_gc_f,fndwi,flineint,flineint2,f_ros0,f_rosx,f_rosy,f_ros,f_int,f_lineint,f_lineint2,f_ros11,f_ros12,f_ros13,f_ros21,f_ros23,f_ros31,f_ros32,f_ros33,wz0,can_top,can_bottom,can_bulk_density,cuf,cvf,uah,vah,tempf,rhof,ffwidth,cfb,can_fuel_frac,can_fuel_burnt,can_fx_z0,surf_mass_frac_b,surf_mass_frac_c,mlhfx_consum_rate
+package   fire_sfire1    ifire==1                    -             state:avg_fuel_frac,nfuel_cat,zsf,tign_g,tign_in,fire_hfx,rthfrten,rqvfrten,grnhfx,grnqfx,canhfx,canqfx,dzdxf,dzdyf,lfn,lfn_out,fuel_frac,fire_area,uf,vf,fgrnhfx,fgrnqfx,fcanhfx,fcanhfx,fcanqfx,ros,fxlong,fxlat,fuel_time,bbb,phiwc,phisc,r_0,fgip,ischap,fz0,fwh,unit_fxlong,unit_fxlat,ndwi,ndvi,fmc_g,fmc_gc,fmc_gc_f,fndwi,flineint,flineint2,f_ros0,f_rosx,f_rosy,f_ros,f_int,f_lineint,f_lineint2,f_ros11,f_ros12,f_ros13,f_ros21,f_ros23,f_ros31,f_ros32,f_ros33,wz0,can_top,can_bottom,can_bulk_density,cuf,cvf,uah,vah,tempf,rhof,ffwidth,cfb,can_fuel_frac,can_fuel_burnt,can_fx_z0,mlhfx_fuel_mass_frac,mlhfx_eff_time,mlhfx_consum_rate
 
 package  fire_fmoist_run   fmoisti_run==1           -             state:fmc_gc,fmc_gc_f,fmep,fmc_equi,fmc_lag,t2_old,q2_old,rain_old,psfc_old,rh_fire
 package  fire_fmoist_interp fmoisti_interp==1       -             state:fmc_gc,fmc_gc_f
@@ -527,8 +527,8 @@ dimspec   mlhf_k   -     namelist=mlhfx_dim                 c        mlhfx_tmp
 #                                                        STATE 
 #<Table> <Type>     <Sym>              <Dims>              <Use>   <NumTLev> <Stagger> <IO> <DNAME>  <DESCRIP>     <UNITS>  
 # ------------------------------------------------------------------------------------------------------------------------
-state    real       surf_mass_frac_b   *i{nlay}*j           fire      1         z    hr   "SURF_MASS_FRAC_B"   "surface biomass fuel mass fraction"        "1"
-state    real       surf_mass_frac_c   *i{nlay}*j           fire      1         z    hr   "SURF_MASS_FRAC_C"   "surface char fuel mass fraction"           "1"
+state    real       mlhfx_fuel_mass_frac *i{nlay}*j         fire      1         z    hr   "MLHFX_FUEL_MASS_FRAC" "MLHFX surface biomass fuel mass fraction" "1"
+state    real       mlhfx_eff_time     *i*j                 fire      1         -    hr   "MLHFX_EFF_TIME"     "MLHFX effective time after ignition"       "s"
 state    real       mlhfx_consum_rate  {four}{mlhf_k}{two}  fire      1         -    -    "MLHFX_CONSUM_RATE"  "data of fuel consumption for MLHFX scheme" "1"
 # ========================================================================================================================
 # End of WRF-SFIRE new developments section

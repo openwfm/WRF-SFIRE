@@ -35,18 +35,18 @@ module module_fr_sfire_fields
   real, pointer,  public, dimension(:, :) :: can_fuel_burnt     !< canopy fuel burnt durint time step [kg m-2]
   real, pointer,  public, dimension(:, :) :: can_top            !< canopy top height [m]
   real, pointer,  public, dimension(:, :) :: cfb                !< crown fraction burnt [-]
+  real, pointer,  public, dimension(:, :) :: mlhfx_eff_time     !< effective time after ignition for MLHFX scheme [-]
   real, pointer,  public, dimension(:, :) :: surf_moisture_frac !< surface moisture fraction for each layer for heat fluxes computation [-]
   
   ! 2d fire grid + layers
-  real, pointer,  public, dimension(:, :, :)  :: surf_mass_frac_b !< surface biomass mass fraction for each layer for heat fluxes computation [-]
-  real, pointer,  public, dimension(:, :, :)  :: surf_mass_frac_c !< surface char mass fraction for each layer for heat fluxes computation [-]
+  real, pointer,  public, dimension(:, :, :)  :: mlhfx_fuel_mass_frac !< surface biomass mass fraction for each layer for MLHFX scheme [-]
   
   ! 2d atm grid
   real, pointer,  public, dimension(:, :) :: can_fx_z0          !< height of injection for canopy heat fluxes [m]  
   
   ! Multilayers Heat Fluxes scheme (MLHFX) data for 4 layers (1h, 10h, 100h, 1000h fuel size)
-  integer,        protected, dimension(4)       :: mlhfx_len_data    !< length of time series for 1h, 10h, 100h, 1000h fuels
   real, pointer,  protected, dimension(:, :, :) :: mlhfx_consum_rate !< fuel fraction consumption rate data (4 layers, length of data given by mlhfx_dim, 2 for time and consumption) [s, s-1]
+  integer,        protected, dimension(4)       :: mlhfx_len_data    !< length of time series for 1h, 10h, 100h, 1000h fuels
 
 contains
 
@@ -70,13 +70,41 @@ subroutine set_sfire_fields_from_grid(grid)
   can_bulk_density => grid%can_bulk_density
   can_fuel_burnt => grid%can_fuel_burnt
   can_fx_z0 => grid%can_fx_z0
-  surf_mass_frac_b => grid%surf_mass_frac_b
-  surf_mass_frac_c => grid%surf_mass_frac_c
+  mlhfx_fuel_mass_frac => grid%mlhfx_fuel_mass_frac
+  mlhfx_eff_time => grid%mlhfx_eff_time
   surf_moisture_frac => grid%surf_moisture_frac
   mlhfx_consum_rate => grid%mlhfx_consum_rate
 
 end subroutine set_sfire_fields_from_grid
 
+
+!------------------------------------------------------------------------------------------------------------------
+! SUBROUTINE: initialize_sfire_fields
+!>   Initialize fields defined in sfire_fields module
+!!
+!!  Set a default value for each field in the module  
+!------------------------------------------------------------------------------------------------------------------
+subroutine initialize_sfire_fields()
+  
+  implicit none
+
+  ! 0. Declarations
+  !    ============
+
+  ! 1. Initialize value on array
+  !    =========================
+
+  cfb(:, :)                 = 0.
+  can_top(:, :)             = 0.
+  can_bottom(:, :)          = 0.
+  can_bulk_density(:, :)    = 0.
+  can_fuel_burnt(:, :)      = 0.
+  can_fx_z0(:, :)           = 0.
+  surf_moisture_frac(:, :)  = 1.
+  mlhfx_fuel_mass_frac(:, :, :) = 1.
+  mlhfx_eff_time(:, :) = 0.
+
+end subroutine initialize_sfire_fields
 
 !------------------------------------------------------------------------------------------------------------------
 ! SUBROUTINE: read_mlhf_data
@@ -131,7 +159,7 @@ subroutine read_mlhf_data()
       read(io, *) line
       ! read number of class
       read(io, *) mlhfx_len_data(i_layer)
-      write(*,*) "len data:", mlhfx_len_data(i_layer)
+      ! write(*,*) "len data:", mlhfx_len_data(i_layer)
       ! check if size if ok
       if (mlhfx_len_data(i_layer) > mlhfx_dim) then
         call crash("read_mlhf_data: mlhfx_dim is too small for 1h data")
@@ -142,7 +170,7 @@ subroutine read_mlhf_data()
       ! read data
       do k = 1, mlhfx_len_data(i_layer)
         read(io, '(F10.1, 3X, E15.7)') mlhfx_consum_rate(i_layer, k, 1), mlhfx_consum_rate(i_layer, k, 2)
-        write(*, *) "data ", k, mlhfx_consum_rate(i_layer, k, 1), mlhfx_consum_rate(i_layer, k, 2)
+        ! write(*, *) "data ", k, mlhfx_consum_rate(i_layer, k, 1), mlhfx_consum_rate(i_layer, k, 2)
       enddo
     enddo
   endif

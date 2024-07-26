@@ -68,7 +68,7 @@ module module_fr_sfire_driver
 ! use this module for standalone call, you only need to provide some mock-up wrf modules  
 
 use module_fr_sfire_model, only: sfire_model
-use module_fr_sfire_phys, only: fire_params, init_fuel_cats, fuel_moisture, &
+use module_fr_sfire_phys, only: init_fuel_cats, fuel_moisture, &
    advance_moisture, moisture_classes, &
    fire_rate_of_spread, ibeh, balbi_msglevel
 use module_fr_sfire_atm, only: apply_windrf,interpolate_wind2fire_height,interpolate_atm2fire, &
@@ -85,7 +85,7 @@ HALO_FIRE_MAG_sub, HALO_FIRE_MFG_sub, halo_fire_ndwi_sub, &
 HALO_SFIRE_RHO2FIRE_ATM_sub, HALO_SFIRE_RHO2FIRE_SUB_sub
 #endif
 use module_fr_sfire_atm, only: read_emissions_table, add_fire_emissions
-
+use module_fr_sfire_fields, only: fire_params
 
 ! WRF dependencies
 USE module_domain, only: domain
@@ -1940,8 +1940,8 @@ subroutine check_grid_alloc(grid,config_flags)
     call check_size(size(grid%can_bulk_density),'can_bulk_density')
     call check_size(size(grid%can_fuel_burnt),'can_fuel_burnt')
     call check_size(size(grid%can_fx_z0),'can_fx_z0')
-    call check_size(size(grid%surf_mass_frac_b),'surf_mass_frac_b')
-    call check_size(size(grid%surf_mass_frac_c),'surf_mass_frac_c')
+    call check_size(size(grid%mlhfx_eff_time),'mlhfx_eff_time')
+    call check_size(size(grid%mlhfx_fuel_mass_frac),'mlhfx_fuel_mass_frac')
     call check_size(size(grid%surf_moisture_frac),'surf_moisture_frac')
     call check_size(size(grid%mlhfx_consum_rate),'mlhfx_consum_rate')
     
