@@ -1900,6 +1900,7 @@ subroutine set_canopy_data(       &
     
   case (1)
     ! The canopy data should have been initialized in the WRF input file. Nothing to do
+    call message("set_canopy_data: canopy data from WRFinput file", level=1)
     return
 
   case default

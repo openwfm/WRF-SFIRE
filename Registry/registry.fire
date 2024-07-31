@@ -190,9 +190,9 @@ state    real     unit_fxlat  -         -         -         -    hr    "UNIT_FXL
 state    real     phisc     *i*j      fire        1         z    hr    "PHISC"     "fuel"
 state    real     wz0       *i*j      fire        1         z    hr    "WZ0"       "WRF roughness length"
 state    real     fwh       *i*j      fire        1         z    hr    "FWH"       "fuel fire wind height"
-state    real     can_top   *i*j      fire        1         z    hr   "CAN_TOP"   "Height of tree canopy top"
-state    real     can_bottom    *i*j  fire        1         z    hr   "CAN_BOTTOM"   "Height of tree canopy base"
-state    real     can_bulk_density *i*j fire      1         z    hr   "CAN_BULK_DENSITY"   "canopy bulk density"
+state    real     can_top   *i*j      fire        1         z    i012hr   "CAN_TOP"   "Height of tree canopy top"
+state    real     can_bottom    *i*j  fire        1         z    i012hr   "CAN_BOTTOM"   "Height of tree canopy base"
+state    real     can_bulk_density *i*j fire      1         z    i012hr   "CAN_BULK_DENSITY"   "canopy bulk density"
 
 #
 
