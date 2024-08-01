@@ -1880,12 +1880,14 @@ subroutine set_canopy_data(       &
 
   select case (i_fire_can_fuel_read)
   case (-1)
+    call message("set_canopy_data: canopy data is set to 0", level=1)
     ! The canopy data shouldbe as default value. Nothing to do
     can_top(:, :)           = 0.
     can_bottom(:, :)        = 0.
     can_bulk_density(:, :)  = 0.
-
+    
   case (0)
+    call message("set_canopy_data: canopy data is set according to surface fuel category", level=1)
     ! The canopy data are set according to surface fuel category.
     do j = jfts, jfte
       do  i = ifts, ifte

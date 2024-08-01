@@ -103,7 +103,7 @@ state    real     ros_front     *i*j      fire        1         z    hr    "ROS_
 state    real     tempf     *i*j      fire        1         z    hr    "TEMPF"    "temperature at 2m"  "K"
 state    real     rhof      *i*j      fire        1         z    hr    "RHOFF"    "surface air density"  "Pa"
 state    real     ffwidth   *i*j      fire        1         z    hr    "FFWIDTH"  "fire front width"  "m"
-state    real     cfb       *i*j      fire        1         z    hr    "CFB"  "canopy fraction burnt"  "1"
+state    real     cfb       *i*j      fire        1         z    i012hr    "CFB"  "canopy fraction burnt"  "1"
 state    real     can_fuel_frac *i*j  fire        1         z    i012hr    "CAN_FUEL_FRAC" "canopy fuel remaining" "1"
 state    real     can_fuel_burnt *i*j fire        1         z    i012hr    "CAN_FUEL_BURNT" "burning mass in canopy" "kg/m^2"
 state    real   surf_moisture_frac *i*j fire      1         z    i012hr   "SURF_MOISTURE_FRAC" "surface fuel moisture fraction" "1"
@@ -527,9 +527,9 @@ dimspec   mlhf_k   -     namelist=mlhfx_dim                 c        mlhfx_tmp
 #                                                        STATE 
 #<Table> <Type>     <Sym>              <Dims>              <Use>   <NumTLev> <Stagger> <IO> <DNAME>  <DESCRIP>     <UNITS>  
 # ------------------------------------------------------------------------------------------------------------------------
-state    real       mlhfx_fuel_mass_frac *i{nlay}*j         fire      1         z    hr   "MLHFX_FUEL_MASS_FRAC" "MLHFX surface biomass fuel mass fraction" "1"
-state    real       mlhfx_eff_time     *i*j                 fire      1         -    hr   "MLHFX_EFF_TIME"     "MLHFX effective time after ignition"       "s"
-state    real       mlhfx_consum_rate  {four}{mlhf_k}{two}  fire      1         -    -    "MLHFX_CONSUM_RATE"  "data of fuel consumption for MLHFX scheme" "1"
+state    real       mlhfx_fuel_mass_frac *i{nlay}*j         fire      1         z    i012hr  "MLHFX_FUEL_MASS_FRAC" "MLHFX surface biomass fuel mass fraction" "1"
+state    real       mlhfx_eff_time     *i*j                 fire      1         -    i012hr  "MLHFX_EFF_TIME"     "MLHFX effective time after ignition"       "s"
+state    real       mlhfx_consum_rate  {four}{mlhf_k}{two}  fire      1         -    -       "MLHFX_CONSUM_RATE"  "data of fuel consumption for MLHFX scheme" "1"
 # ========================================================================================================================
 # End of WRF-SFIRE new developments section
 # ========================================================================================================================

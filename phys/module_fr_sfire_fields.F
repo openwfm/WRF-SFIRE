@@ -84,25 +84,34 @@ end subroutine set_sfire_fields_from_grid
 !!
 !!  Set a default value for each field in the module  
 !------------------------------------------------------------------------------------------------------------------
-subroutine initialize_sfire_fields()
+subroutine initialize_sfire_fields(restart, i_fire_can_fuel_read)
   
   implicit none
 
   ! 0. Declarations
   !    ============
 
+  logical,  intent(in   ) :: restart              !< flag for restart
+  integer,  intent(in   ) :: i_fire_can_fuel_read !< source of data for canopy data
+
   ! 1. Initialize value on array
   !    =========================
 
-  cfb(:, :)                 = 0.
-  can_top(:, :)             = 0.
-  can_bottom(:, :)          = 0.
-  can_bulk_density(:, :)    = 0.
-  can_fuel_burnt(:, :)      = 0.
+  if (.not. restart) then
+    cfb(:, :)                 = 0.
+    if (i_fire_can_fuel_read /= 1) then
+      ! set default value only if variable not in input file
+      can_top(:, :)             = 0.
+      can_bottom(:, :)          = 0.
+      can_bulk_density(:, :)    = 0.
+    endif
+    can_fuel_burnt(:, :)      = 0.
+    surf_moisture_frac(:, :)  = 1.
+    mlhfx_fuel_mass_frac(:, :, :) = 1.
+    mlhfx_eff_time(:, :) = 0.
+  endif
+
   can_fx_z0(:, :)           = 0.
-  surf_moisture_frac(:, :)  = 1.
-  mlhfx_fuel_mass_frac(:, :, :) = 1.
-  mlhfx_eff_time(:, :) = 0.
 
 end subroutine initialize_sfire_fields
 
