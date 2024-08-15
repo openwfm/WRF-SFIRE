@@ -47,7 +47,7 @@ integer,save::              &
  fndwi_from_ndwi=1,         &   ! interpolate ndwi from atmosphere resolution
  kfmc_ndwi=0,               &   ! if>0 , number of the fuel moisture class to update from ndwi
  fire_can_top_read=1,       &   ! canopy top height : 0 from wrfinput, 1 from namelist.fire (CAN_TOP)
- hfx_scheme=0,              &   !> HFX scheme selection : 0 BURNUP, 1 Multilayer BioSmoke (MLHFX), (todo: 2 FOFEM)
+ hfx_scheme=1,              &   !> HFX scheme selection : 0 no flux, 1 BURNUP, 2 Multilayer BioSmoke (MLHFX), (todo: 2 FOFEM)
  mlhfx_dim=384                  !> Max dimension of MLHFX fuel consumption data
 
 real, save::                &

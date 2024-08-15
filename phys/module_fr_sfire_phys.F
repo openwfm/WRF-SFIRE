@@ -1579,7 +1579,15 @@ subroutine heat_fluxes_surf(dt,fp,          &
   !*** executable        
   latent = present(grnqft)
   select case(hf_scheme_selection)
-  case(0) ! BURNUP
+  case(0) ! No flux
+    do j = jfts, jfte
+      do i = ifts, ifte
+        grnhft(i, j) = 0.
+        if(latent) grnqft(i, j) = 0.
+      enddo
+    enddo
+    
+  case(1) ! BURNUP
     ! default exeponential scheme
     do j = jfts, jfte
       do i = ifts, ifte
@@ -1597,7 +1605,7 @@ subroutine heat_fluxes_surf(dt,fp,          &
         ! xlv is  defined in module_model_constants 
       enddo
     enddo
-  case(1) ! MLHFX
+  case(2) ! MLHFX
     ! Crash if fire area not in inputs
     if (.not. present(fire_area)) then
       call crash("heat_fluxes_surf: fire_area not in inputs for MLHFX scheme. Check call of heat_fluxes")

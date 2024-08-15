@@ -240,7 +240,7 @@ elseif(ifun.eq.2)then
         
         ! Import data for heat flux scheme if necessary
         select case(hf_scheme_selection)
-        case(1) ! MLHF Biosmoke
+        case(2) ! MLHF Biosmoke
             call read_mlhf_data()
         end select
 
