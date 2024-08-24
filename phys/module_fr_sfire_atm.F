@@ -393,9 +393,10 @@ subroutine add_fire_emissions(chem_opt,tracer_opt,dt,dx,dy,      &
        its,ite,kts,kte,jts,jte,          &
        rho,dz8w,                         & ! input on atmosphere mesh 
        fgip, fuel_frac_burnt, nfuel_cat, & ! input on fire mesh
+       hf_scheme_selection,              & ! heat flux scheme
        chem,tracer)                        ! output
 
-  use module_fr_sfire_fields, only: can_fuel_burnt
+  use module_fr_sfire_fields, only: can_fuel_burnt, surf_fuel_burnt
 
 implicit none
 
@@ -416,6 +417,7 @@ real, intent(in)::rho(ims:ime,kms:kme,jms:jme),  &                ! air density 
 real, intent(in), dimension(ifms:ifme,jfms:jfme):: fgip, &            ! initial fuel load kg/m^2 
                                             fuel_frac_burnt, &        ! fuel fraction burned this step kg/kg
                                             nfuel_cat                 ! fuel category (Anderson= 1 to 13)
+integer,  intent(in   )  :: hf_scheme_selection   !< Choice of HF scheme (0: no heat flux, 1: BURNUP, 2: Multilayers BioSmoke, 3: FOFEM)
 ! update
 real, intent(inout)::chem(ims:ime,kms:kme,jms:jme,num_chem),tracer(ims:ime,kms:kme,jms:jme,num_tracer)
 
@@ -717,15 +719,24 @@ do j=max(jds+1,jts),min(jte,jde-1)          ! safe distance from domain boundary
        do joff=0,jr-1
            j_f=joff+jbase
            do ioff=0,ir-1
-               i_f=ioff+ibase
+              i_f=ioff+ibase
 
 
-               !*** fire cell (i_f,j_f) contributes to atmosphere cell (i,j) at ground level
+              !*** fire cell (i_f,j_f) contributes to atmosphere cell (i,j) at ground level
 
-               fuel_burnt = fgip(i_f,j_f) * fuel_frac_burnt(i_f,j_f) ! kg/m^2 
-               cat = nfuel_cat(i_f, j_f)                       ! usually 1 to 13
+              select case(hf_scheme_selection)
+              case(0) ! no fuel consumption
+                fuel_burnt = 0. 
+              case(1) ! Burnup
+                fuel_burnt = fgip(i_f,j_f) * fuel_frac_burnt(i_f,j_f) ! kg/m^2 
+              case(2) ! MLHFX
+                fuel_burnt = surf_fuel_burnt(i_f, j_f)
+              case default
+                fuel_burnt=0.
+              end select 
+              cat = nfuel_cat(i_f, j_f)                       ! usually 1 to 13
 
-               if(cat > 0 .and. cat <= nfuelcats) t_fuel(cat) = t_fuel(cat) + fuel_burnt
+              if(cat > 0 .and. cat <= nfuelcats) t_fuel(cat) = t_fuel(cat) + fuel_burnt
 
 
                !*** chem compounds emissions given in g/kg

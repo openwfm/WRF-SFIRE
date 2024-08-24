@@ -545,6 +545,7 @@ call print_2d_stats(ifps,min(ifpe,ifde-ir),jfps,min(jfpe,jfde-jr),ifms,ifme,jfms
                  ips,ipe,kps,kpe,jps,jpe,          &
                  rho,dz8w,                         & ! from atmosphere state
                  grid%fgip, grid%fuel_frac_burnt, grid%nfuel_cat, & ! from fire state
+                 config_flags%hfx_scheme,          & ! heat flux scheme
                  grid%chem,grid%tracer)              ! update/output
           endif
      endif
@@ -1939,6 +1940,7 @@ subroutine check_grid_alloc(grid,config_flags)
     call check_size(size(grid%can_bottom),'can_bottom')
     call check_size(size(grid%can_bulk_density),'can_bulk_density')
     call check_size(size(grid%can_fuel_burnt),'can_fuel_burnt')
+    call check_size(size(grid%surf_fuel_burnt),'surf_fuel_burnt')
     call check_size(size(grid%can_fx_z0),'can_fx_z0')
     call check_size(size(grid%mlhfx_eff_time),'mlhfx_eff_time')
     call check_size(size(grid%mlhfx_fuel_mass_frac),'mlhfx_fuel_mass_frac')

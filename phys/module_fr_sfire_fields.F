@@ -33,6 +33,7 @@ module module_fr_sfire_fields
   real, pointer,  public, dimension(:, :) :: can_bottom         !< canopy bottom height [m]
   real, pointer,  public, dimension(:, :) :: can_bulk_density   !< canopy bulk density [kg m-3]
   real, pointer,  public, dimension(:, :) :: can_fuel_burnt     !< canopy fuel burnt durint time step [kg m-2]
+  real, pointer,  public, dimension(:, :) :: surf_fuel_burnt    !< surface fuel burnt durint time step [kg m-2] (only used for MLHFX scheme before refactoring emission module for fofem)
   real, pointer,  public, dimension(:, :) :: can_top            !< canopy top height [m]
   real, pointer,  public, dimension(:, :) :: cfb                !< crown fraction burnt [-]
   real, pointer,  public, dimension(:, :) :: mlhfx_eff_time     !< effective time after ignition for MLHFX scheme [-]
@@ -69,6 +70,7 @@ subroutine set_sfire_fields_from_grid(grid)
   can_bottom => grid%can_bottom
   can_bulk_density => grid%can_bulk_density
   can_fuel_burnt => grid%can_fuel_burnt
+  surf_fuel_burnt => grid%surf_fuel_burnt
   can_fx_z0 => grid%can_fx_z0
   mlhfx_fuel_mass_frac => grid%mlhfx_fuel_mass_frac
   mlhfx_eff_time => grid%mlhfx_eff_time
@@ -106,6 +108,7 @@ subroutine initialize_sfire_fields(restart, i_fire_can_fuel_read)
       can_bulk_density(:, :)    = 0.
     endif
     can_fuel_burnt(:, :)      = 0.
+    surf_fuel_burnt(:, :)     = 0.
     surf_moisture_frac(:, :)  = 1.
     mlhfx_fuel_mass_frac(:, :, :) = 1.
     mlhfx_eff_time(:, :) = 0.

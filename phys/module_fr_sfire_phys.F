@@ -1460,7 +1460,7 @@ subroutine heat_fluxes(dt,fp,               &
   integer,  intent(in   )  :: jffs  !< fire fuel frac burnt start index y axis
   integer,  intent(in   )  :: jffe  !< fire fuel frac burnt end   index y axis
 
-  integer,  intent(in   )  :: hf_scheme_selection   !< Choice of HF scheme (0: BURNUP, 1: Multilayers BioSmoke, 2: FOFEM)
+  integer,  intent(in   )  :: hf_scheme_selection   !< Choice of HF scheme (0: no heat flux, 1: BURNUP, 2: Multilayers BioSmoke, 3: FOFEM)
   
   real, intent(in   ),  dimension(ifms:ifme,jfms:jfme)  :: fgip             !< init mass from fuel model [kg m-2]
   real, intent(in   ),  dimension(iffs:iffe,jffs:jffe)  :: fuel_frac_burnt  !< fraction burned this call [-]
@@ -1523,7 +1523,7 @@ subroutine heat_fluxes_surf(dt,fp,          &
   fgip, fuel_frac_burnt,                    & 
   grnhft, grnqft, fire_area                 )
   
-  use module_fr_sfire_fields, only: mlhfx_fuel_mass_frac, mlhfx_eff_time, surf_moisture_frac, mlhfx_consum_rate, mlhfx_len_data
+  use module_fr_sfire_fields, only: mlhfx_fuel_mass_frac, mlhfx_eff_time, surf_moisture_frac, mlhfx_consum_rate, mlhfx_len_data, surf_fuel_burnt
   use module_fr_sfire_util, only: interpolate_linear_1d
 
   implicit none
@@ -1570,11 +1570,12 @@ subroutine heat_fluxes_surf(dt,fp,          &
   real, parameter :: moisture_evap_rate = 0.1   !< evaporation rate [s-1]
   
   ! multi layer local variables
-  real :: mflr        !< mass fraction loss rate [s-1]
-  real :: moflr       !< moisture fraction loss rate [s-1]
-  real :: tmp_flux_h  !< local sensible heat flux [W m-2]
-  real :: tmp_flux_w  !< local latent heat flux [W m-2]
-  real :: dt_incr     !< time increment [s]
+  real :: mflr            !< mass fraction loss rate [s-1]
+  real :: moflr           !< moisture fraction loss rate [s-1]
+  real :: tmp_flux_h      !< local sensible heat flux [W m-2]
+  real :: tmp_flux_w      !< local latent heat flux [W m-2]
+  real :: tmp_mass_burnt  !< local mass burnt during time step for emissions [kg m-2]
+  real :: dt_incr         !< time increment [s]
 
   !*** executable        
   latent = present(grnqft)
@@ -1620,6 +1621,7 @@ subroutine heat_fluxes_surf(dt,fp,          &
         ! init fluxes
         tmp_flux_h = 0.
         tmp_flux_w = 0.
+        tmp_mass_burnt = 0.
 
         ! set time increment
         dt_incr = dt * fire_area(i, j)
@@ -1641,13 +1643,17 @@ subroutine heat_fluxes_surf(dt,fp,          &
         
         ! loop over layers
         do l = 1, n_layer_hf_surf        
-          mflr = min(interpolate_linear_1d(mlhfx_consum_rate(l, :, :), mlhfx_eff_time(i, j), mlhfx_len_data(l)), mlhfx_fuel_mass_frac(i, l, j) / dt)
-          
+          mflr = min(interpolate_linear_1d(mlhfx_consum_rate(l, :, :), mlhfx_eff_time(i, j), mlhfx_len_data(l)), mlhfx_fuel_mass_frac(i, l, j) / dt_incr)
+
           ! update fuel fraction
           mlhfx_fuel_mass_frac(i, l, j) = mlhfx_fuel_mass_frac(i, l, j) - mflr * dt_incr
+
+          ! Add layer mass burnt to total mass burnt
+          tmp_mass_burnt = tmp_mass_burnt + fuel_load_layers_hf(k, l) * mflr * dt_incr
           
           ! compute fluxes
           tmp_flux_h = tmp_flux_h + fuel_load_layers_hf(k, l) * mflr * delta_H_comb
+          
           ! add fuel burning contribution to latent HF
           if(latent) tmp_flux_w = tmp_flux_w + fuel_load_layers_hf(k, l) * mflr * water_from_combustion_ratio * xlv
         enddo
@@ -1655,6 +1661,7 @@ subroutine heat_fluxes_surf(dt,fp,          &
         ! save fluxes
         grnhft(i, j) = tmp_flux_h
         if (latent) grnqft(i, j) = tmp_flux_w
+        surf_fuel_burnt(i, j) = tmp_mass_burnt
 
       enddo
     enddo
