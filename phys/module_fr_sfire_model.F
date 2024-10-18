@@ -424,12 +424,12 @@ elseif (ifun.eq.6) then ! timestep postprocessing
     ! have halo on lfn now
 
     ! diagnostics
-    ! call fire_intensity(fp,                   &  ! fuel properties
-    !     ifms,ifme,jfms,jfme,                      &  ! memory dims
-    !     ifts,ifte,jfts,jfte,                      &  ! tile dims
-    !     ifms,ifme,jfms,jfme,                      &  ! ros dims
-    !     ros,nfuel_cat,                            & !in
-    !     flineint,flineint2)                       ! fireline intensities out
+    call fire_intensity(fp,                   &  ! fuel properties
+        ifms,ifme,jfms,jfme,                      &  ! memory dims
+        ifts,ifte,jfts,jfte,                      &  ! tile dims
+        ifms,ifme,jfms,jfme,                      &  ! ros dims
+        ros,nfuel_cat,                            & !in
+        flineint,flineint2)                       ! fireline intensities out
 
     if(fireline_mask < 0.) then
       do j=jfts,jfte
