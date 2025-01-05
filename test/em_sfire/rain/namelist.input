@@ -124,7 +124,7 @@
  /
 
  &fire ! be sure to set sr_x,sr_y in domains-namelist (to set refinement in x,y)
- ifire              = 1,             ! integer, = 0: no fire, 2=turn on fire model
+ ifire              = 1,             ! integer, = 0: no fire, 1=turn on fire model
  fire_fuel_read     = 0,             ! integer, -1: from WPS, 0= use fire_fuel_cat, 1= by altitude
  fire_fuel_cat      = 3,             ! integer, if specified which fuel category?
 !
