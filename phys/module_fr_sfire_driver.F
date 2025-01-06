@@ -968,7 +968,7 @@ do ij=1,num_tiles
 
     elseif(ifun.eq.3)then  ! interpolate atmosphere variables to the fire grid
   
-      for_balbi: if(ibeh.eq.2 .or. ibeh == 3)then
+      for_balbi: if(ibeh.eq.2 .or. ibeh.eq.3)then
 
          call message('ibeh=2 or 3: interpolating atmosphere input for rate of spread model')
          if(.not.use_atm_vars)call crash('ibeh=2 or 3, ros model requires atmosphere but use_atm_vars=false')

@@ -313,7 +313,7 @@ rconfig   integer fire_grows_only        namelist,fire         max_domains      
 rconfig   integer fire_upwinding         namelist,fire         max_domains            9       -     "fire_upwinding" "upwind normal spread: 1=standard, 2=godunov, 3=eno, 4=sethian, 5=2nd-order, 6=WENO3, 7=WENO5, 8=hybrid WENO3/ENO1, 9=hybrid WENO5/ENO1" "1"
 rconfig   integer fire_upwind_split      namelist,fire         max_domains            0       -     "fire_upwind_split" "1=upwind advection separately from normal direction spread" "1"
 rconfig   integer fire_wind_log_interp   namelist,fire         max_domains           1       -      "fire_wind_log_interp" "1 = fz0/fwh from fuel categores, 2=fz0 const rom z0,3=fz0 interp from z0, 4=interpolation on atm mesh and wind reduction" "" 
-rconfig   integer fire_use_windrf        namelist,fire         max_domains           0       -      "fire_use_windrf" "only for fire_wind_log_interp.ne.4: 0=ignore windrf, 1=multiply wind by windrf, 2=set fwh from windrf, 3=adjust fwh for z0" "" 
+rconfig   integer fire_use_windrf        namelist,fire         max_domains           2       -      "fire_use_windrf" "only for fire_wind_log_interp.ne.4: 0=ignore windrf, 1=multiply wind by windrf, 2=set fwh from windrf, 3=adjust fwh for z0" "" 
 # sfire switches
 rconfig   logical fire_restart           namelist,fire         max_domains           .false. -      "fire_restart"   "restart run, do not initialize state" ""
 rconfig   integer fire_time_step_ratio   namelist,fire         max_domains           1       -      "fire_time_step_ratio"   "number of fire time steps per atmospheric step" ""
