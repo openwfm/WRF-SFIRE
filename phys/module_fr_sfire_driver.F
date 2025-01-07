@@ -295,6 +295,12 @@ call print_2d_stats(ifps,min(ifpe,ifde-ir),jfps,min(jfpe,jfde-jr),ifms,ifme,jfms
     ! decide what to run - moisture, interpolation, or fire model itself
     fmoist_run    = config_flags%fmoist_run
     fmoist_interp = config_flags%fmoist_interp 
+    write(msg,*)'config_flags fmoist_run=',fmoist_run,' fmoist_interp=',fmoist_interp
+    call message(msg)
+    if ( fmoist_run .NEQV. fmoist_interp) then
+        call message('resetting from fmoist_run')
+        fmoist_interp = fmoist_run
+    endif
     if(fire_fmc_read.ne.0.and.fmoist_run)call crash('fmoist_run=T requires fire_fmc_read=0')
     fire_run = .not. config_flags%fmoist_only
 
