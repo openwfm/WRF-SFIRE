@@ -38,8 +38,8 @@ public fire_driver_em,use_atm_vars
 
 logical:: use_atm_vars=.true.   !  interpolate wind from atm mesh and average output fluxes back
 
-logical:: fmoist_run, fmoist_interp, fire_run  ! which kind of model to run overall
-
+integer:: fmoist_run, fmoist_interp, fmoist_only  ! which kind of model to run overall
+logical:: fire_run
 contains
 
 #define DEBUG_OUT
@@ -138,8 +138,8 @@ halo_fire_mag_sub
     ! decide what to run - moisture, interpolation, or fire model itself
     fmoist_run    = config_flags%fmoist_run
     fmoist_interp = config_flags%fmoist_interp 
-    if(fire_fmc_read.ne.0.and.fmoist_run)call crash('fmoist_run=T requires fire_fmc_read=0')
-    fire_run = .not. config_flags%fmoist_only
+    if(fire_fmc_read.ne.0.and.fmoist_run.eq.1)call crash('fmoist_run=T requires fire_fmc_read=0')
+    fire_run = config_flags%fmoist_only .eq. 0
 
     !decide what to run
     moisture_time = time_start
@@ -149,7 +149,7 @@ halo_fire_mag_sub
     
     
     
-    if(fmoist_run)then
+    if(fmoist_run.eq.1)then
         if(moisture_initializing)then
             if(fire_ifun_end>2)call crash('initialization must be run separately')
             grid%fmoist_lasttime=moisture_time ! initialize the last time the model has run to start of run
@@ -181,13 +181,13 @@ halo_fire_mag_sub
                     write(msg,'(a,f12.2,a,f12.2,a)')'moisture time step is ',dt_moisture,'s next run at ',grid%fmoist_nexttime,'s'
                     call message(msg)
                 endif
-                if(fmoist_interp)then
+                if(fmoist_interp .eq. 1)then
                     call message('moisture interpolation to fuels will run because moisture model does')
                     run_fuel_moisture=.true.
                 endif
             endif
         endif
-    elseif(itimestep.eq.1.and.fmoist_interp)then
+    elseif(itimestep.eq.1.and.fmoist_interp.eq.1)then
             call message('initializing, moisture interpolation to fuels will run from input data')
             run_fuel_moisture=.true.
     endif
@@ -600,7 +600,7 @@ call check_mesh_2dim(ifps,ifpe,jfps,jfpe,ifds,ifde,jfds,jfde) ! check if fire pa
 ! init rest of fuel tables with derived constants
 if(ifun.eq.1) then
    ! properties of fuel categories and moisture classes from namelist.fire
-   call init_fuel_cats(fmoist_run .or. fmoist_interp) ! common for all threads
+   call init_fuel_cats(fmoist_run.eq.1 .or. fmoist_interp.eq.1) ! common for all threads
 endif
 !$OMP END SINGLE
 

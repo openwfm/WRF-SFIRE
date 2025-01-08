@@ -104,7 +104,8 @@ public ifun_beg, ifun_step, ifun_end
 logical:: use_atm_vars=.true.   !  interpolate wind from atm mesh and average output fluxes back
 logical:: interpolate_long_lat=.true. ! get fxlong fxlat by interpolation
 
-logical:: fmoist_run, fmoist_interp, fire_run  ! which kind of model to run overall
+integer:: fmoist_run, fmoist_interp, fmoist_only  ! which kind of model to run overall
+logical:: fire_run
 
 integer, parameter:: ifun_beg=1, ifun_step=3, ifun_end=6  
 
@@ -295,14 +296,11 @@ call print_2d_stats(ifps,min(ifpe,ifde-ir),jfps,min(jfpe,jfde-jr),ifms,ifme,jfms
     ! decide what to run - moisture, interpolation, or fire model itself
     fmoist_run    = config_flags%fmoist_run
     fmoist_interp = config_flags%fmoist_interp 
-    write(msg,*)'config_flags fmoist_run=',fmoist_run,' fmoist_interp=',fmoist_interp
+    fmoist_only   = config_flags%fmoist_only
+    write(msg,*)'config_flags fmoist_run=',fmoist_run,' fmoist_interp=',fmoist_interp,' fmoist_only=',fmoist_only
     call message(msg)
-    if ( fmoist_run .NEQV. fmoist_interp) then
-        call message('resetting from fmoist_run')
-        fmoist_interp = fmoist_run
-    endif
-    if(fire_fmc_read.ne.0.and.fmoist_run)call crash('fmoist_run=T requires fire_fmc_read=0')
-    fire_run = .not. config_flags%fmoist_only
+    if(fire_fmc_read.ne.0.and.fmoist_run.eq.1)call crash('fmoist_run=T requires fire_fmc_read=0')
+    fire_run = fmoist_only.eq.0
 
     !decide what to run
     moisture_time = time_step_start
@@ -312,7 +310,7 @@ call print_2d_stats(ifps,min(ifpe,ifde-ir),jfps,min(jfpe,jfde-jr),ifms,ifme,jfms
     
     
     
-    if(fmoist_run)then
+    if(fmoist_run .eq. 1)then
         if(moisture_initializing)then
             if(fire_ifun_end>2)call crash('initialization must be run separately')
             grid%fmoist_lasttime=moisture_time ! initialize the last time the model has run to start of run
@@ -344,13 +342,13 @@ call print_2d_stats(ifps,min(ifpe,ifde-ir),jfps,min(jfpe,jfde-jr),ifms,ifme,jfms
                     write(msg,'(a,f12.2,a,f12.2,a)')'moisture time step is ',dt_moisture,'s next run at ',grid%fmoist_nexttime,'s'
                     call message(msg)
                 endif
-                if(fmoist_interp)then
+                if(fmoist_interp .eq. 1)then
                     call message('moisture interpolation to fuels will run because moisture model does')
                     run_fuel_moisture=.true.
                 endif
             endif
         endif
-    elseif(itimestep.eq.1.and.fmoist_interp)then
+    elseif(itimestep.eq.1.and.fmoist_interp.eq.1)then
             call message('initializing, moisture interpolation to fuels will run from input data')
             run_fuel_moisture=.true.
     endif
@@ -797,7 +795,7 @@ endif
 
 
 if(ifun.eq.1)then
-         call init_fuel_cats(fmoist_run .or. fmoist_interp) ! properties of fuel categories and moisture classes from namelist.fire
+         call init_fuel_cats(fmoist_run .eq. 1 .or. fmoist_interp .eq. 1) ! properties of fuel categories and moisture classes from namelist.fire
 endif
 
 if(ifun.eq.2)then
@@ -1929,7 +1927,7 @@ subroutine check_grid_alloc(grid,config_flags)
     call check_size(size(grid%ischap),'ischap')
     call check_size(size(grid%fmc_g),'fmc_g')
     call message('check_grid_alloc: checking if grid arrays used in fuel moisture are allocated',level=2)
-    if (config_flags%fmoisti_run==1)then
+    if (config_flags%fmoist_run .eq. 1)then
         call check_size(size(grid%fmc_gc),'fmc_gc')
         call check_size(size(grid%fmep),'fmep')
         call check_size(size(grid%fmc_equi),'fmc_equi')
@@ -1943,7 +1941,7 @@ subroutine check_grid_alloc(grid,config_flags)
         call check_size(size(grid%fmc_g),'fmc_g')
         call check_size(size(grid%fmc_gc_f),'fmc_gc_f')
     endif
-    if (config_flags%fmoisti_interp .eq. 1)then
+    if (config_flags%fmoist_interp .eq. 1)then
         call check_size(size(grid%fmc_gc),'fmc_gc')
     endif
     call message('check_grid_alloc: checking if grid arrays used in emissions are allocated',level=2)
