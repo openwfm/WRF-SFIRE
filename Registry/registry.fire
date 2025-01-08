@@ -15,8 +15,8 @@ package   fire_sfire    ifire==2                    -             state:avg_fuel
 
 package   fire_sfire1    ifire==1                    -             state:avg_fuel_frac,nfuel_cat,zsf,tign_g,tign_in,fire_hfx,rthfrten,rqvfrten,grnhfx,grnqfx,canhfx,canqfx,dzdxf,dzdyf,lfn,lfn_out,fuel_frac,fire_area,uf,vf,fgrnhfx,fgrnqfx,fcanhfx,fcanhfx,fcanqfx,ros,fxlong,fxlat,fuel_time,bbb,phiwc,phisc,r_0,fgip,ischap,fz0,fwh,unit_fxlong,unit_fxlat,ndwi,ndvi,fmc_g,fmc_gc,fmc_gc_f,fndwi,flineint,flineint2,f_ros0,f_rosx,f_rosy,f_ros,f_int,f_lineint,f_lineint2,f_ros11,f_ros12,f_ros13,f_ros21,f_ros23,f_ros31,f_ros32,f_ros33,wz0,can_top,can_bottom,can_bulk_density,cuf,cvf,uah,vah,tempf,rhof,ffwidth,cfb,can_fuel_frac,can_fuel_burnt,can_fx_z0,surf_mass_frac_b,surf_mass_frac_c
 
-package  fire_fmoist_run   fmoisti_run==1           -             state:fmc_gc,fmc_gc_f,fmep,fmc_equi,fmc_lag,t2_old,q2_old,rain_old,psfc_old,rh_fire
-package  fire_fmoist_interp fmoisti_interp==1       -             state:fmc_gc,fmc_gc_f
+package  fire_fmoist_run   fmoist_run==1           -             state:fmc_gc,fmc_gc_f,fmep,fmc_equi,fmc_lag,t2_old,q2_old,rain_old,psfc_old,rh_fire
+package  fire_fmoist_interp fmoist_interp==1       -             state:fmc_gc,fmc_gc_f
 
 # ------------------------------------------------------------------------------------------------------------------------
 #<Table> <Type>  <Sym>           <Dims>   <Use>   <NumTLev> <Stagger>  <IO>     <DNAME>      <DESCRIP>     <UNITS>   
@@ -136,14 +136,12 @@ state    real     psfc_old  ij       fire        1         z     hr   "PSFC_OLD"
 state    real     rh_fire   ij       fire        1         z     hr   "RH_FIRE" "relative humidity at the surface" "1"
 state    real     fmoist_lasttime -  fire        -         -     hr   "FMOIST_LASTTIME" "last time the moisture model was run" "s"
 state    real     fmoist_nexttime -  fire        -         -     hr   "FMOIST_NEXTTIME" "next time the moisture model will run" "s"
-rconfig logical   fmoist_run        namelist,fire  max_domains   .false.       hr   "run moisture model (on the atmospheric grid), output to fmc_gc"
-rconfig logical   fmoist_interp     namelist,fire  max_domains   .false.       hr   "interpolate moisture from the model or the input to fuels on the fire grid"
-rconfig integer   fmoisti_run       derived        max_domains   0             hr   "run moisture model (on the atmospheric grid), output to fmc_gc"
-rconfig integer   fmoisti_interp    derived        max_domains   0             hr   "interpolate moisture from the model or the input to fuels on the fire grid"
-rconfig logical   fmoist_only       namelist,fire  max_domains   .false.       hr   "only run moisture model, skip fire"
-rconfig integer   fmoist_freq       namelist,fire  max_domains    0       hr   "fmoist_freq"    "frequency to run moisture model 0: use fmoist_dt, k>0: every k timesteps" "1"
-rconfig real      fmoist_dt         namelist,fire  max_domains    600     hr   "fmoist_dt  "    "moisture model time step" "s"
-rconfig real      fmep_decay_tlag   namelist,fire  1              999999  hr   "fmep_decay_tlag" "time constant of assimilated adjustments of equilibria decay" "1"
+rconfig integer   fmoist_run        namelist,fire  max_domains   0        hr   "run moisture model (on the atmospheric grid), output to fmc_gc"
+rconfig integer   fmoist_interp     namelist,fire  max_domains   0        hr   "interpolate moisture from the model or the input to fuels on the fire grid"
+rconfig integer   fmoist_only       namelist,fire  max_domains   0        hr   "only run moisture model, skip fire"
+rconfig integer   fmoist_freq       namelist,fire  max_domains   0        hr   "fmoist_freq"    "frequency to run moisture model 0: use fmoist_dt, k>0: every k timesteps" "1"
+rconfig real      fmoist_dt         namelist,fire  max_domains   600      hr   "fmoist_dt  "    "moisture model time step" "s"
+rconfig real      fmep_decay_tlag   namelist,fire  1             999999   hr   "fmep_decay_tlag" "time constant of assimilated adjustments of equilibria decay" "1"
 #
 halo      HALO_FIRE_MFG dyn_em 24:fmc_g,fmc_gc_f
 halo      HALO_FIRE_MAG dyn_em 8:fmc_gc
