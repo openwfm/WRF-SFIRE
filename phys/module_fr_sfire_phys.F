@@ -164,7 +164,7 @@ PUBLIC:: mfuelcats
    INTEGER, PARAMETER :: zf = mfuelcats-nf  ! number of zero fillers in data stmt 
    INTEGER, SAVE      :: no_fuel_cat = 14   ! special no fuel category outside of 1:nfuelcats
    INTEGER, SAVE      :: no_fuel_cat2 = 99999999  ! all categories between no_fuel_cat and no_fuel_cat2 are no fuel
-   INTEGER, SAVE      :: ibeh=1             ! spread formula 0 = MacArthur, 1 = Rothermel, 2 = Balbi
+   INTEGER, SAVE      :: ibeh=1             ! spread formula 0 = MacArthur, 1 = Rothermel, 2 = Balbi, 3 = WIRC, 4 = Behave
    CHARACTER (len=80), DIMENSION(mfuelcats ), save :: fuel_name
    INTEGER, DIMENSION( mfuelcats ), save :: ichap
    INTEGER, DIMENSION( mfuelcats ), save :: idynamic
@@ -1124,7 +1124,7 @@ iounit = open_text_file('fuels.m','write')
 10 format('fuel(',i3,').',a,'=',"'",a,"'",';% ',a)
 do k=1,nfuelcats
     write(iounit,10)k,'fuel_name',trim(fuel_name(k)),'FUEL MODEL NAME'
-    call write_var(k,'ibeh',1.*ibeh,'Model: 0 = MacArthur, 1 = Rothermel, 2 = Balbi' )
+    call write_var(k,'ibeh',1.*ibeh,'Model: 0 = MacArthur, 1 = Rothermel, 2 = Balbi, 3 = WIRC, 4 = Behave' )
     call write_var(k,'windrf',windrf(k),'WIND REDUCTION FACTOR FROM FCWH TO MIDFLAME HEIGHT' )
     call write_var(k,'fwh',fcwh(k),'WIND HEIGHT TO INTERPOLATE VERTICALLY TO (M)' )
     call write_var(k,'fz0',fcz0(k),'ROUGHNESS LENGTH FOR VERTICAL WIND LOG INTERPOLATION (M)' )
