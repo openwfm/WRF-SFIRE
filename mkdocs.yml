@@ -1,0 +1,26 @@
+site_name: WRF-SFIRE
+site_url: https://WRF-SFIRE.readthedocs.io/en/latest/ 
+# these lines make the "edit on Github button"
+# repo_url: https://github.com/openwfm/WRF-SFIRE 
+# edit_uri: edit/master/docs/
+site_description: WRF-SFIRE Documentation
+theme:
+  name: readthedocs
+  highlightjs: true
+  features:
+    - navigation.instant
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        # See: https://mkdocstrings.github.io/python/usage/
+        python:
+          options:
+            docstring_style: sphinx
+markdown_extensions:
+  - markdown_include.include:
+      base_path: .
+  - admonition
+nav:
+    - Welcome: index.md
+    - For Editors: build.md

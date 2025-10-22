@@ -1,45 +1,31 @@
 ---
 name: New feature
 about: Add a new feature issue
-title: ''
+title: 'New feature: [Feature name]'
 labels: newfeature
 assignees: ''
 
 ---
 
-# Feature Name
+A brief summary of the feature
 
 ## Description
-[Provide a brief description of the feature.]
 
-## Methods/References
-[List the methods or references used for implementing the feature.]
+- Explain the scientific concept or the physical parameterization this feature will address.
+- Describe the expected outcome and how it will enhance the weather model.
 
-## Feature Class
-Please choose one of the available feature classes:
-- [ ] Level-Set Spread
-- [ ] Rate of Spread Parameterization
-- [ ] Surface Model
-- [ ] Ignition
-- [ ] Heat Fluxes Parameterization
-- [ ] Fuel Moisture Parameterization
-- [ ] Surface Initialization
-- [ ] Other Parameterization
-- [ ] Miscellaneous
+## Acceptance Criteria
 
-## Relevant Information
-[Include any additional relevant information or considerations related to the feature.]
+- Detail the scientific criteria and benchmarks that the feature must meet.
+- Include criteria for validation and testing, like specific datasets or comparison with observed data.
+- Specify any performance metrics, like computational efficiency or accuracy improvements.
 
-## Test Cases
-To test your feature implementation, consider the following test cases or develop additional ones as needed:
+## Dependencies
 
-If you need to create a new test case, please provide the following information:
- - Description: [Provide a brief description of the test case.]
- - Input: [Specify the input data or parameters required for the test case.]
- - Expected Output: [Describe the expected output or result of the test case.]
+- List any external libraries, data sources, issues, or other features within the model that this feature depends on.
+- Mention any necessary updates to existing components of the model.
 
+## Additional Resources
 
-[Add more test cases as needed.]
-
-## Usage Example
-[Provide an example of how the feature can be used or applied.]
+- Provide references to scientific papers, technical documentation, or previous model versions relevant to this feature.
+- Include links to datasets or tools that will be used or affected.
