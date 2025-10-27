@@ -33,7 +33,7 @@ public:: fire_params
 
 ! variables
 PUBLIC:: fire_wind_height,fcz0,fcwh,have_fuel_cats,nfuelcats, &
-  no_fuel_cat,no_fuel_cat2,windrf,moisture_classes,itree,fueldepthm,ibeh, use_multilayer_hf
+  no_fuel_cat,no_fuel_cat2,windrf,moisture_classes,itree,fueldepthm,veg_ros_model, use_multilayer_hf
 PUBLIC:: mfuelcats
 ! NOTE: fcwh and fcz0 are called fwh and fz0 in read/write statements
 
@@ -164,7 +164,7 @@ PUBLIC:: mfuelcats
    INTEGER, PARAMETER :: zf = mfuelcats-nf  ! number of zero fillers in data stmt 
    INTEGER, SAVE      :: no_fuel_cat = 14   ! special no fuel category outside of 1:nfuelcats
    INTEGER, SAVE      :: no_fuel_cat2 = 99999999  ! all categories between no_fuel_cat and no_fuel_cat2 are no fuel
-   INTEGER, SAVE      :: ibeh=1             ! spread formula 0 = MacArthur, 1 = Rothermel, 2 = Balbi, 3 = WIRC, 4 = Behave
+   INTEGER, SAVE      :: veg_ros_model=1             ! spread formula 0 = MacArthur, 1 = Rothermel, 2 = Balbi, 3 = WIRC, 4 = Behave
    CHARACTER (len=80), DIMENSION(mfuelcats ), save :: fuel_name
    INTEGER, DIMENSION( mfuelcats ), save :: ichap
    INTEGER, DIMENSION( mfuelcats ), save :: idynamic
@@ -760,7 +760,7 @@ REAL   , DIMENSION( mfuelcats ) :: fwh, fz0
 !*** executable
 
 ! read 
-namelist /fuel_scalars/ cmbcnst,hfgl,fuelmc_g,fuelmc_c,nfuelcats,no_fuel_cat,no_fuel_cat2,fire_wind_height,ibeh, &
+namelist /fuel_scalars/ cmbcnst,hfgl,fuelmc_g,fuelmc_c,nfuelcats,no_fuel_cat,no_fuel_cat2,fire_wind_height,veg_ros_model, &
     ffwidth_thresh, balbi_msglevel, use_multilayer_hf
 namelist /fuel_categories/ fuel_name,windrf,fgi,fueldepthm,savr, &
     fuelmce,fueldens,st,se,weight,fci_d,fct,ichap,itree,fwh,fz0,ffw,idynamic, &
@@ -858,7 +858,7 @@ call wrf_dm_bcast_real(ffwidth_thresh,1)
 call wrf_dm_bcast_integer(nfuelcats,1)
 call wrf_dm_bcast_integer(no_fuel_cat,1)
 call wrf_dm_bcast_integer(no_fuel_cat2,1)
-call wrf_dm_bcast_integer(ibeh,1)
+call wrf_dm_bcast_integer(veg_ros_model,1)
 call wrf_dm_bcast_real(windrf,    nfuelcats)
 call wrf_dm_bcast_real(fgi,       nfuelcats)
 call wrf_dm_bcast_real(fueldepthm,nfuelcats)
@@ -1124,7 +1124,7 @@ iounit = open_text_file('fuels.m','write')
 10 format('fuel(',i3,').',a,'=',"'",a,"'",';% ',a)
 do k=1,nfuelcats
     write(iounit,10)k,'fuel_name',trim(fuel_name(k)),'FUEL MODEL NAME'
-    call write_var(k,'ibeh',1.*ibeh,'Model: 0 = MacArthur, 1 = Rothermel, 2 = Balbi, 3 = WIRC, 4 = Behave' )
+    call write_var(k,'veg_ros_model',1.*veg_ros_model,'Model: 0 = MacArthur, 1 = Rothermel, 2 = Balbi, 3 = WIRC, 4 = Behave' )
     call write_var(k,'windrf',windrf(k),'WIND REDUCTION FACTOR FROM FCWH TO MIDFLAME HEIGHT' )
     call write_var(k,'fwh',fcwh(k),'WIND HEIGHT TO INTERPOLATE VERTICALLY TO (M)' )
     call write_var(k,'fz0',fcz0(k),'ROUGHNESS LENGTH FOR VERTICAL WIND LOG INTERPOLATION (M)' )
@@ -2071,7 +2071,7 @@ else if (k >= 1 .and. k < no_fuel_cat) then
         endif
 
         ierrx=0
-        if (ibeh .eq. 2) then
+        if (veg_ros_model .eq. 2) then
             call fire_ros_balbi(ros, nvx, nvy, i, j, fp, ierrx, msg, k, speed)
             ! if (ierrx.ne.0)then
             !     balbi_nc_count = balbi_nc_count + 1
@@ -2085,13 +2085,13 @@ else if (k >= 1 .and. k < no_fuel_cat) then
             !     endif
             !     call warning(msg)
             ! endif
-        else if (ibeh .eq. 3) then
+        else if (veg_ros_model .eq. 3) then
 #ifdef USE_STARFIRE
             call fire_ros_wirc(ros, nvx, nvy, i, j, fp, ierrx, msg, k, speed)
 #else
             call crash("fire_ros: fire_ros_wirc requires StarFIRE.")
 #endif
-        else if (ibeh .eq. 4) then
+        else if (veg_ros_model .eq. 4) then
             call fire_ros_behave(ros,nvx,nvy,i,j,fp,ierrx,msg, k, speed)
         else
             if (fire_advection.ne.0) then ! from flags in module_fr_sfire_util
@@ -3084,12 +3084,12 @@ integer::k
 
 ierrx = 0
 
-if(ibeh.eq.2)then
-        call crash('fire_ros_cawfe: ibeh=2 Balbi not supported here')
+if(veg_ros_model.eq.2)then
+        call crash('fire_ros_cawfe: veg_ros_model=2 Balbi not supported here')
 endif
 
 if (.not. fp%ischap(i,j) > 0.) then            ! if not chaparral, do not test for .eq. 0 for speed
-    if (ibeh .eq. 1) then                ! use Rothermel formula
+    if (veg_ros_model .eq. 1) then                ! use Rothermel formula
 !       ... if wind is 0 or into fireline, phiw = 0, &this reduces to backing ros.
         spdms = max(speed,0.)          ! 
         umidm = min(spdms,30.)       ! max input wind spd is 30 m/s   !param!
@@ -3102,15 +3102,15 @@ if (.not. fp%ischap(i,j) > 0.) then            ! if not chaparral, do not test f
         ros_slope = fp%phisc(i,j) *tanphim**2   ! slope factor
         ! rosm = fp%r_0(i,j)*(1. + phiw + phis)  * .00508 ! spread rate, m/s
         ros_back = fp%r_0(i,j)
-    elseif(ibeh.eq.98)then ! for testing only, spread rate = wind but not < 0
+    elseif(veg_ros_model.eq.98)then ! for testing only, spread rate = wind but not < 0
         ros_back = 0.
         ros_wind = max(speed,0.)
         ros_slope= 0.
-    elseif(ibeh.eq.99)then ! for testing only, spread rate = wind speed, no mask <0
+    elseif(veg_ros_model.eq.99)then ! for testing only, spread rate = wind speed, no mask <0
         ros_back = 0.
         ros_wind = speed
         ros_slope= 0.
-    elseif(ibeh.eq.0)then                                  ! MacArthur formula (Australian)
+    elseif(veg_ros_model.eq.0)then                                  ! MacArthur formula (Australian)
         ! rosm = 0.18*exp(0.8424*max(speed,0.))
         ros_back = 0.18
         ros_wind = 0.18*exp(0.8424*max(speed,0.)) - ros_back

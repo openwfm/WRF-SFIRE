@@ -70,7 +70,7 @@ module module_fr_sfire_driver
 use module_fr_sfire_model, only: sfire_model
 use module_fr_sfire_phys, only: fire_params, init_fuel_cats, fuel_moisture, &
    advance_moisture, moisture_classes, &
-   fire_rate_of_spread, ibeh, balbi_msglevel
+   fire_rate_of_spread, veg_ros_model, balbi_msglevel
 use module_fr_sfire_atm, only: apply_windrf,interpolate_wind2fire_height,interpolate_atm2fire, &
    interpolate_z2fire,setup_wind_log_interpolation,find_trees_fmesh,massman_fwh, rho2fire
 use module_fr_sfire_util
@@ -407,13 +407,13 @@ call print_2d_stats(ifps,min(ifpe,ifde-ir),jfps,min(jfpe,jfde-jr),ifms,ifme,jfms
 !           halo exchange on atm winds and geopotential for interpolation
 #include "HALO_SFIRE_WIND_A.inc"
 #include "HALO_FIRE_PH.inc"
-            if(ibeh.eq.2 .or. ibeh == 3)then
+            if(veg_ros_model.eq.2 .or. veg_ros_model == 3)then
 #include "HALO_SFIRE_RHO2FIRE_ATM.inc"
             endif
         elseif(fire_ifun.eq.4)then
 !           halo exchange on fire winds width 2 for a 2-step RK method
 #include "HALO_FIRE_WIND_F.inc"
-            if(ibeh.eq.2 .or. ibeh == 3)then
+            if(veg_ros_model.eq.2 .or. veg_ros_model == 3)then
 #include "HALO_SFIRE_RHO2FIRE_SUB.inc"
             endif
             if(run_fuel_moisture)then
@@ -972,10 +972,10 @@ do ij=1,num_tiles
 
     elseif(ifun.eq.3)then  ! interpolate atmosphere variables to the fire grid
   
-      for_balbi: if(ibeh.eq.2 .or. ibeh.eq.3)then
+      for_balbi: if(veg_ros_model.eq.2 .or. veg_ros_model.eq.3)then
 
-         call message('ibeh=2 or 3: interpolating atmosphere input for rate of spread model')
-         if(.not.use_atm_vars)call crash('ibeh=2 or 3, ros model requires atmosphere but use_atm_vars=false')
+         call message('veg_ros_model=2 or 3: interpolating atmosphere input for rate of spread model')
+         if(.not.use_atm_vars)call crash('veg_ros_model=2 or 3, ros model requires atmosphere but use_atm_vars=false')
          
          ! balbi_msglevel = 4
 
@@ -1948,7 +1948,7 @@ subroutine check_grid_alloc(grid,config_flags)
     call check_size(size(grid%chem),'chem',config_flags%chem_opt)
     call check_size(size(grid%tracer),'tracer',config_flags%tracer_opt)
     
-    if(ibeh.eq.2)then
+    if(veg_ros_model.eq.2)then
         call check_size(size(grid%t2),'t2')
         call check_size(size(grid%psfc),'psfc')
         call check_size(size(grid%q2),'q2')
