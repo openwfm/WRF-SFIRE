@@ -1,6 +1,5 @@
-# for gcc/gfortran 9 and below
 FFREE=-ffree-form -ffree-line-length-none
 FFIXED=-ffixed-form
-FCFLAGS=-O -DGFORTRAN_IARGC -fallow-argument-mismatch
+FCFLAGS=-O -DGFORTRAN_IARGC -Wno-argument-mismatch
 FC=gfortran
 FP=gfortran
