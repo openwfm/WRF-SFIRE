@@ -3,9 +3,16 @@ include make.inc
 DEFS =
 WRF = ..
 INC = $(WRF)/inc
-FPFLAGS= -I$(NETCDF)/include -I$(NETCDF)/modules -I $(INC) -I.  
-LDFLAGS = -L$(NETCDF)/lib -lnetcdff -lnetcdf
-#LDFLAGS = `$(NETCDF)/bin/nc-config --flibs`
+NETCDF_FFLAGS := $(shell nf-config --fflags 2>/dev/null)
+NETCDF_FLIBS := $(shell nf-config --flibs 2>/dev/null) $(shell nc-config --libs 2>/dev/null)
+ifeq ($(strip $(NETCDF_FFLAGS)),)
+NETCDF_FFLAGS = -I$(NETCDF)/include -I$(NETCDF)/modules
+endif
+ifeq ($(strip $(NETCDF_FLIBS)),)
+NETCDF_FLIBS = -L$(NETCDF)/lib -lnetcdff -lnetcdf
+endif
+FPFLAGS= $(NETCDF_FFLAGS) -I $(INC) -I.
+LDFLAGS = $(NETCDF_FLIBS)
 FFLAGS=$(FPFLAGS) $(FCFLAGS) $(FFREE)
 
 MAKEFILE=Makefile
@@ -43,7 +50,7 @@ FIRE_OBJ = \
     module_fr_sfire_fields.o \
     module_fr_sfire_atm.o \
     module_fr_sfire_util.o  \
-	module_fr_sfire_driver.o \
+    module_fr_sfire_driver.o \
     wrf_fakes.o
 
 INIT_OBJ = \
@@ -90,7 +97,7 @@ MOISTURE_OBJ = \
     module_fr_sfire_util.o  \
     wrf_fakes.o
 
-default: fire_ros
+default: all
 
 all: fire.exe fire_ros
 
@@ -114,6 +121,7 @@ atm: atm.exe
 atm.exe: $(MAKEFILE) atm.o $(FIRE_OBJ)
 	$(FC) $(FCFLAGS) -o atm.exe fire.o $(FIRE_OBJ) $(LDFLAGS)
 
+fire_main.o: fire_main.F $(FIRE_OBJ)
 
 fire.exe: $(MAKEFILE) fire_main.o $(FIRE_OBJ)
 	$(FC) $(FCFLAGS) -o fire.exe fire_main.o $(FIRE_OBJ) $(LDFLAGS)
@@ -143,8 +151,8 @@ moisture_main.o: $(MAKEFILE) \
 fire.o: $(MAKEFILE) \
     module_fr_sfire_model.o \
     module_fr_sfire_core.o  \
-	module_fr_sfire_driver.o \
-	module_fr_sfire_fields.o \
+    module_fr_sfire_driver.o \
+    module_fr_sfire_fields.o \
     module_domain.o \
     module_configure.o \
     wrf_fakes.o \
@@ -178,6 +186,7 @@ module_fr_sfire_atm.o: \
     module_fr_sfire_util.o
       
 module_fr_sfire_phys.o: $(MAKEFILE) \
+    module_fr_sfire_fields.o \
     module_fr_sfire_util.o 
 
 module_fr_sfire_util.o: $(MAKEFILE) \
@@ -190,6 +199,7 @@ module_fr_sfire_driver.o: $(MAKEFILE) \
 	sfire_id.inc \
 	module_domain.o \
 	module_configure.o \
+    module_fr_sfire_fields.o \
         module_fr_sfire_phys.o \
 	module_fr_sfire_model.o \
 	module_fr_sfire_atm.o \

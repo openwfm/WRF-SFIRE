@@ -1,7 +1,7 @@
 module module_fire_standalone
 
 use module_fr_sfire_driver, only: set_flags, fire_ignition_convert, &
-                                  set_fp_from_grid
+                                  set_fp_from_grid, set_sfire_fields_from_grid
 use module_fr_sfire_util, only: message,crash, &
           lines_type, print_2d_stats
 use module_fr_sfire_phys, only: fire_params, init_fuel_cats
@@ -44,6 +44,7 @@ type(grid_info)::info                    ! dimensions, grid controls
 ! scalars
 integer:: nsteps,itimestep,ifun_start,ifun_end,id,ifun,iframe,istep
 integer::nhalo=5
+integer, parameter::n_layer_hf_surf=4
 double precision:: dt_double,dt_config,duration_s,frame_s  ! may need more accurate time computation to get the number of timesteps right
 real:: time_start,dt,t
 logical::do_ouput
@@ -98,6 +99,10 @@ write(6,2)'fire tile   dimensions       ',ifts,ifte,jfts,jfte
 ! inputs
 call allocate2d(grid%uf,ifms,ifme,jfms,jfme,'uf')              ! fire winds
 call allocate2d(grid%vf,ifms,ifme,jfms,jfme,'vf')              ! fire winds
+call allocate2d(grid%can_top,ifms,ifme,jfms,jfme,'can_top')    ! canopy top
+call allocate2d(grid%can_bottom,ifms,ifme,jfms,jfme,'can_bottom') ! canopy base
+call allocate2d(grid%can_bulk_density,ifms,ifme,jfms,jfme,'can_bulk_density') ! canopy bulk density
+call allocate2d(grid%can_fx_z0,ifms,ifme,jfms,jfme,'can_fx_z0') ! canopy heat flux injection height
 call allocate2d(grid%zsf,ifms,ifme,jfms,jfme,'zsf')             ! terrain height
 call allocate2d(grid%dzdxf,ifms,ifme,jfms,jfme,'dzdxf')           ! terrain grad
 call allocate2d(grid%dzdyf,ifms,ifme,jfms,jfme,'dzdyf')           ! terrain grad
@@ -118,8 +123,14 @@ call allocate2d(grid%fuel_time,ifms,ifme,jfms,jfme,'fuel_time')        !
 call allocate2d(grid%lfn,ifms,ifme,jfms,jfme,'lfn') 
 call allocate2d(grid%tign_g,ifms,ifme,jfms,jfme,'tign_g') 
 call allocate2d(grid%fuel_frac,ifms,ifme,jfms,jfme,'fuel_frac') 
+call allocate2d(grid%can_fuel_frac,ifms,ifme,jfms,jfme,'can_fuel_frac')
 call allocate2d(grid%fuel_frac_burnt,ifms,ifme,jfms,jfme,'fuel_frac_burnt') 
 call allocate2d(grid%lfn_out,ifms,ifme,jfms,jfme,'lfn_out') 
+call allocate2d(grid%cfb,ifms,ifme,jfms,jfme,'cfb')
+call allocate2d(grid%can_fuel_burnt,ifms,ifme,jfms,jfme,'can_fuel_burnt')
+call allocate2d(grid%surf_moisture_frac,ifms,ifme,jfms,jfme,'surf_moisture_frac')
+call allocate3d(grid%surf_mass_frac_b,ifms,ifme,1,n_layer_hf_surf,jfms,jfme,'surf_mass_frac_b')
+call allocate3d(grid%surf_mass_frac_c,ifms,ifme,1,n_layer_hf_surf,jfms,jfme,'surf_mass_frac_c')
 
 ! outputs
 call allocate2d(grid%fire_area,ifms,ifme,jfms,jfme,'fire_area') 
@@ -148,6 +159,7 @@ call allocate2d(fmc_g2,ifms,ifme,jfms,jfme,'fmc_g2')              ! moisture
 
 ! copy pointers to grid fields, to pass to the spread rate calculation
 call set_fp_from_grid(grid,fp)
+call set_sfire_fields_from_grid(grid)
 call init_fuel_cats(.true.)
 
 ! time control
@@ -230,14 +242,17 @@ write(*,'(2(a,i5))')'using frames from',iframe_start,' to',iframe_end
 
 itimestep = 0
 ifun_start=1
-do iframe=iframe_start,iframe_end ! interval ending with iframe
+do iframe=1,iframe_end ! interval ending with iframe
   if(.not.uniform)then
     call read_vars(inputfile,info,iframe,grid)
     uf2=grid%uf
     vf2=grid%vf
     fmc_g2=grid%fmc_g
   endif
-  do istep=1,nsteps
+
+  if (iframe.ge.iframe_start) then ! interpolate and run fire model  
+
+   do istep=1,nsteps
     itimestep=info%ntimes * (iframe - 1) + istep
     grid%itimestep = itimestep
     grid%xtime = itimestep * grid%dt / 60.
@@ -268,6 +283,7 @@ do iframe=iframe_start,iframe_end ! interval ending with iframe
         restart,replay,                         & ! use existing state; prescribe fire arrival time
         run_fuel_moisture,                      & ! run the moisture model
         config_flags%fire_fuel_read,config_flags%fire_fuel_cat,   & ! legacy initial constant fuel category
+        config_flags%fire_can_fuel_read,        & ! canopy fuel initialization mode
         ifds,ifde,jfds,jfde,                    & ! fire domain dims - the whole domain
         ifms,ifme,jfms,jfme,                    & ! fire memory dims - how declared
         ifps,ifpe,jfps,jfpe,                    & ! patch - nodes owned by this process
@@ -279,8 +295,10 @@ do iframe=iframe_start,iframe_end ! interval ending with iframe
         grid%fire_hfx,                          & ! given heat flux (experimental)
         grid%tign_in,                           & ! ignition time, if given
         grid%lfn,grid%lfn_out,grid%tign_g,grid%fuel_frac,grid%fire_area,   & ! state: level function, ign time, fuel left, area burning
+        grid%can_fuel_frac,                     & ! canopy fuel fraction
         grid%fuel_frac_burnt,                   &
         grid%fgrnhfx,grid%fgrnqfx,                          & ! output: heat fluxes
+        grid%fcanhfx,grid%fcanqfx,              & ! output: canopy heat fluxes
         grid%ros,grid%flineint,grid%flineint2,                 & ! diagnostic variables
         grid%f_ros0,grid%f_rosx,grid%f_rosy,grid%f_ros,             & ! fire risk spread
         grid%f_int,grid%f_lineint,grid%f_lineint2,             & ! fire risk intensities
@@ -291,8 +309,9 @@ do iframe=iframe_start,iframe_end ! interval ending with iframe
     
     enddo
     ifun_start=3
-  enddo
-  call write_vars(outputfile,grid,info,iframe)
+   enddo
+  endif
+  call write_vars(outputfile,grid,info,iframe) 
   if(.not.uniform)then
     uf1=uf2
     vf1=vf2

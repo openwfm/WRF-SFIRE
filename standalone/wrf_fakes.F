@@ -162,6 +162,17 @@ SUBROUTINE wrf_dm_bcast_integer( BUF, N1 )
    RETURN
 END SUBROUTINE wrf_dm_bcast_integer
 
+!
+!***
+!
+
+SUBROUTINE wrf_dm_bcast_logical( BUF, N1 )
+   IMPLICIT NONE
+   INTEGER n1
+   LOGICAL  buf(*)
+   RETURN
+END SUBROUTINE wrf_dm_bcast_logical
+
 
 !WRF:DRIVER_LAYER:UTIL
 !
@@ -235,4 +246,3 @@ CONTAINS
    END SUBROUTINE end_timing
 
 END MODULE module_timing
-

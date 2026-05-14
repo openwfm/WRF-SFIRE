@@ -16,6 +16,9 @@ module module_domain
       ! constant arrays - set once at initialization
       real, pointer, dimension(:,:)::wz0 => null()             ! roughness length
       real, pointer, dimension(:,:)::can_top => null()         ! Height of tree canopy
+      real, pointer, dimension(:,:)::can_bottom => null()      ! Height of tree canopy base
+      real, pointer, dimension(:,:)::can_bulk_density => null()! Canopy bulk density
+      real, pointer, dimension(:,:)::can_fx_z0 => null()       ! Canopy heat flux injection height
       real, pointer, dimension(:,:)::zsf => null()             ! terrain height
       real, pointer, dimension(:,:)::dzdxf => null()           ! terrain gradient 
       real, pointer, dimension(:,:)::dzdyf => null()           ! terrain gradient 
@@ -71,6 +74,11 @@ module module_domain
       real, pointer, dimension(:,:)::tempf => null()
       real, pointer, dimension(:,:)::rhof => null()
       real, pointer, dimension(:,:)::ffwidth => null()
+      real, pointer, dimension(:,:)::cfb => null()             ! crown fraction burnt
+      real, pointer, dimension(:,:)::can_fuel_burnt => null()  ! canopy fuel burnt in timestep
+      real, pointer, dimension(:,:)::surf_moisture_frac => null()
+      real, pointer, dimension(:,:,:)::surf_mass_frac_b => null()
+      real, pointer, dimension(:,:,:)::surf_mass_frac_c => null()
 
       ! scalars
       ! mesh and housekeeping
@@ -94,6 +102,7 @@ module module_domain
       real, pointer, dimension(:,:)::tign_g => null()          ! time of ignintion
       real, pointer, dimension(:,:)::tign_in => null()         ! given fire arrival time
       real, pointer, dimension(:,:)::fuel_frac => null()       ! remaining fuel fraction
+      real, pointer, dimension(:,:)::can_fuel_frac => null()   ! remaining canopy fuel fraction
       real, pointer, dimension(:,:)::fuel_frac_burnt => null() ! fuel fraction burned in the time step
       real, pointer, dimension(:,:)::lfn_out  => null()        ! a copy of the level set function
       real, pointer, dimension(:,:)::fire_area  => null()      ! fraction of cell area burning

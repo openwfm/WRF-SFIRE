@@ -1,5 +1,5 @@
 FFREE=-ffree-form -ffree-line-length-none
 FFIXED=-ffixed-form
-FCFLAGS=-O -DGFORTRAN_IARGC
+FCFLAGS=-O -DGFORTRAN_IARGC -fallow-argument-mismatch
 FC=gfortran
 FP=gfortran

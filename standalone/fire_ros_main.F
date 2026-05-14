@@ -72,7 +72,7 @@ print *,'number of cases in namelist &data                n=',n
 print *,'WRF-SFIRE print level               fire_print_msg=',fire_print_msg
 print *,'print level in fire_ros_balbi       balbi_msglevel=',balbi_msglevel
 print *,'write file fuels.m for graphics call_write_fuels_m=',call_write_fuels_m
-print *,'compare codes (ibeh=1 only)      compare_rothermel=',compare_rothermel
+print *,'compare codes (veg_ros_model=1 only) compare_rothermel=',compare_rothermel
 print *,'number of fuel moisture classes               nfmc=',nfmc
 write(*,control)
 
@@ -81,8 +81,8 @@ if(call_write_fuels_m)then
      print *,'and writing file fuels.m. For a guide how to use fuels.m, see' 
      print *,'https://wiki.openwfm.org/wiki/How_to_diagnose_fuel_properties_in_WRF-SFIRE'
 endif
-call init_fuel_cats(init_fuel_moisture=.true.) 
-print *,'Fire ROS model from file namelist.fire is ibeh=',ibeh,' ',model(ibeh)
+call init_fuel_cats(init_fuel_moisture=.true.)
+print *,'Fire ROS model from file namelist.fire is veg_ros_model=',veg_ros_model,' ',model(veg_ros_model)
  
 ! allocate our arrays used in namelist
 allocate(propx(1,n),propy(1,n),vx(1,n),vy(1,n),dzdxf(1,n),dzdyf(1,n),fmc_g(1,n),nfuel_cat(1,n),tempf(1,n),rhof(1,n),ffwidth(1,n),ros(1,n))

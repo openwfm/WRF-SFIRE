@@ -90,6 +90,30 @@ character(len=nf90_max_name)::                        &
                               var_fgrnqfx='FGRNQFX',            &
                               unit_fgrnqfx='J/m^2',             &
                               desc_fgrnqfx='heat flux',         &
+                              var_fcanhfx='FCANHFX',            &
+                              unit_fcanhfx='J/m^2',             &
+                              desc_fcanhfx='canopy sensible heat flux', &
+                              var_fcanqfx='FCANQFX',            &
+                              unit_fcanqfx='J/m^2',             &
+                              desc_fcanqfx='canopy latent heat flux', &
+                              var_can_top='CAN_TOP',            &
+                              unit_can_top='m',                 &
+                              desc_can_top='canopy top height', &
+                              var_can_bottom='CAN_BOTTOM',      &
+                              unit_can_bottom='m',              &
+                              desc_can_bottom='canopy base height', &
+                              var_can_bulk_density='CAN_BULK_DENSITY', &
+                              unit_can_bulk_density='kg/m^3',   &
+                              desc_can_bulk_density='canopy bulk density', &
+                              var_can_fuel_frac='CAN_FUEL_FRAC', &
+                              unit_can_fuel_frac='1',           &
+                              desc_can_fuel_frac='canopy fuel fraction remaining', &
+                              var_can_fuel_burnt='CAN_FUEL_BURNT', &
+                              unit_can_fuel_burnt='kg/m^2',     &
+                              desc_can_fuel_burnt='canopy fuel burnt in timestep', &
+                              var_cfb='CFB',                    &
+                              unit_cfb='1',                     &
+                              desc_cfb='crown fraction burnt',  &
                               var_ros='ROS',                    &
                               unit_ros='m/s',                   &
                               desc_ros='ROS',                   &
@@ -266,6 +290,14 @@ call define_var(filename,info,var_fxlong,3,dim_fire,unit_fxlong,desc_fxlong)
 call define_var(filename,info,var_fxlat,3,dim_fire,unit_fxlat,desc_fxlat)
 call define_var(filename,info,var_fgrnhfx,3,dim_fire,unit_fgrnhfx,desc_fgrnhfx)
 call define_var(filename,info,var_fgrnqfx,3,dim_fire,unit_fgrnqfx,desc_fgrnqfx)
+call define_var(filename,info,var_fcanhfx,3,dim_fire,unit_fcanhfx,desc_fcanhfx)
+call define_var(filename,info,var_fcanqfx,3,dim_fire,unit_fcanqfx,desc_fcanqfx)
+call define_var(filename,info,var_can_top,3,dim_fire,unit_can_top,desc_can_top)
+call define_var(filename,info,var_can_bottom,3,dim_fire,unit_can_bottom,desc_can_bottom)
+call define_var(filename,info,var_can_bulk_density,3,dim_fire,unit_can_bulk_density,desc_can_bulk_density)
+call define_var(filename,info,var_can_fuel_frac,3,dim_fire,unit_can_fuel_frac,desc_can_fuel_frac)
+call define_var(filename,info,var_can_fuel_burnt,3,dim_fire,unit_can_fuel_burnt,desc_can_fuel_burnt)
+call define_var(filename,info,var_cfb,3,dim_fire,unit_cfb,desc_cfb)
 call define_var(filename,info,var_fuel_frac,3,dim_fire,unit_fuel_frac,desc_fuel_frac)
 call define_var(filename,info,var_fire_area,3,dim_fire,unit_fire_area,desc_fire_area)
 call define_var(filename,info,var_flineint,3,dim_fire,unit_flineint,desc_flineint)
@@ -385,8 +417,17 @@ call write_fire_var(ncid,info,iframe,var_fxlat,grid%fxlat)
 call write_fire_var(ncid,info,iframe,var_zsf,grid%zsf)
 call write_fire_var(ncid,info,iframe,var_fuel_frac,grid%fuel_frac)
 call write_fire_var(ncid,info,iframe,var_fire_area,grid%fire_area)
+! print *,'fgrnhfx ',grid%fgrnhfx(1,1),' at ',trim(var_times)
 call write_fire_var(ncid,info,iframe,var_fgrnhfx,grid%fgrnhfx)
 call write_fire_var(ncid,info,iframe,var_fgrnqfx,grid%fgrnqfx)
+call write_fire_var(ncid,info,iframe,var_fcanhfx,grid%fcanhfx)
+call write_fire_var(ncid,info,iframe,var_fcanqfx,grid%fcanqfx)
+call write_fire_var(ncid,info,iframe,var_can_top,grid%can_top)
+call write_fire_var(ncid,info,iframe,var_can_bottom,grid%can_bottom)
+call write_fire_var(ncid,info,iframe,var_can_bulk_density,grid%can_bulk_density)
+call write_fire_var(ncid,info,iframe,var_can_fuel_frac,grid%can_fuel_frac)
+call write_fire_var(ncid,info,iframe,var_can_fuel_burnt,grid%can_fuel_burnt)
+call write_fire_var(ncid,info,iframe,var_cfb,grid%cfb)
 call write_fire_var(ncid,info,iframe,var_ros,grid%ros)
 call write_fire_var(ncid,info,iframe,var_r_0,grid%r_0)
 call write_fire_var(ncid,info,iframe,var_flineint,grid%flineint)
