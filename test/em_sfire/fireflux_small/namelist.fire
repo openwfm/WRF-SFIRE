@@ -4,7 +4,6 @@
  fuelmc_g = 0.09,                   ! ground fuel moisture, set = 0 for dry
  fuelmc_c = 1.00,                   ! canopy fuel moisture, set = 0 for dry
  nfuelcats = 13,                    ! number of fuel categories used
- no_fuel_cat = 14                   ! extra category for no fuel
 /
 
 &fuel_categories                 
