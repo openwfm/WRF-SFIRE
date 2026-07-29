@@ -233,13 +233,14 @@ elseif(ifun.eq.2)then
             nfuel_cat,fuel_time, &
             fp) 
 
-        ! initialize model state to no fire / set tign_in
+        ! initialize model state to no fire or tign_in to set tign
         if(.not.restart)then
-            call init_no_fire  ( &
+            call init_fire_model  ( &
             ifds,ifde,jfds,jfde, &
             ifms,ifme,jfms,jfme, &
             ifts,ifte,jfts,jfte, &
             fdx,fdy,time_start,dt,  &
+            nfuel_cat,           &
             fuel_frac,can_fuel_frac,fire_area,lfn,tign_in,tign)
             
         endif

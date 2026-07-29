@@ -26,16 +26,17 @@ contains
 !****************************************
 !
     
-subroutine init_no_fire(&
+subroutine init_fire_model(&
     ifds,ifde,jfds,jfde, &
     ifms,ifme,jfms,jfme, &
     ifts,ifte,jfts,jfte, &
     fdx,fdy,time_start,dt,  & ! scalars in
+    nfuel_cat,              & ! arrays in
     fuel_frac,can_fuel_frac,fire_area,lfn,tign_in, & !arrays out 
-    tign)    ! arrays inout            
+    tign)    ! arrays inout
 implicit none
              
-!*** purpose: initialize model to no fire
+! initialize fire state for perimeter replay, prescribed ignition, or no fire
 
 !*** arguments
 integer, intent(in):: ifds,ifde,jfds,jfde   ! fire domain bounds
@@ -45,8 +46,12 @@ real, intent(in) :: fdx,fdy,time_start,dt   ! mesh spacing, time
 real, intent(out), dimension (ifms:ifme,jfms:jfme) :: & 
                    fuel_frac,can_fuel_frac,fire_area,lfn,           &  !  model state
                    tign_in       
+real, intent(in), dimension (ifms:ifme,jfms:jfme) :: &
+                   nfuel_cat                             ! lfn<0 on output allowed where no fuel
 real, intent(inout), dimension (ifms:ifme,jfms:jfme) :: & 
                    tign       ! model state, on input values tign_in
+!*** global
+!  fire_perimeter_time, fire_tign_in_time from namelist.input through use module_fr_sfire_util
 
 !*** calls
 intrinsic epsilon
@@ -60,7 +65,7 @@ time_now = time_start+dt
 time_init = time_start+2*dt  ! could be time_start+dt if not for rounding errors
 lfn_init = 2*max((ifde-ifds+1)*fdx,(jfde-jfds+1)*fdy)      ! more than domain diameter
 
-call print_2d_stats(ifts,ifte,jfts,jfte,ifms,ifme,jfms,jfme, tign,'init_no_fire start: tign')
+call print_2d_stats(ifts,ifte,jfts,jfte,ifms,ifme,jfms,jfme, tign,'init_fire_model start: tign')
 
 if (fire_perimeter_time > 0. .and. fire_tign_in_time > 0.)then
    call crash('fire_perimeter_time > 0 and fire_tign_in_time > 0')
@@ -68,7 +73,7 @@ endif
 
 if(fire_perimeter_time > 0.)then
   
-  write(msg,'(a,g14.6)')'init_no_fire: using given ignition time to replay history to fire_perimeter_time=',fire_perimeter_time
+  write(msg,'(a,g14.6)')'init_fire_model: using given ignition time to replay history to fire_perimeter_time=',fire_perimeter_time
 !$OMP CRITICAL(SFIRE_CORE_CRIT)
   call message(msg,level=1)
 !$OMP END CRITICAL(SFIRE_CORE_CRIT)
@@ -81,7 +86,7 @@ if(fire_perimeter_time > 0.)then
     enddo
 enddo
 elseif(fire_tign_in_time > 0.)then
-  call message('init_no_fire: using ignition from given max fire arrival time',level=1)
+  call message('init_fire_model: using ignition from given max fire arrival time',level=1)
   do j=jfts,jfte
     do i=ifts,ifte
         tign_in(i,j)=tign(i,j)
@@ -91,9 +96,9 @@ elseif(fire_tign_in_time > 0.)then
         lfn(i,j) = tign_in(i,j)-time_now    ! use specified ignition time as level set function 
     enddo
 enddo
-call print_2d_stats(ifts,ifte,jfts,jfte,ifms,ifme,jfms,jfme, tign_in,'init_no_fire: tign_in')
+call print_2d_stats(ifts,ifte,jfts,jfte,ifms,ifme,jfms,jfme, tign_in,'init_fire_model: tign_in')
 else
-    call message('init_no_fire: setting state to no fire',level=1)
+    call message('init_fire_model: setting state to no fire',level=1)
     do j=jfts,jfte
         do i=ifts,ifte
             fuel_frac(i,j)=1.          ! fuel at start is 1 by definition
@@ -105,21 +110,21 @@ else
   enddo
 endif
 
-call check_lfn_tign('init_no_fire',time_now,ifts,ifte,jfts,jfte,ifms,ifme,jfms,jfme,lfn, tign)
-call print_2d_stats(ifts,ifte,jfts,jfte,ifms,ifme,jfms,jfme, tign,'init_no_fire: tign')
-call print_2d_stats(ifts,ifte,jfts,jfte,ifms,ifme,jfms,jfme, tign,'init_no_fire: lfn')
+call check_lfn_tign('init_fire_model',time_now,ifts,ifte,jfts,jfte,ifms,ifme,jfms,jfme,lfn, tign)
+call print_2d_stats(ifts,ifte,jfts,jfte,ifms,ifme,jfms,jfme, tign,'init_fire_model: tign')
+call print_2d_stats(ifts,ifte,jfts,jfte,ifms,ifme,jfms,jfme, lfn,'init_fire_model: lfn')
 
 do j=jfts,jfte
    do i=ifts,ifte
-      if(.not.lfn(i,j) > 0.)then
-         write(msg,*)'i,j=',i,j,' tign=',tign(i,j),' <= time_now =',time_now
+      if(.not.lfn(i,j) > 0. .and. nfuel_cat(i,j) > 0.)then    ! ***relies on fuel category 0 = no fuel***
+         write(msg,*)'i,j=',i,j,' tign=',tign(i,j),' <= time_now =',time_now,' nfuel_cat=',nfuel_cat(i,j)
          call message(msg,level=0)
-         call crash('init_no_fire: ignition time must be after the end of the first time step')
+         call crash('init_fire_model: fuel ignition time must be after the first timestep')
       endif
    enddo
 enddo
 
-end subroutine init_no_fire
+end subroutine init_fire_model
 
 !
 !******************
@@ -133,7 +138,7 @@ subroutine ignite_from_tign_in(                                   &
                         tign_in,                                  &
                         lfn,tign,ignited)
 implicit none
-!*** purpose: ignite from given gridded ignition times
+!*** purpose: timestep forcing -  ignite from given gridded ignition times
 !*** arguments
 integer, intent(in):: ifds,ifde,jfds,jfde   ! fire domain bounds
 integer, intent(in):: ifts,ifte,jfts,jfte   ! fire tile bounds
@@ -169,8 +174,8 @@ enddo
 
 
 call check_lfn_tign('ignite_from_tign_in end',end_ts,ifts,ifte,jfts,jfte,ifms,ifme,jfms,jfme,lfn, tign)
-call print_2d_stats(ifts,ifte,jfts,jfte,ifms,ifme,jfms,jfme, tign,'init_no_fire: tign')
-call print_2d_stats(ifts,ifte,jfts,jfte,ifms,ifme,jfms,jfme, tign,'init_no_fire: lfn')
+call print_2d_stats(ifts,ifte,jfts,jfte,ifms,ifme,jfms,jfme, tign,'ignite_from_tign_in: tign')
+call print_2d_stats(ifts,ifte,jfts,jfte,ifms,ifme,jfms,jfme, lfn,'ignite_from_tign_in: lfn')
 
 end subroutine ignite_from_tign_in
 
